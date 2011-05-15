@@ -1,4 +1,4 @@
-package json
+package com.rojoma.json
 package ast
 
 import scala.{collection => sc}
@@ -26,8 +26,8 @@ object JValue {
   implicit def toCastable[T <: JValue](x: T) = new `ast-impl`.DownCaster(x)
 }
 
-/** A JSON "atom" — anything except arrays or objects.  This and [[json.ast.JCompound]] form
-  * a partition of the set of valid [[json.ast.JValue]]s. */
+/** A JSON "atom" — anything except arrays or objects.  This and [[com.rojoma.json.ast.JCompound]] form
+  * a partition of the set of valid [[com.rojoma.json.ast.JValue]]s. */
 sealed abstract class JAtom extends JValue
 
 /** A number.  This JSON implementation stores floating-point values
@@ -44,12 +44,12 @@ object JNumber {
   def apply(x: Long): JNumber = JIntegral(x)
 }
 
-/** A floating-point [[json.ast.JNumber]]. */
+/** A floating-point [[com.rojoma.json.ast.JNumber]]. */
 case class JFloatingPoint(floatingPoint: Double) extends JNumber {
   def integral = floatingPoint.toLong
 }
 
-/** An integer [[json.ast.JNumber]]. */
+/** An integer [[com.rojoma.json.ast.JNumber]]. */
 case class JIntegral(integral: Long) extends JNumber {
   def floatingPoint = integral.toDouble
 }
@@ -64,11 +64,11 @@ case class JBoolean(boolean: Boolean) extends JAtom
 /** Null. */
 case object JNull extends JAtom
 
-/** The common superclass of arrays and objects.  This and [[json.ast.JAtom]] form
-  * a partition of the set of valid [[json.ast.JValue]]s. */
+/** The common superclass of arrays and objects.  This and [[com.rojoma.json.ast.JAtom]] form
+  * a partition of the set of valid [[com.rojoma.json.ast.JValue]]s. */
 sealed abstract class JCompound extends JValue
 
-/** A JSON array, implemented as a thin wrapper around a sequence of [[json.ast.JValue]]s.
+/** A JSON array, implemented as a thin wrapper around a sequence of [[com.rojoma.json.ast.JValue]]s.
   * In many ways this can be treated as a `Seq`, but it is in fact not one. */
 case class JArray(override val toSeq: sc.Seq[JValue]) extends JCompound with Iterable[JValue] with PartialFunction[Int, JValue] {
   override def size = toSeq.size
@@ -83,7 +83,7 @@ case class JArray(override val toSeq: sc.Seq[JValue]) extends JCompound with Ite
   def iterator = toSeq.iterator
 }
 
-/** A JSON object, implemented as a thin wrapper around a map from `String` to [[json.ast.JValue]].
+/** A JSON object, implemented as a thin wrapper around a map from `String` to [[com.rojoma.json.ast.JValue]].
   * In many ways this can be treated as a `Map`, but it is in fact not one. */
 case class JObject(val fields: sc.Map[String, JValue]) extends JCompound with Iterable[(String, JValue)] with PartialFunction[String, JValue] {
   override def size = fields.size

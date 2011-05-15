@@ -1,4 +1,4 @@
-package json
+package com.rojoma.json
 package io
 
 import java.io.{Reader, StringReader}
@@ -7,7 +7,7 @@ import ast._
 
 case class JsonParseException(message: String) extends Exception(message)
 
-/** Parses a character-stream into a [[json.ast.JValue]].
+/** Parses a character-stream into a [[com.rojoma.json.ast.JValue]].
   * 
   * This is guaranteed to read no more than necessary to ensure it
   * has reached the end of the object.  For objects, arrays, and strings,
@@ -56,8 +56,8 @@ class JsonReader(r: Reader) {
   }
 
   /** Read one JSON datum out of the `Reader`.
-    * @return The [[json.ast.JValue]] read.
-    * @throws [[json.io.JsonParseException]] if a complete object cannot be read.
+    * @return The [[com.rojoma.json.ast.JValue]] read.
+    * @throws [[com.rojoma.json.io.JsonParseException]] if a complete object cannot be read.
     * @throws `IOException` if a low-level IO error occurs. */
   def read(): JValue = {
     skipWhitespace()
@@ -228,21 +228,21 @@ class JsonReader(r: Reader) {
 }
 
 object JsonReader {
-  /** Read a [[json.ast.JValue]] out of a `Reader`.
+  /** Read a [[com.rojoma.json.ast.JValue]] out of a `Reader`.
     * @param r The source of characters.
-    * @return A [[json.ast.JValue]]
-    * @throws [[json.io.JsonParseException]] if a complete object cannot be read.
+    * @return A [[com.rojoma.json.ast.JValue]]
+    * @throws [[com.rojoma.json.io.JsonParseException]] if a complete object cannot be read.
     * @throws `IOException` if a low-level IO error occurs.
-    * @see [[json.io.JsonReader]] */
+    * @see [[com.rojoma.json.io.JsonReader]] */
   @throws(classOf[JsonParseException])
   @throws(classOf[java.io.IOException])
   def fromReader(r: Reader) = new JsonReader(r).read
 
-  /** Read a [[json.ast.JValue]] out of a `String`.
+  /** Read a [[com.rojoma.json.ast.JValue]] out of a `String`.
     * @param s The source of characters.
-    * @return A [[json.ast.JValue]]
-    * @throws [[json.io.JsonParseException]] if a complete object cannot be read.
-    * @see [[json.io.JsonReader]] */
+    * @return A [[com.rojoma.json.ast.JValue]]
+    * @throws [[com.rojoma.json.io.JsonParseException]] if a complete object cannot be read.
+    * @see [[com.rojoma.json.io.JsonReader]] */
   @throws(classOf[JsonParseException])
   def fromString(s: String) = fromReader(new StringReader(s))
 }

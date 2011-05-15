@@ -1,4 +1,4 @@
-package json
+package com.rojoma.json
 package ast
 
 import org.scalacheck.Arbitrary

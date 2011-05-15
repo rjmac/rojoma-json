@@ -1,4 +1,4 @@
-package json
+package com.rojoma.json
 package io
 
 import scala.{collection => sc}
@@ -14,7 +14,7 @@ private[io] case class PrettyContext(output: Writer, leftMargin: List[String], i
   def printMargin() = for(s <- leftMargin) output.write(s)
 }
 
-/** An object that will write [[json.ast.JValue]]s in a human-friendly
+/** An object that will write [[com.rojoma.json.ast.JValue]]s in a human-friendly
   * indented format with no spaces or newlines.
   *
   * The writer will try to keep as much data on a single line as
@@ -243,14 +243,14 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
 object PrettyJsonWriter {
   /** Utility function for writing a single datum to a `Writer`.
     * @throws `IOException` if a low-level IO exception occurs.
-    * @throws [[json.io.JsonInvalidFloat]] if a NaN or infinite floating-point value is written.
-    * @see [[json.io.PrettyJsonWriter]] */
+    * @throws [[com.rojoma.json.io.JsonInvalidFloat]] if a NaN or infinite floating-point value is written.
+    * @see [[com.rojoma.json.io.PrettyJsonWriter]] */
   def toWriter(w: Writer, datum: JValue) = new PrettyJsonWriter(w).write(datum)
 
   /** Utility function for writing a single datum to a `String`.
     * @return The encoded JSON object.
-    * @throws [[json.io.JsonInvalidFloat]] if a NaN or infinite floating-point value is written.
-    * @see [[json.io.PrettyJsonWriter]] */
+    * @throws [[com.rojoma.json.io.JsonInvalidFloat]] if a NaN or infinite floating-point value is written.
+    * @see [[com.rojoma.json.io.PrettyJsonWriter]] */
   def toString(datum: JValue) = {
     val w = new StringWriter
     toWriter(w, datum)

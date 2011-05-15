@@ -1,4 +1,4 @@
-package json
+package com.rojoma.json
 package io
 
 import org.scalatest.FunSuite
