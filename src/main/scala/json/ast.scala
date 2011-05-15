@@ -1,28 +1,19 @@
-package json.ast
+package json
+package ast
 
 import scala.{collection => sc}
 
-sealed abstract class JValue {
-  // I can't think of a way to limit the type parameter to "a subclass
-  // of this object's static type" (which may or may not be a subclass
-  // of this object's dynamic type).  The idea is that this can be used
-  // as a downcast only within the JSON type hierarchy.
-  //
-  // Actually, I can, but the syntax would be pretty bad:
-  //   JValue.downcast(x).to[JFoo]
-  //
-  // Anyway, this can be used for a pretty nice syntaxing:
+sealed abstract class JValue
+
+object JValue {
+  // This can be used for a pretty nice syntax:
   //   for {
   //     JObject(foo) <- raw.cast[JObject]
   //     JArray(elems) <- foo.get("foo").flatMap(_.cast[JArray])
   //   } yield {
   //     ...something with elems...
   //   } getOrElse(throw "couldn't find interesting elements")
-  def cast[T <: JValue : ClassManifest]: Option[T] = {
-    val m = implicitly[ClassManifest[T]]
-    if(m.erasure.isInstance(this)) Some(m.erasure.cast(this).asInstanceOf[T])
-    else None
-  }
+  implicit def toCastable[T <: JValue](x: T) = new `ast-impl`.DownCaster(x)
 }
 
 sealed abstract class JAtom extends JValue
