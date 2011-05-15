@@ -26,11 +26,16 @@ private[io] object WriterUtils {
         case '\r' => output.write("\\r")
         case '\t' => output.write("\\t")
         case _ =>
-          if(c.toInt < 0x20 || c.isSurrogate) unicode(c, output)
+          if(shouldEscape(c)) unicode(c, output)
           else output.write(c)
       }
     }
     output.write('"')
+  }
+
+  def shouldEscape(c: Char): Boolean = {
+    val t = Character.getType(c)
+    (t == Character.SURROGATE) || (t == Character.CONTROL) || (t == Character.UNASSIGNED) || (t == Character.PRIVATE_USE) || (t == Character.LINE_SEPARATOR) || (t == Character.PARAGRAPH_SEPARATOR)
   }
 
   def unicode(c: Char, output: Writer) = output.write("\\u%04x".format(c.toInt))
