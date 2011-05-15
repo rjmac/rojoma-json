@@ -60,10 +60,12 @@ class JsonReader(r: Reader) {
       case '{' => readObject()
       case '[' => readArray()
       case '"' | '\'' => readString()
-      case c if isDigit(c) => readNumber()
       case '-' => readNumber()
-      case c if Character.isUnicodeIdentifierStart(c) => parseIdentifier(readIdentifier())
-      case _ => throw JsonParseException("Unexpected character at start of datum: " + peek().toInt)
+      case other => other match { // nested case to allow scalac to emit a lookupswitch instruction for the above options
+        case c if isDigit(c) => readNumber()
+        case c if Character.isUnicodeIdentifierStart(c) => parseIdentifier(readIdentifier())
+        case _ => throw JsonParseException("Unexpected character at start of datum: " + peek().toInt)
+      }
     }
   }
 
