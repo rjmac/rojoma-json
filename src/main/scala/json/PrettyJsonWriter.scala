@@ -209,6 +209,7 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
   }
 
   protected def writeDouble(x: Double) {
+    if(x.isNaN || x.isInfinite) throw JsonInvalidFloat(x)
     output.write(x.toString)
   }
 

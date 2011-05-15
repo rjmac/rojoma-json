@@ -5,6 +5,8 @@ import scala.{collection => sc}
 
 import ast._
 
+case class JsonInvalidFloat(value: Double) extends RuntimeException("Attempted to serialize a NaN or infinite value into a JSON stream.")
+
 trait JsonWriter {
   def write(jobject: JValue) {
     jobject match {
