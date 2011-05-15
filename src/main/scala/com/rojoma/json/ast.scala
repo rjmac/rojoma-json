@@ -6,7 +6,9 @@ import scala.{collection => sc}
 /** A JSON datum.  This can be safely downcast to a more-specific type
   * using the `cast` method which is implicitly added to this class
   * in the companion object.*/
-sealed abstract class JValue
+sealed trait JValue {
+  override def toString = io.PrettyJsonWriter.toString(this)
+}
 
 object JValue {
   /** Safe downcast with a fairly nice syntax.
@@ -66,11 +68,11 @@ case object JNull extends JAtom
 
 /** The common superclass of arrays and objects.  This and [[com.rojoma.json.ast.JAtom]] form
   * a partition of the set of valid [[com.rojoma.json.ast.JValue]]s. */
-sealed abstract class JCompound extends JValue
+sealed trait JCompound extends JValue
 
 /** A JSON array, implemented as a thin wrapper around a sequence of [[com.rojoma.json.ast.JValue]]s.
   * In many ways this can be treated as a `Seq`, but it is in fact not one. */
-case class JArray(override val toSeq: sc.Seq[JValue]) extends JCompound with Iterable[JValue] with PartialFunction[Int, JValue] {
+case class JArray(override val toSeq: sc.Seq[JValue]) extends Iterable[JValue] with PartialFunction[Int, JValue] with JCompound {
   override def size = toSeq.size
   def length = size
   override def toIndexedSeq[B >: JValue] = toSeq.toIndexedSeq[B]
@@ -85,7 +87,7 @@ case class JArray(override val toSeq: sc.Seq[JValue]) extends JCompound with Ite
 
 /** A JSON object, implemented as a thin wrapper around a map from `String` to [[com.rojoma.json.ast.JValue]].
   * In many ways this can be treated as a `Map`, but it is in fact not one. */
-case class JObject(val fields: sc.Map[String, JValue]) extends JCompound with Iterable[(String, JValue)] with PartialFunction[String, JValue] {
+case class JObject(val fields: sc.Map[String, JValue]) extends Iterable[(String, JValue)] with PartialFunction[String, JValue] with JCompound {
   override def size = fields.size
   def contains(s: String) = fields.contains(s)
   def apply(key: String) = fields(key)
