@@ -5,7 +5,10 @@ import java.io.{Reader, StringReader}
 
 import ast._
 
-case class JsonParseException(message: String) extends Exception(message)
+sealed abstract class JsonParseException(message: String) extends Exception(message)
+case class JsonEOF() extends JsonParseException("Unexpected end of input")
+case class JsonUnexpectedCharacter(character: Char, expected: String) extends JsonParseException("Expected " + expected + "; got character " + character.toInt)
+case class JsonUnknownIdentifier(identifier: String) extends JsonParseException("Unknown identifier " + identifier)
 
 /** Parses a character-stream into a [[com.rojoma.json.ast.JValue]].
   * 
@@ -30,7 +33,7 @@ class JsonReader(r: Reader) {
   private def peek() = {
     if(!isPeeked) {
       val newChar = r.read()
-      if(newChar == -1) throw new JsonParseException("Unexpected end of input")
+      if(newChar == -1) throw JsonEOF()
       peeked = newChar.toChar
       isPeeked = true
     }
@@ -51,7 +54,7 @@ class JsonReader(r: Reader) {
   private def expect(c: Char) {
     skipWhitespace()
     val n = next()
-    if(n != c) throw JsonParseException("Expected \"" + c + "\"; got " + n.toInt)
+    if(n != c) throw JsonUnexpectedCharacter(n, c.toString)
     skipWhitespace()
   }
 
@@ -69,7 +72,7 @@ class JsonReader(r: Reader) {
       case other => other match { // nested case to allow scalac to emit a lookupswitch instruction for the above options
         case c if isDigit(c) => readNumber()
         case c if Character.isUnicodeIdentifierStart(c) => parseIdentifier(readIdentifier())
-        case _ => throw JsonParseException("Unexpected character at start of datum: " + peek().toInt)
+        case c => throw JsonUnexpectedCharacter(c, "start of datum")
       }
     }
   }
@@ -78,7 +81,7 @@ class JsonReader(r: Reader) {
     case "true" => JBoolean(true)
     case "false" => JBoolean(false)
     case "null" => JNull
-    case _ => throw JsonParseException("Unknown identifier " + id)
+    case other => throw JsonUnknownIdentifier(other)
   }
 
   private def readObject(): JObject = {
@@ -159,7 +162,7 @@ class JsonReader(r: Reader) {
       case 'r' => '\r'
       case 't' => '\t'
       case 'u' => readUnicodeCharacter()
-      case c => throw JsonParseException("Unknown string escape " + c.toInt)
+      case c => throw JsonUnexpectedCharacter(c, "string escape character")
     }
   }
 
@@ -176,7 +179,7 @@ class JsonReader(r: Reader) {
       case c if isDigit(c) => c.toInt - '0'.toInt
       case c if 'a' <= c && c <= 'f' => 10 + c.toInt - 'a'.toInt
       case c if 'A' <= c && c <= 'F' => 10 + c.toInt - 'A'.toInt
-      case c => throw JsonParseException("Expected hex digit; got " + c.toInt)
+      case c => throw JsonUnexpectedCharacter(c, "hex digit")
     }
   }
 
@@ -189,7 +192,7 @@ class JsonReader(r: Reader) {
 
   private def readDigit() = {
     val c = next()
-    if(!isDigit(c)) throw JsonParseException("Expected digit; got " + c.toInt)
+    if(!isDigit(c)) throw JsonUnexpectedCharacter(c, "digit")
     c
   }
 
