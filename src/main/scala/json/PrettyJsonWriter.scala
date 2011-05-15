@@ -14,30 +14,48 @@ private[io] case class PrettyContext(output: Writer, leftMargin: List[String], i
   def printMargin() = for(s <- leftMargin) output.write(s)
 }
 
+/** An object that will write [[json.ast.JValue]]s in a human-friendly
+  * indented format with no spaces or newlines.
+  *
+  * The writer will try to keep as much data on a single line as
+  * possible.  As a result, arrays and objects have two printing
+  * modes (selected automatically), "compact" and "indented".
+  *
+  * In the "compact" mode, an array is stored on a single line:
+  * {{{
+  *    [ elem1, elem2, ... ]
+  * }}}
+  * Similarly for objects:
+  * {{{
+  *    { "key1" : value1, "key2 : value2, ... }
+  * }}}
+  *
+  * In the "indented" mode, the delimiters appear on lines by
+  * themselves, with each element formatted on a separate line:
+  * {{{
+  *    [
+  *      elem1,
+  *      elem2,
+  *      ...
+  *    ]
+  * }}}
+  * For objects, if a key/value pair does not fit on a single line,
+  * the value is printed on a line of its own, indented further:
+  * {{{
+  *    {
+  *      "key" :
+  *        value
+  *    }
+  * }}}
+  * 
+  * Empty arrays and objects are always represented compactly,
+  * as `[]` or `{}` respectively.
+  *
+  * This does many small writes, so it is probably a good idea to wrap
+  * the `Writer` in a `BufferedWriter`. */
 class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
   def this(output: Writer, indentation: Int = 2, leftMargin: Int = 0, targetWidth: Int = 78) =
-    this(PrettyContext(output, List(" " * leftMargin), indentation, targetWidth - leftMargin))
-
-  // A "pretty writer" has two modes, compact and indented.
-  // 
-  // Lists format either "compactly" if they either have 0 or 1 atomic elements
-  // or fit in the remaining target space:
-  //   [ elem1, elem2, ... ]
-  // or indented if they do not:
-  //   [
-  //     elem1,
-  //     ...
-  //   ]
-  //
-  // Objects format compactly if they fit in the available space or indented if they do not.
-  // In the latter case, a field is formatted like
-  //    "key" : "value"
-  // if it fits in the remaining space, or
-  //    "key" :
-  //      "value"
-  // if it does not.
-  //
-  // An empty list or object contains no internal space: [] or {}
+    this(PrettyContext(output, List(" " * leftMargin), indentation, targetWidth))
 
   private def output = context.output
 
@@ -223,7 +241,16 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
 }
 
 object PrettyJsonWriter {
+  /** Utility function for writing a single datum to a `Writer`.
+    * @throws `IOException` if a low-level IO exception occurs.
+    * @throws [[json.io.JsonInvalidFloat]] if a NaN or infinite floating-point value is written.
+    * @see [[json.io.PrettyJsonWriter]] */
   def toWriter(w: Writer, datum: JValue) = new PrettyJsonWriter(w).write(datum)
+
+  /** Utility function for writing a single datum to a `String`.
+    * @return The encoded JSON object.
+    * @throws [[json.io.JsonInvalidFloat]] if a NaN or infinite floating-point value is written.
+    * @see [[json.io.PrettyJsonWriter]] */
   def toString(datum: JValue) = {
     val w = new StringWriter
     toWriter(w, datum)

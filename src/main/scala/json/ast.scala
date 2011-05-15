@@ -3,21 +3,37 @@ package ast
 
 import scala.{collection => sc}
 
+/** A JSON datum.  This can be safely downcast to a more-specific type
+  * using the `cast` method which is implicitly added to this class
+  * in the companion object.*/
 sealed abstract class JValue
 
 object JValue {
-  // This can be used for a pretty nice syntax:
-  //   for {
-  //     JObject(foo) <- raw.cast[JObject]
-  //     JArray(elems) <- foo.get("foo").flatMap(_.cast[JArray])
-  //   } yield {
-  //     ...something with elems...
-  //   } getOrElse(throw "couldn't find interesting elements")
+  /** Safe downcast with a fairly nice syntax.
+    * This will statically prevent attempting to cast anywhere except
+    * a subclass of the value's static type.
+    *
+    * It can be used for navigation in a JSON tree:
+    * {{{
+    *   for {
+    *     JObject(foo) <- raw.cast[JObject]
+    *     JArray(elems) <- foo.get("foo").flatMap(_.cast[JArray])
+    *   } yield {
+    *     ...something with elems...
+    *   } getOrElse(throw "couldn't find interesting elements")
+    * }}}
+    */
   implicit def toCastable[T <: JValue](x: T) = new `ast-impl`.DownCaster(x)
 }
 
+/** A JSON "atom" — anything except arrays or objects.  This and [[json.ast.JCompound]] form
+  * a partition of the set of valid [[json.ast.JValue]]s. */
 sealed abstract class JAtom extends JValue
 
+/** A number.  This JSON implementation stores floating-point values
+  * in IEEE 754 doubles and integers in 64-bit signed ints, and has the
+  * corresponding limitations.  Numbers outside that range may be silently
+  * changed. */
 sealed abstract class JNumber extends JAtom {
   def floatingPoint: Double
   def integral: Long
@@ -28,22 +44,32 @@ object JNumber {
   def apply(x: Long): JNumber = JIntegral(x)
 }
 
+/** A floating-point [[json.ast.JNumber]]. */
 case class JFloatingPoint(floatingPoint: Double) extends JNumber {
   def integral = floatingPoint.toLong
 }
 
+/** An integer [[json.ast.JNumber]]. */
 case class JIntegral(integral: Long) extends JNumber {
   def floatingPoint = integral.toDouble
 }
 
+/** A JSON string.  This does not yet enforce well-formedness with
+  * respect to surrogate pairs, but it probably should. */
 case class JString(string: String) extends JAtom
 
+/** A boolean */
 case class JBoolean(boolean: Boolean) extends JAtom
 
+/** Null. */
 case object JNull extends JAtom
 
+/** The common superclass of arrays and objects.  This and [[json.ast.JAtom]] form
+  * a partition of the set of valid [[json.ast.JValue]]s. */
 sealed abstract class JCompound extends JValue
 
+/** A JSON array, implemented as a thin wrapper around a sequence of [[json.ast.JValue]]s.
+  * In many ways this can be treated as a `Seq`, but it is in fact not one. */
 case class JArray(override val toSeq: sc.Seq[JValue]) extends JCompound with Iterable[JValue] with PartialFunction[Int, JValue] {
   override def size = toSeq.size
   def length = size
@@ -57,6 +83,8 @@ case class JArray(override val toSeq: sc.Seq[JValue]) extends JCompound with Ite
   def iterator = toSeq.iterator
 }
 
+/** A JSON object, implemented as a thin wrapper around a map from `String` to [[json.ast.JValue]].
+  * In many ways this can be treated as a `Map`, but it is in fact not one. */
 case class JObject(val fields: sc.Map[String, JValue]) extends JCompound with Iterable[(String, JValue)] with PartialFunction[String, JValue] {
   override def size = fields.size
   def contains(s: String) = fields.contains(s)
