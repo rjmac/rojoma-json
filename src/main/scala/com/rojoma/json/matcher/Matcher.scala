@@ -4,7 +4,7 @@ package matcher
 import ast._
 
 sealed trait Pattern {
-  def matches(x: JValue) = Pattern.matches(x, this)
+  def matches(x: JValue) = Pattern.matches(x, this, Map.empty[Variable[_], AnyRef])
 }
 object Pattern {
   implicit def litify(x: JValue): Pattern = Literal(x)
@@ -13,44 +13,74 @@ object Pattern {
   implicit def litify(x: String): Pattern = Literal(JString(x))
   implicit def litify(x: Boolean): Pattern = Literal(JBoolean(x))
 
-  private [matcher] def matches(x: JValue, pattern: Pattern): Boolean = pattern match {
+  type Results = Map[Variable[_], AnyRef]
+
+  private [matcher] def matches(x: JValue, pattern: Pattern, environment: Results): Option[Results] = pattern match {
     case Literal(atom: JAtom) =>
-      x == atom
+      if(x == atom) Some(environment)
+      else None
     case Literal(pat: JArray) => // matches if x is a sequence and pat is a prefix of that sequence
-      x.cast[JArray] map { lit =>
-        pat.length <= lit.length && pat.zip(lit).forall { case (a,b) => a == b }
-      } getOrElse(false)
+      x.cast[JArray] flatMap { lit =>
+        if(pat.length <= lit.length && pat.zip(lit).forall { case (a,b) => a == b }) Some(environment)
+        else None
+      }
     case Literal(pat: JObject) => // matches if x is an object and pat is a subset of that object
-      x.cast[JObject] map { lit =>
-        pat.forall { case (k, v) => lit.get(k) == Some(v) }
-      } getOrElse(false)
-    case v@Variable() =>
-      v.maybeFill(x)
+      x.cast[JObject] flatMap { lit =>
+        if(pat.forall { case (k, v) => lit.get(k) == Some(v) }) Some(environment)
+        else None
+      }
+    case v: Variable[_] =>
+      v.maybeFill(x, environment)
     case VArray(subPatterns @ _*) =>
-      x.cast[JArray] map { arr =>
-        subPatterns.length <= arr.length && subPatterns.zip(arr).forall { case (a,b) => matches(b, a) }
-      } getOrElse(false)
-    case VObject(subPatterns @ _*) =>
-      x.cast[JObject] map { obj =>
-        subPatterns forall {
-          case (k, v) =>
-            obj.contains(k) && matches(obj(k), v)
+      x.cast[JArray] flatMap { arr =>
+        if(arr.length < subPatterns.length) {
+          None
+        } else {
+          arr.zip(subPatterns).foldLeft(Some(environment) : Option[Results]) { (env, vp) =>
+            env match {
+              case None => None
+              case Some(env) =>
+                val (value,pattern) = vp
+                matches(value, pattern, env)
+            }
+          }
         }
-      } getOrElse(false)
+      }
+    case VObject(subPatterns @ _*) =>
+      x.cast[JObject] flatMap { obj =>
+        subPatterns.foldLeft(Some(environment) : Option[Results]) { (env, sp) =>
+          env match {
+            case None => None
+            case Some(env) =>
+              val (k, v) = sp
+              if(obj contains k) matches(obj(k), v, env)
+              else None
+          }
+        }
+      }
   }
 }
 case class Literal(underlying: JValue) extends Pattern
-case class Variable[T <: JValue : ClassManifest]() extends Pattern {
-  var result: T = _
-  private [matcher] def maybeFill(x: JValue): Boolean = {
+final class Variable[T <: JValue : ClassManifest] extends Pattern {
+  def apply(results: Pattern.Results): T =
+    implicitly[ClassManifest[T]].erasure.cast(results(this)).asInstanceOf[T]
+
+  private [matcher] def maybeFill(x: JValue, environment: Pattern.Results): Option[Pattern.Results] = {
     x.cast[T] match {
       case None =>
-        false
-      case Some(r) =>
-        result = r
-        true
+        None
+      case Some(r1) =>
+        environment.get(this) match {
+          case None =>
+            Some(environment + (this -> r1))
+          case Some(r2) if r2 == r1 =>
+            Some(environment)
+          case _ =>
+            None
+        }
     }
   }
 }
 case class VArray(subPatterns: Pattern*) extends Pattern
 case class VObject(subPatterns: (String, Pattern)*) extends Pattern
+

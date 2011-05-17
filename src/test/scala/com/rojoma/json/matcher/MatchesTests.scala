@@ -4,94 +4,96 @@ package matcher
 import ast._
 
 import org.scalatest.FunSuite
-import org.scalatest.Assertions
+import org.scalatest.matchers.MustMatchers
 
-class MatchesTests extends FunSuite with Assertions {
+class MatchesTests extends FunSuite with MustMatchers {
   import Pattern._
 
   def j(s: String) = io.JsonReader.fromString(s)
 
   test("atom literals match") {
-    assert(JNull matches JNull)
-    assert(JBoolean(true) matches JBoolean(true))
-    assert(JBoolean(false) matches JBoolean(false))
-    assert(JString("hello") matches JString("hello"))
+    (JNull matches JNull) must equal (Some(Map.empty))
+    (JBoolean(true) matches JBoolean(true)) must equal (Some(Map.empty))
+    (JBoolean(false) matches JBoolean(false)) must equal (Some(Map.empty))
+    (JString("hello") matches JString("hello")) must equal (Some(Map.empty))
   }
 
   test("atom literals don't match") {
-    assert(!(JNull matches JBoolean(true)))
-    assert(!(JBoolean(true) matches JBoolean(false)))
-    assert(!(JString("hello") matches JString("world")))
+    (JNull matches JBoolean(true)) must equal (None)
+    (JBoolean(true) matches JBoolean(false)) must equal (None)
+    (JString("hello") matches JString("world")) must equal (None)
   }
 
   test("variables get filled in") {
-    val x = Variable[JBoolean]
-    assert(x matches JBoolean(true))
-    assert(x.result.boolean)
-
-    assert(x matches JBoolean(false))
-    assert(!x.result.boolean)
+    val x = new Variable[JBoolean]
+    (x matches JBoolean(true)) must equal (Some(Map(x -> JBoolean(true))))
+    (x matches JBoolean(false)) must equal (Some(Map(x -> JBoolean(false))))
   }
 
   test("variables don't match") {
-    val x = Variable[JString]
-    assert(!(x matches JBoolean(true)))
-    assert(x.result eq null)
+    val x = new Variable[JString]
+    (x matches JBoolean(true)) must equal (None)
   }
 
   test("sequence literals match exactly") {
-    assert(j("""[1,2,3]""") matches j("""[1,2,3]"""))
+    (j("""[1,2,3]""") matches j("""[1,2,3]""")) must equal (Some(Map.empty))
   }
 
   test("sequence literals match prefix") {
-    assert(j("""[1,2,3]""") matches j("""[1,2,3,4,5]"""))
+    (j("""[1,2,3]""") matches j("""[1,2,3,4,5]""")) must equal (Some(Map.empty))
   }
 
   test("sequence literals do not match overlong") {
-    assert(!(j("""[1,2,3]""") matches j("""[1,2]""")))
+    (j("""[1,2,3]""") matches j("""[1,2]""")) must equal (None)
   }
 
   test("sequence literals to not match mismatch") {
-    assert(!(j("""[1,2,3]""") matches j("""[1,3,3]""")))
+    (j("""[1,2,3]""") matches j("""[1,3,3]""")) must equal (None)
   }
 
   test("sequence variables match") {
-    val middle = Variable[JIntegral]
-    assert(VArray(1, middle, 3) matches j("""[1,2,3]"""))
-    assert(middle.result.integral === 2)
+    val middle = new Variable[JIntegral]
+    (VArray(1, middle, 3) matches j("""[1,2,3]""")) must equal (Some(Map(middle -> JIntegral(2))))
   }
 
   test("nested sequence variables match") {
-    val a = Variable[JIntegral]
-    val b = Variable[JString]
-    assert(VArray(1, a, VArray("hello", b, "world"), 3) matches j("""[1,2,["hello","there","world"],3]"""))
-    assert(a.result.integral === 2)
-    assert(b.result.string === "there")
+    val a = new Variable[JIntegral]
+    val b = new Variable[JString]
+    (VArray(1, a, VArray("hello", b, "world"), 3) matches j("""[1,2,["hello","there","world"],3]""")) must equal (Some(Map(a -> JIntegral(2), b -> JString("there"))))
   }
 
   test("object literals match exactly") {
-    assert(j("""{'hello':1,'world':2}""") matches j("""{'world':2,'hello':1}"""))
+    (j("""{'hello':1,'world':2}""") matches j("""{'world':2,'hello':1}""")) must equal (Some(Map.empty))
   }
 
   test("object literals match subset") {
-    assert(j("""{'hello':1,'world':2}""") matches j("""{'world':2,'hello':1,'gnu':3}"""))
+    (j("""{'hello':1,'world':2}""") matches j("""{'world':2,'hello':1,'gnu':3}""")) must equal (Some(Map.empty))
   }
 
   test("object literals do not match superset") {
-    assert(!(j("""{'hello':1,'world':2}""") matches j("""{'world':2}""")))
+    (j("""{'hello':1,'world':2}""") matches j("""{'world':2}""")) must equal (None)
   }
 
   test("object variables match") {
-    val a = Variable[JNumber]
-    assert(VObject("hello" -> 1, "there" -> a, "world" -> 3) matches j("""{'hello':1,'there':2,'world':3}"""))
-    assert(a.result.integral === 2)
+    val a = new Variable[JNumber]
+    (VObject("hello" -> 1, "there" -> a, "world" -> 3) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (Some(Map(a -> JIntegral(2))))
   }
 
   test("nest variables match") {
-    val a = Variable[JNumber]
-    val b = Variable[JString]
-    assert(VObject("hello" -> 1, "there" -> a, "gnu" -> VObject("smiling" -> b), "world" -> 3) matches j("""{'hello':1,'there':2,'world':3,'gnu':{'smiling':'gnus','are':'happy'}}"""))
-    assert(a.result.integral === 2)
-    assert(b.result.string === "gnus")
+    val a = new Variable[JNumber]
+    val b = new Variable[JString]
+    (VObject("hello" -> 1, "there" -> a, "gnu" -> VObject("smiling" -> b), "world" -> 3) matches j("""{'hello':1,'there':2,'world':3,'gnu':{'smiling':'gnus','are':'happy'}}""")) must equal (Some(Map(a -> JIntegral(2), b -> JString("gnus"))))
+  }
+
+  test("variables look up results") {
+    val a = new Variable[JNumber]
+    val results: Pattern.Results = Map(a -> JIntegral(5))
+    a(results) must equal (JIntegral(5))
+  }
+
+  test("variables look up failure") {
+    val a = new Variable[JValue]
+    val results: Pattern.Results = Map.empty
+    evaluating { a(results) } must produce [NoSuchElementException]
   }
 }
