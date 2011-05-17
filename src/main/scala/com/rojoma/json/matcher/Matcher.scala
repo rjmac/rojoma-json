@@ -4,7 +4,7 @@ package matcher
 import ast._
 
 sealed trait Pattern {
-  def matches(x: JValue) = Matcher.matches(x, this)
+  def matches(x: JValue) = Pattern.matches(x, this)
 }
 object Pattern {
   implicit def litify(x: JValue): Pattern = Literal(x)
@@ -12,24 +12,7 @@ object Pattern {
   implicit def litify(x: Double): Pattern = Literal(JNumber(x))
   implicit def litify(x: String): Pattern = Literal(JString(x))
   implicit def litify(x: Boolean): Pattern = Literal(JBoolean(x))
-}
-case class Literal(underlying: JValue) extends Pattern
-case class Variable[T <: JValue : ClassManifest]() extends Pattern {
-  var result: T = _
-  private [matcher] def maybeFill(x: JValue): Boolean = {
-    x.cast[T] match {
-      case None =>
-        false
-      case Some(r) =>
-        result = r
-        true
-    }
-  }
-}
-case class VArray(subPatterns: Pattern*) extends Pattern
-case class VObject(subPatterns: (String, Pattern)*) extends Pattern
 
-object Matcher {
   private [matcher] def matches(x: JValue, pattern: Pattern): Boolean = pattern match {
     case Literal(atom: JAtom) =>
       x == atom
@@ -56,3 +39,18 @@ object Matcher {
       } getOrElse(false)
   }
 }
+case class Literal(underlying: JValue) extends Pattern
+case class Variable[T <: JValue : ClassManifest]() extends Pattern {
+  var result: T = _
+  private [matcher] def maybeFill(x: JValue): Boolean = {
+    x.cast[T] match {
+      case None =>
+        false
+      case Some(r) =>
+        result = r
+        true
+    }
+  }
+}
+case class VArray(subPatterns: Pattern*) extends Pattern
+case class VObject(subPatterns: (String, Pattern)*) extends Pattern
