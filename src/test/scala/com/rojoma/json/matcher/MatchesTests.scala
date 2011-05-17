@@ -97,6 +97,16 @@ class MatchesTests extends FunSuite with MustMatchers {
     evaluating { a(results) } must produce [NoSuchElementException]
   }
 
+  test("variables can match the same thing twice") {
+    val a = new Variable[JValue]
+    (VObject("hello" -> a, "there" -> a) matches j("""{'hello':'happy','there':'happy'}""")) must equal (Some(Map(a -> JString("happy"))))
+  }
+
+  test("variables fail to match different things") {
+    val a = new Variable[JValue]
+    (VObject("hello" -> a, "there" -> a) matches j("""{'hello':'happy','there':'sad'}""")) must equal (None)
+  }
+
   test("patterns can be matched") {
     val a = new Variable[JNumber]
     val b = new Variable[JString]
