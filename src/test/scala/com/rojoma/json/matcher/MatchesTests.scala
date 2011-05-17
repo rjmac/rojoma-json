@@ -96,4 +96,21 @@ class MatchesTests extends FunSuite with MustMatchers {
     val results: Pattern.Results = Map.empty
     evaluating { a(results) } must produce [NoSuchElementException]
   }
+
+  test("patterns can be matched") {
+    val a = new Variable[JNumber]
+    val b = new Variable[JString]
+    val Pattern1 = Literal(JNull)
+    val Pattern2 = VObject("hello" -> 1, "there" -> a, "gnu" -> VObject("smiling" -> b), "world" -> 3)
+    val scrutinee = j("""{'hello':1,'there':2,'world':3,'gnu':{'smiling':'gnus','are':'happy'}}""")
+    scrutinee match {
+      case Pattern1(results) =>
+        fail("It should not have matched Pattern1")
+      case Pattern2(results) =>
+        a(results) must equal (JIntegral(2))
+        b(results) must equal (JString("gnus"))
+      case _ =>
+        fail("It should have matched Pattern2")
+    }
+  }
 }

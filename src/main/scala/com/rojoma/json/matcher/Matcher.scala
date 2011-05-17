@@ -5,6 +5,7 @@ import ast._
 
 sealed trait Pattern {
   def matches(x: JValue) = Pattern.matches(x, this, Map.empty[Variable[_], AnyRef])
+  def unapply(x: JValue) = matches(x)
 }
 object Pattern {
   implicit def litify(x: JValue): Pattern = Literal(x)
