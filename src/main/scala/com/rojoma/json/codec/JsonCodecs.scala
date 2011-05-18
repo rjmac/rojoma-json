@@ -160,6 +160,14 @@ object JsonCodecs {
       case Right(right) => implicitly[JsonCodec[R]].encode(right)
     }
 
-    def decode(x: JValue) = implicitly[JsonCodec[R]].decode(x) orElse implicitly[JsonCodec[L]].decode(x)
+    def decode(x: JValue) = 
+      implicitly[JsonCodec[R]].decode(x) match {
+        case Some(right) => Some(Right(right))
+        case None =>
+          implicitly[JsonCodec[L]].decode(x) match {
+            case Some(left) => Some(Left(left))
+            case None => None
+          }
+      }
   }
 }
