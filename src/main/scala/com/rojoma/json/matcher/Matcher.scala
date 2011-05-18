@@ -6,18 +6,23 @@ import codec.JsonCodec
 
 sealed trait OptPattern
 
-sealed trait Pattern extends OptPattern {
-  def matches(x: JValue) = Pattern.matches(x, this, Map.empty[Variable[_], AnyRef])
-  def unapply(x: JValue) = matches(x)
-}
-object Pattern {
+trait Implicits {
   implicit def litify[T : JsonCodec](x: T): Pattern = FLiteral(j => implicitly[JsonCodec[T]].decode(j) == Some(x))
   implicit def litify(x: JValue): Pattern = Literal(x)
   implicit def litify(x: Long): Pattern = Literal(JNumber(x))
   implicit def litify(x: Double): Pattern = Literal(JNumber(x))
   implicit def litify(x: String): Pattern = Literal(JString(x))
   implicit def litify(x: Boolean): Pattern = Literal(JBoolean(x))
+}
 
+object OptPattern extends Implicits {
+}
+
+sealed trait Pattern extends OptPattern {
+  def matches(x: JValue) = Pattern.matches(x, this, Map.empty[Variable[_], AnyRef])
+  def unapply(x: JValue) = matches(x)
+}
+object Pattern extends Implicits {
   type Results = Map[Variable[_], Any]
 
   private def foldLeftOpt[A, B](seq: Iterable[B], init: A)(f: (A, B) => Option[A]): Option[A] = {
@@ -85,7 +90,7 @@ object Pattern {
                 case _: Pattern =>
                   None
                 case _: POption =>
-                  Some(environment)
+                  Some(env)
               }
           }
         }
