@@ -82,7 +82,7 @@ object Pattern {
 case class Literal(underlying: JValue) extends Pattern
 case class FLiteral(x: JValue => Boolean) extends Pattern
 
-sealed abstract class Variable[T] extends Pattern {
+sealed abstract class Variable[+T] extends Pattern {
   def apply(results: Pattern.Results): T =
     results(this).asInstanceOf[T]
 
