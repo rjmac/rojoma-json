@@ -25,13 +25,13 @@ class MatchesTests extends FunSuite with MustMatchers {
   }
 
   test("variables get filled in") {
-    val x = new Variable[JBoolean]
+    val x = Variable.raw[JBoolean]()
     (x matches JBoolean(true)) must equal (Some(Map(x -> JBoolean(true))))
     (x matches JBoolean(false)) must equal (Some(Map(x -> JBoolean(false))))
   }
 
   test("variables don't match") {
-    val x = new Variable[JString]
+    val x = Variable.raw[JString]()
     (x matches JBoolean(true)) must equal (None)
   }
 
@@ -52,14 +52,14 @@ class MatchesTests extends FunSuite with MustMatchers {
   }
 
   test("sequence variables match") {
-    val middle = new Variable[JIntegral]
     (VArray(1, middle, 3) matches j("""[1,2,3]""")) must equal (Some(Map(middle -> JIntegral(2))))
+    val middle = Variable.raw[JIntegral]()
   }
 
   test("nested sequence variables match") {
-    val a = new Variable[JIntegral]
-    val b = new Variable[JString]
     (VArray(1, a, VArray("hello", b, "world"), 3) matches j("""[1,2,["hello","there","world"],3]""")) must equal (Some(Map(a -> JIntegral(2), b -> JString("there"))))
+    val a = Variable.raw[JIntegral]()
+    val b = Variable.raw[JString]()
   }
 
   test("object literals match exactly") {
@@ -75,43 +75,42 @@ class MatchesTests extends FunSuite with MustMatchers {
   }
 
   test("object variables match") {
-    val a = new Variable[JNumber]
     (VObject("hello" -> 1, "there" -> a, "world" -> 3) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (Some(Map(a -> JIntegral(2))))
+    val a = Variable.raw[JNumber]()
   }
 
   test("nest variables match") {
-    val a = new Variable[JNumber]
-    val b = new Variable[JString]
     (VObject("hello" -> 1, "there" -> a, "gnu" -> VObject("smiling" -> b), "world" -> 3) matches j("""{'hello':1,'there':2,'world':3,'gnu':{'smiling':'gnus','are':'happy'}}""")) must equal (Some(Map(a -> JIntegral(2), b -> JString("gnus"))))
+    val a = Variable.raw[JNumber]()
+    val b = Variable.raw[JString]()
   }
 
   test("variables look up results") {
-    val a = new Variable[JNumber]
+    val a = Variable.raw[JNumber]()
     val results: Pattern.Results = Map(a -> JIntegral(5))
     a(results) must equal (JIntegral(5))
   }
 
   test("variables look up failure") {
-    val a = new Variable[JValue]
+    val a = Variable.raw[JValue]()
     val results: Pattern.Results = Map.empty
     evaluating { a(results) } must produce [NoSuchElementException]
   }
 
   test("variables can match the same thing twice") {
-    val a = new Variable[JValue]
     (VObject("hello" -> a, "there" -> a) matches j("""{'hello':'happy','there':'happy'}""")) must equal (Some(Map(a -> JString("happy"))))
+    val a = Variable.raw[JValue]()
   }
 
   test("variables fail to match different things") {
-    val a = new Variable[JValue]
     (VObject("hello" -> a, "there" -> a) matches j("""{'hello':'happy','there':'sad'}""")) must equal (None)
+    val a = Variable.raw[JValue]()
   }
 
   test("patterns can be matched") {
-    val a = new Variable[JNumber]
-    val b = new Variable[JString]
+    val a = Variable.raw[JNumber]()
+    val b = Variable.raw[JString]()
     val Pattern1 = Literal(JNull)
-    val Pattern2 = VObject("hello" -> 1, "there" -> a, "gnu" -> VObject("smiling" -> b), "world" -> 3)
     val scrutinee = j("""{'hello':1,'there':2,'world':3,'gnu':{'smiling':'gnus','are':'happy'}}""")
     scrutinee match {
       case Pattern1(results) =>
