@@ -9,6 +9,7 @@ sealed trait Pattern {
   def unapply(x: JValue) = matches(x)
 }
 object Pattern {
+  implicit def litify[T : JsonCodec](x: T): Pattern = FLiteral(j => implicitly[JsonCodec[T]].decode(j) == Some(x))
   implicit def litify(x: JValue): Pattern = Literal(x)
   implicit def litify(x: Long): Pattern = Literal(JNumber(x))
   implicit def litify(x: Double): Pattern = Literal(JNumber(x))
@@ -31,6 +32,9 @@ object Pattern {
         if(pat.forall { case (k, v) => lit.get(k) == Some(v) }) Some(environment)
         else None
       }
+    case FLiteral(recognizer) =>
+      if(recognizer(x)) Some(environment)
+      else None
     case v: Variable[_] =>
       v.maybeFill(x, environment)
     case PArray(subPatterns @ _*) =>
@@ -64,6 +68,7 @@ object Pattern {
 }
 
 case class Literal(underlying: JValue) extends Pattern
+case class FLiteral(x: JValue => Boolean) extends Pattern
 
 sealed abstract class Variable[T] extends Pattern {
   def apply(results: Pattern.Results): T
