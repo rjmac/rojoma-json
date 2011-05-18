@@ -26,13 +26,36 @@ object Pattern {
       else None
     case Literal(pat: JArray) => // matches if x is a sequence and pat is a prefix of that sequence
       x.cast[JArray] flatMap { lit =>
-        if(pat.length <= lit.length && pat.zip(lit).forall { case (a,b) => a == b }) Some(environment)
-        else None
+        // instead of just doing
+        //  if(pat.length <= lit.length && pat.zip(lit).forall { case (a,b) => a == b }) Some(environment)
+        // we want to apply the same subsetting logic to child objects.
+        if(pat.length > lit.length) None
+        else pat.zip(lit).foldLeft(Some(environment) : Option[Results]) { (env, pl) =>
+          env match {
+            case None => None
+            case Some(env) =>
+              val (subPat, subLit) = pl
+              matches(subLit, Literal(subPat), environment)
+          }
+        }
       }
     case Literal(pat: JObject) => // matches if x is an object and pat is a subset of that object
       x.cast[JObject] flatMap { lit =>
-        if(pat.forall { case (k, v) => lit.get(k) == Some(v) }) Some(environment)
-        else None
+        // instead of just doing
+        //   if(pat.forall { case (k, v) => lit.get(k) == Some(v) }) Some(environment)
+        // we want to apply the same subsetting logic to child objects.
+        pat.foldLeft(Some(environment) : Option[Results]) { (env, kv) =>
+          env match {
+            case None => None
+            case Some(env) =>
+              val (k,v) = kv
+              lit.get(k) match {
+                case Some(litv) =>
+                  matches(litv, Literal(v), environment)
+                case None => None
+              }
+          }
+        }
       }
     case FLiteral(recognizer) =>
       if(recognizer(x)) Some(environment)
