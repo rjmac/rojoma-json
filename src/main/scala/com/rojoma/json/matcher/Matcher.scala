@@ -20,6 +20,18 @@ object Pattern {
 
   type Results = Map[Variable[_], Any]
 
+  private def foldLeftOpt[A, B](seq: Iterable[B], init: A)(f: (A, B) => Option[A]): Option[A] = {
+    val it = seq.iterator
+    var acc = init
+    while(it.hasNext) {
+      f(acc, it.next()) match {
+        case None => return None
+        case Some(r) => acc = r
+      }
+    }
+    return Some(acc)
+  }
+
   private [matcher] def matches(x: JValue, pattern: OptPattern, environment: Results): Option[Results] = pattern match {
     case Literal(atom: JAtom) =>
       if(x == atom) Some(environment)
@@ -30,13 +42,9 @@ object Pattern {
         //  if(pat.length <= lit.length && pat.zip(lit).forall { case (a,b) => a == b }) Some(environment)
         // we want to apply the same subsetting logic to child objects.
         if(pat.length > lit.length) None
-        else pat.zip(lit).foldLeft(Some(environment) : Option[Results]) { (env, pl) =>
-          env match {
-            case None => None
-            case Some(env) =>
-              val (subPat, subLit) = pl
-              matches(subLit, Literal(subPat), environment)
-          }
+        else foldLeftOpt(pat zip lit, environment) { (env, pl) =>
+          val (subPat, subLit) = pl
+          matches(subLit, Literal(subPat), environment)
         }
       }
     case Literal(pat: JObject) => // matches if x is an object and pat is a subset of that object
@@ -44,17 +52,9 @@ object Pattern {
         // instead of just doing
         //   if(pat.forall { case (k, v) => lit.get(k) == Some(v) }) Some(environment)
         // we want to apply the same subsetting logic to child objects.
-        pat.foldLeft(Some(environment) : Option[Results]) { (env, kv) =>
-          env match {
-            case None => None
-            case Some(env) =>
-              val (k,v) = kv
-              lit.get(k) match {
-                case Some(litv) =>
-                  matches(litv, Literal(v), environment)
-                case None => None
-              }
-          }
+        foldLeftOpt(pat, environment) { (env, kv) =>
+          val (k,v) = kv
+          lit.get(k).flatMap(matches(_, Literal(v), environment))
         }
       }
     case FLiteral(recognizer) =>
@@ -67,32 +67,25 @@ object Pattern {
         if(arr.length < subPatterns.length) {
           None
         } else {
-          arr.zip(subPatterns).foldLeft(Some(environment) : Option[Results]) { (env, vp) =>
-            env match {
-              case None => None
-              case Some(env) =>
-                val (value,pattern) = vp
-                matches(value, pattern, env)
-            }
+          foldLeftOpt(arr zip subPatterns, environment) { (env, vp) =>
+            val (subValue, subPattern) = vp
+            matches(subValue, subPattern, env)
           }
         }
       }
     case PObject(subPatterns @ _*) =>
       x.cast[JObject] flatMap { obj =>
-        subPatterns.foldLeft(Some(environment) : Option[Results]) { (env, sp) =>
-          env match {
-            case None => None
-            case Some(env) =>
-              val (k, v) = sp
-              if(obj contains k) {
-                matches(obj(k), v, env)
-              } else {
-                v match {
-                  case _: Pattern =>
-                    None
-                  case _: POption =>
-                    Some(environment)
-                }
+        foldLeftOpt(subPatterns, environment) { (env, sp) =>
+          val (subKey, subPat) = sp
+          obj.get(subKey) match {
+            case Some(subValue) =>
+              matches(subValue, subPat, env)
+            case None =>
+              subPat match {
+                case _: Pattern =>
+                  None
+                case _: POption =>
+                  Some(environment)
               }
           }
         }
