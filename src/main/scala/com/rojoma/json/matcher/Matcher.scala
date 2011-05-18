@@ -33,7 +33,7 @@ object Pattern {
       }
     case v: Variable[_] =>
       v.maybeFill(x, environment)
-    case VArray(subPatterns @ _*) =>
+    case PArray(subPatterns @ _*) =>
       x.cast[JArray] flatMap { arr =>
         if(arr.length < subPatterns.length) {
           None
@@ -48,7 +48,7 @@ object Pattern {
           }
         }
       }
-    case VObject(subPatterns @ _*) =>
+    case PObject(subPatterns @ _*) =>
       x.cast[JObject] flatMap { obj =>
         subPatterns.foldLeft(Some(environment) : Option[Results]) { (env, sp) =>
           env match {
@@ -113,6 +113,6 @@ object Variable {
   def raw[T <: JValue : ClassManifest](): Variable[T] = new JVariable[T]()
   def cooked[T : JsonCodec](): Variable[T] = new CVariable[T]
 }
-case class VArray(subPatterns: Pattern*) extends Pattern
-case class VObject(subPatterns: (String, Pattern)*) extends Pattern
+case class PArray(subPatterns: Pattern*) extends Pattern
+case class PObject(subPatterns: (String, Pattern)*) extends Pattern
 
