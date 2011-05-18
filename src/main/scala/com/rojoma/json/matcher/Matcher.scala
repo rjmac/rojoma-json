@@ -4,7 +4,9 @@ package matcher
 import ast._
 import codec.JsonCodec
 
-sealed trait Pattern {
+sealed trait OptPattern
+
+sealed trait Pattern extends OptPattern {
   def matches(x: JValue) = Pattern.matches(x, this, Map.empty[Variable[_], AnyRef])
   def unapply(x: JValue) = matches(x)
 }
@@ -18,7 +20,7 @@ object Pattern {
 
   type Results = Map[Variable[_], Any]
 
-  private [matcher] def matches(x: JValue, pattern: Pattern, environment: Results): Option[Results] = pattern match {
+  private [matcher] def matches(x: JValue, pattern: OptPattern, environment: Results): Option[Results] = pattern match {
     case Literal(atom: JAtom) =>
       if(x == atom) Some(environment)
       else None
@@ -59,11 +61,21 @@ object Pattern {
             case None => None
             case Some(env) =>
               val (k, v) = sp
-              if(obj contains k) matches(obj(k), v, env)
-              else None
+              if(obj contains k) {
+                matches(obj(k), v, env)
+              } else {
+                v match {
+                  case _: Pattern =>
+                    None
+                  case _: POption =>
+                    Some(environment)
+                }
+              }
           }
         }
       }
+    case POption(subPattern) =>
+      matches(x, subPattern, environment)
   }
 }
 
@@ -71,14 +83,16 @@ case class Literal(underlying: JValue) extends Pattern
 case class FLiteral(x: JValue => Boolean) extends Pattern
 
 sealed abstract class Variable[T] extends Pattern {
-  def apply(results: Pattern.Results): T
+  def apply(results: Pattern.Results): T =
+    results(this).asInstanceOf[T]
+
+  def get(results: Pattern.Results): Option[T] =
+    results.get(this).map(_.asInstanceOf[T])
+
   private [matcher] def maybeFill(x: JValue, environment: Pattern.Results): Option[Pattern.Results]
 }
 
 private[matcher] final class JVariable[T <: JValue : ClassManifest] extends Variable[T] {
-  def apply(results: Pattern.Results): T =
-    implicitly[ClassManifest[T]].erasure.cast(results(this)).asInstanceOf[T]
-
   def maybeFill(x: JValue, environment: Pattern.Results): Option[Pattern.Results] = {
     x.cast[T] match {
       case None =>
@@ -97,9 +111,6 @@ private[matcher] final class JVariable[T <: JValue : ClassManifest] extends Vari
 }
 
 private[matcher] final class CVariable[T : JsonCodec] extends Variable[T] {
-  def apply(results: Pattern.Results): T =
-    results(this).asInstanceOf[T]
-
   def maybeFill(x: JValue, environment: Pattern.Results): Option[Pattern.Results] = {
     implicitly[JsonCodec[T]].decode(x) flatMap { r1 =>
       environment.get(this) match {
@@ -119,5 +130,6 @@ object Variable {
   def cooked[T : JsonCodec](): Variable[T] = new CVariable[T]
 }
 case class PArray(subPatterns: Pattern*) extends Pattern
-case class PObject(subPatterns: (String, Pattern)*) extends Pattern
+case class PObject(subPatterns: (String, OptPattern)*) extends Pattern
 
+case class POption(subPattern: Pattern) extends OptPattern

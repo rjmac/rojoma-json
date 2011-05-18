@@ -79,6 +79,26 @@ class MatchesTests extends FunSuite with MustMatchers {
     (PObject("hello" -> 1, "there" -> a, "world" -> 3) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (Some(Map(a -> JIntegral(2))))
   }
 
+  test("object variables can be optional") {
+    val a = Variable.raw[JNumber]()
+    (PObject("hello" -> 1, "there" -> 2, "world" -> POption(a)) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (Some(Map(a -> JIntegral(3))))
+    (PObject("hello" -> 1, "there" -> 2, "world" -> POption(a)) matches j("""{'hello':1,'there':2}""")) must equal (Some(Map.empty))
+  }
+
+  test("optional variables are bound only once") {
+    val a = Variable.raw[JNumber]()
+    (PObject("hello" -> 1, "there" -> POption(a), "world" -> POption(a)) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (None)
+    (PObject("hello" -> 1, "there" -> a, "world" -> POption(a)) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (None)
+    (PObject("hello" -> 1, "there" -> POption(a), "world" -> a) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (None)
+    (PObject("hello" -> 1, "there" -> a, "world" -> POption(a)) matches j("""{'hello':1,'there':2,'world':2}""")) must equal (Some(Map(a -> JIntegral(2))))
+    (PObject("hello" -> 1, "there" -> POption(a), "world" -> a) matches j("""{'hello':1,'there':2,'world':2}""")) must equal (Some(Map(a -> JIntegral(2))))
+  }
+
+  test("omitted optional variables don't affect present ones") {
+    val a = Variable.raw[JNumber]()
+    (PObject("hello" -> 1, "there" -> POption(a), "world" -> a) matches j("""{'hello':1,'world':2}""")) must equal (Some(Map(a -> JIntegral(2))))
+  }
+
   test("nest variables match") {
     val a = Variable.raw[JNumber]()
     val b = Variable.raw[JString]()
