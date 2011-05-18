@@ -127,6 +127,25 @@ class MatchesTests extends FunSuite with MustMatchers {
     (PObject("hello" -> a, "there" -> a) matches j("""{'hello':'happy','there':'sad'}""")) must equal (None)
   }
 
+  test("codecs can be matched") {
+    import codec.JsonCodecs._
+    val a = Variable.cooked[List[String]]()
+    (PObject("hello" -> a) matches j("""{'hello':['happy','there','sad']}""")) must equal (Some(Map(a -> List("happy","there","sad"))))
+  }
+
+  test("types with codecs can be matched as literals") {
+    import codec.JsonCodecs._
+    (PObject("hello" -> List("happy","there","sad")) matches j("""{'hello':['happy','there','sad']}""")) must equal (Some(Map.empty))
+    (PObject("hello" -> List("happy")) matches j("""{'hello':['happy','there','sad']}""")) must equal (None)
+  }
+
+  test("codecs match normally") {
+    import codec.JsonCodecs._
+    val a = Variable.cooked[String]()
+    (PObject("hello" -> a, "world" -> a) matches j("""{'hello':'happy','world':'gnu'}""")) must equal (None)
+    (PObject("hello" -> a, "world" -> a) matches j("""{'hello':'happy','world':'happy'}""")) must equal (Some(Map(a -> "happy")))
+  }
+
   test("patterns can be matched") {
     val a = Variable.raw[JNumber]()
     val b = Variable.raw[JString]()
