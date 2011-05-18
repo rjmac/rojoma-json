@@ -159,6 +159,12 @@ class MatchesTests extends FunSuite with MustMatchers {
     (PObject("hello" -> a, "world" -> a) matches j("""{'hello':'happy','world':'happy'}""")) must equal (Some(Map(a -> "happy")))
   }
 
+  test("codecs do not interfere with normal matching") {
+    import codec.JsonCodecs._
+    // if this is matched via JValue's JsonCodec, it will fail.
+    (PObject("hello" -> JArray(List(JString("happy")))) matches j("""{'hello':['happy','world','happy']}""")) must equal (Some(Map.empty))
+  }
+
   test("patterns can be matched") {
     val a = Variable.raw[JNumber]()
     val b = Variable.raw[JString]()
