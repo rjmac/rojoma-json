@@ -7,21 +7,67 @@ import org.scalatest.FunSuite
 import org.scalatest.matchers.MustMatchers
 
 class MatchesTests extends FunSuite with MustMatchers {
-  import Pattern._
-
   def j(s: String) = io.JsonReader.fromString(s)
 
-  test("atom literals match") {
-    (JNull matches JNull) must equal (Some(Map.empty))
-    (JBoolean(true) matches JBoolean(true)) must equal (Some(Map.empty))
-    (JBoolean(false) matches JBoolean(false)) must equal (Some(Map.empty))
-    (JString("hello") matches JString("hello")) must equal (Some(Map.empty))
-  }
+  locally {
+    // tests which depend on having the JValue => Literal conversion in scope because
+    // "matches" is used on a JValue directly.
 
-  test("atom literals don't match") {
-    (JNull matches JBoolean(true)) must equal (None)
-    (JBoolean(true) matches JBoolean(false)) must equal (None)
-    (JString("hello") matches JString("world")) must equal (None)
+    import OptPattern._
+
+    test("atom literals match") {
+      (JNull matches JNull) must equal (Some(Map.empty))
+      (JBoolean(true) matches JBoolean(true)) must equal (Some(Map.empty))
+      (JBoolean(false) matches JBoolean(false)) must equal (Some(Map.empty))
+      (JString("hello") matches JString("hello")) must equal (Some(Map.empty))
+    }
+
+    test("atom literals don't match") {
+      (JNull matches JBoolean(true)) must equal (None)
+      (JBoolean(true) matches JBoolean(false)) must equal (None)
+      (JString("hello") matches JString("world")) must equal (None)
+    }
+
+    test("sequence literals match exactly") {
+      (j("""[1,2,3]""") matches j("""[1,2,3]""")) must equal (Some(Map.empty))
+    }
+
+    test("sequence literals match prefix") {
+      (j("""[1,2,3]""") matches j("""[1,2,3,4,5]""")) must equal (Some(Map.empty))
+    }
+
+    test("sequence literals do not match overlong") {
+      (j("""[1,2,3]""") matches j("""[1,2]""")) must equal (None)
+    }
+
+    test("sequence literals to not match mismatch") {
+      (j("""[1,2,3]""") matches j("""[1,3,3]""")) must equal (None)
+    }
+
+    test("sequence literals inside other literals match like outer ones") {
+      (j("""[[1,2,3]]""") matches j("""[[1,2,3]]""")) must equal (Some(Map.empty))
+      (j("""[[1,2,3]]""") matches j("""[[1,2,3,4,5]]""")) must equal (Some(Map.empty))
+      (j("""[[1,2,3]]""") matches j("""[[1,2]]""")) must equal (None)
+      (j("""[[1,2,3]]""") matches j("""[[1,3,3]]""")) must equal (None)
+    }
+
+    test("object literals match exactly") {
+      (j("""{'hello':1,'world':2}""") matches j("""{'world':2,'hello':1}""")) must equal (Some(Map.empty))
+    }
+
+    test("object literals match subset") {
+      (j("""{'hello':1,'world':2}""") matches j("""{'world':2,'hello':1,'gnu':3}""")) must equal (Some(Map.empty))
+    }
+
+    test("object literals do not match superset") {
+      (j("""{'hello':1,'world':2}""") matches j("""{'world':2}""")) must equal (None)
+    }
+
+    test("nested object literals match the same as top-level ones") {
+      (j("""[{'hello':1,'world':2}]""") matches j("""[{'world':2,'hello':1}]""")) must equal (Some(Map.empty))
+      (j("""[{'hello':1,'world':2}]""") matches j("""[{'world':2,'hello':1,'gnu':3}]""")) must equal (Some(Map.empty))
+      (j("""[{'hello':1,'world':2}]""") matches j("""[{'world':2}]""")) must equal (None)
+    }
   }
 
   test("variables get filled in") {
@@ -35,29 +81,6 @@ class MatchesTests extends FunSuite with MustMatchers {
     (x matches JBoolean(true)) must equal (None)
   }
 
-  test("sequence literals match exactly") {
-    (j("""[1,2,3]""") matches j("""[1,2,3]""")) must equal (Some(Map.empty))
-  }
-
-  test("sequence literals match prefix") {
-    (j("""[1,2,3]""") matches j("""[1,2,3,4,5]""")) must equal (Some(Map.empty))
-  }
-
-  test("sequence literals do not match overlong") {
-    (j("""[1,2,3]""") matches j("""[1,2]""")) must equal (None)
-  }
-
-  test("sequence literals to not match mismatch") {
-    (j("""[1,2,3]""") matches j("""[1,3,3]""")) must equal (None)
-  }
-
-  test("sequence literals inside other literals match like outer ones") {
-    (j("""[[1,2,3]]""") matches j("""[[1,2,3]]""")) must equal (Some(Map.empty))
-    (j("""[[1,2,3]]""") matches j("""[[1,2,3,4,5]]""")) must equal (Some(Map.empty))
-    (j("""[[1,2,3]]""") matches j("""[[1,2]]""")) must equal (None)
-    (j("""[[1,2,3]]""") matches j("""[[1,3,3]]""")) must equal (None)
-  }
-
   test("sequence variables match") {
     val middle = Variable.raw[JIntegral]()
     (PArray(1, middle, 3) matches j("""[1,2,3]""")) must equal (Some(Map(middle -> JIntegral(2))))
@@ -67,24 +90,6 @@ class MatchesTests extends FunSuite with MustMatchers {
     val a = Variable.raw[JIntegral]()
     val b = Variable.raw[JString]()
     (PArray(1, a, PArray("hello", b, "world"), 3) matches j("""[1,2,["hello","there","world"],3]""")) must equal (Some(Map(a -> JIntegral(2), b -> JString("there"))))
-  }
-
-  test("object literals match exactly") {
-    (j("""{'hello':1,'world':2}""") matches j("""{'world':2,'hello':1}""")) must equal (Some(Map.empty))
-  }
-
-  test("object literals match subset") {
-    (j("""{'hello':1,'world':2}""") matches j("""{'world':2,'hello':1,'gnu':3}""")) must equal (Some(Map.empty))
-  }
-
-  test("object literals do not match superset") {
-    (j("""{'hello':1,'world':2}""") matches j("""{'world':2}""")) must equal (None)
-  }
-
-  test("nested object literals match the same as top-level ones") {
-    (j("""[{'hello':1,'world':2}]""") matches j("""[{'world':2,'hello':1}]""")) must equal (Some(Map.empty))
-    (j("""[{'hello':1,'world':2}]""") matches j("""[{'world':2,'hello':1,'gnu':3}]""")) must equal (Some(Map.empty))
-    (j("""[{'hello':1,'world':2}]""") matches j("""[{'world':2}]""")) must equal (None)
   }
 
   test("object variables match") {
