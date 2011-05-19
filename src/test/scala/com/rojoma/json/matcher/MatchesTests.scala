@@ -165,6 +165,13 @@ class MatchesTests extends FunSuite with MustMatchers {
     (PObject("hello" -> JArray(List(JString("happy")))) matches j("""{'hello':['happy','world','happy']}""")) must equal (Some(Map.empty))
   }
 
+  test("switch matches the first possibility") {
+    val a = Variable.raw[JString]()
+    val b = Variable.raw[JBoolean]()
+    (FirstOf(a, b) matches JString("hello")) must equal (Some(Map(a -> JString("hello"))))
+    (FirstOf(a, b) matches JBoolean(true)) must equal (Some(Map(b -> JBoolean(true))))
+  }
+
   test("patterns can be matched") {
     val a = Variable.raw[JNumber]()
     val b = Variable.raw[JString]()

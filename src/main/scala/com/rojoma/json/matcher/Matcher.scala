@@ -6,7 +6,7 @@ import codec.JsonCodec
 
 sealed trait OptPattern
 
-trait Implicits {
+object OptPattern {
   implicit def litify[T : JsonCodec](x: T): Pattern = FLiteral(j => implicitly[JsonCodec[T]].decode(j) == Some(x))
   implicit def litify(x: JValue): Pattern = Literal(x)
   implicit def litify(x: Long): Pattern = Literal(JNumber(x))
@@ -15,14 +15,11 @@ trait Implicits {
   implicit def litify(x: Boolean): Pattern = Literal(JBoolean(x))
 }
 
-object OptPattern extends Implicits {
-}
-
 sealed trait Pattern extends OptPattern {
   def matches(x: JValue) = Pattern.matches(x, this, Map.empty[Variable[_], AnyRef])
   def unapply(x: JValue) = matches(x)
 }
-object Pattern extends Implicits {
+object Pattern {
   type Results = Map[Variable[_], Any]
 
   private def foldLeftOpt[A, B](seq: Iterable[B], init: A)(f: (A, B) => Option[A]): Option[A] = {
@@ -95,6 +92,16 @@ object Pattern extends Implicits {
           }
         }
       }
+    case FirstOf(subPatterns @ _*) =>
+      val it = subPatterns.iterator
+      def loop(): Option[Results] = {
+        if(!it.hasNext) None
+        else matches(x, it.next(), environment) match {
+          case None => loop()
+          case res => res
+        }
+      }
+      loop()
     case POption(subPattern) =>
       matches(x, subPattern, environment)
   }
@@ -152,5 +159,6 @@ object Variable {
 }
 case class PArray(subPatterns: Pattern*) extends Pattern
 case class PObject(subPatterns: (String, OptPattern)*) extends Pattern
+case class FirstOf(subPatterns: Pattern*) extends Pattern
 
 case class POption(subPattern: Pattern) extends OptPattern
