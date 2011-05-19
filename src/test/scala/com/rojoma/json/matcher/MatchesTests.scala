@@ -117,6 +117,15 @@ class MatchesTests extends FunSuite with MustMatchers {
     (PObject("hello" -> 1, "there" -> POption(a), "world" -> a) matches j("""{'hello':1,'world':2}""")) must equal (Some(Map(a -> JIntegral(2))))
   }
 
+  test("optional fields will match null") {
+    (PObject("hello" -> POption(1)) matches j("""{'hello':null}""")) must equal (Some(Map.empty))
+  }
+
+  test("optional fields will match null only if the subpattern doesn't acept it") {
+    var a = Variable.raw[JValue]
+    (PObject("hello" -> POption(a)) matches j("""{'hello':null}""")) must equal (Some(Map(a -> JNull)))
+  }
+
   test("nest variables match") {
     val a = Variable.raw[JNumber]()
     val b = Variable.raw[JString]()

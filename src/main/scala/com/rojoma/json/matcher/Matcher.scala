@@ -103,7 +103,10 @@ object Pattern {
       }
       loop()
     case POption(subPattern) =>
-      matches(x, subPattern, environment)
+      matches(x, subPattern, environment) orElse {
+        if(x == JNull) Some(environment)
+        else None
+      }
   }
 }
 
