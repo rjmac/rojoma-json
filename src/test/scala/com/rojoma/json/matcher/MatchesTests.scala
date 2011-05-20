@@ -32,8 +32,8 @@ class MatchesTests extends FunSuite with MustMatchers {
       (j("""[1,2,3]""") matches j("""[1,2,3]""")) must equal (Some(Map.empty))
     }
 
-    test("sequence literals match prefix") {
-      (j("""[1,2,3]""") matches j("""[1,2,3,4,5]""")) must equal (Some(Map.empty))
+    test("sequence literals do NOT match prefix") {
+      (j("""[1,2,3]""") matches j("""[1,2,3,4,5]""")) must equal (None)
     }
 
     test("sequence literals do not match overlong") {
@@ -46,7 +46,7 @@ class MatchesTests extends FunSuite with MustMatchers {
 
     test("sequence literals inside other literals match like outer ones") {
       (j("""[[1,2,3]]""") matches j("""[[1,2,3]]""")) must equal (Some(Map.empty))
-      (j("""[[1,2,3]]""") matches j("""[[1,2,3,4,5]]""")) must equal (Some(Map.empty))
+      (j("""[[1,2,3]]""") matches j("""[[1,2,3,4,5]]""")) must equal (None)
       (j("""[[1,2,3]]""") matches j("""[[1,2]]""")) must equal (None)
       (j("""[[1,2,3]]""") matches j("""[[1,3,3]]""")) must equal (None)
     }
@@ -55,8 +55,8 @@ class MatchesTests extends FunSuite with MustMatchers {
       (j("""{'hello':1,'world':2}""") matches j("""{'world':2,'hello':1}""")) must equal (Some(Map.empty))
     }
 
-    test("object literals match subset") {
-      (j("""{'hello':1,'world':2}""") matches j("""{'world':2,'hello':1,'gnu':3}""")) must equal (Some(Map.empty))
+    test("object literals do not match subset") {
+      (j("""{'hello':1,'world':2}""") matches j("""{'world':2,'hello':1,'gnu':3}""")) must equal (None)
     }
 
     test("object literals do not match superset") {
@@ -65,7 +65,7 @@ class MatchesTests extends FunSuite with MustMatchers {
 
     test("nested object literals match the same as top-level ones") {
       (j("""[{'hello':1,'world':2}]""") matches j("""[{'world':2,'hello':1}]""")) must equal (Some(Map.empty))
-      (j("""[{'hello':1,'world':2}]""") matches j("""[{'world':2,'hello':1,'gnu':3}]""")) must equal (Some(Map.empty))
+      (j("""[{'hello':1,'world':2}]""") matches j("""[{'world':2,'hello':1,'gnu':3}]""")) must equal (None)
       (j("""[{'hello':1,'world':2}]""") matches j("""[{'world':2}]""")) must equal (None)
     }
   }
@@ -117,8 +117,8 @@ class MatchesTests extends FunSuite with MustMatchers {
     (PObject("hello" -> 1, "there" -> POption(a), "world" -> a) matches j("""{'hello':1,'world':2}""")) must equal (Some(Map(a -> JIntegral(2))))
   }
 
-  test("optional fields will match null") {
-    (PObject("hello" -> POption(1)) matches j("""{'hello':null}""")) must equal (Some(Map.empty))
+  test("optional fields will not match null") {
+    (PObject("hello" -> POption(1)) matches j("""{'hello':null}""")) must equal (None)
   }
 
   test("optional fields will match null only if the subpattern doesn't acept it") {
@@ -171,12 +171,6 @@ class MatchesTests extends FunSuite with MustMatchers {
     val a = Variable.cooked[String]()
     (PObject("hello" -> a, "world" -> a) matches j("""{'hello':'happy','world':'gnu'}""")) must equal (None)
     (PObject("hello" -> a, "world" -> a) matches j("""{'hello':'happy','world':'happy'}""")) must equal (Some(Map(a -> "happy")))
-  }
-
-  test("codecs do not interfere with normal matching") {
-    import codec.JsonCodecs._
-    // if this is matched via JValue's JsonCodec, it will fail.
-    (PObject("hello" -> JArray(List(JString("happy")))) matches j("""{'hello':['happy','world','happy']}""")) must equal (Some(Map.empty))
   }
 
   test("switch matches the first possibility") {

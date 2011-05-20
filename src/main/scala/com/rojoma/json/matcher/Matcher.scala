@@ -35,30 +35,9 @@ object Pattern {
   }
 
   private [matcher] def matches(x: JValue, pattern: OptPattern, environment: Results): Option[Results] = pattern match {
-    case Literal(atom: JAtom) =>
-      if(x == atom) Some(environment)
+    case Literal(lit) =>
+      if(x == lit) Some(environment)
       else None
-    case Literal(pat: JArray) => // matches if x is a sequence and pat is a prefix of that sequence
-      x.cast[JArray] flatMap { lit =>
-        // instead of just doing
-        //  if(pat.length <= lit.length && pat.zip(lit).forall { case (a,b) => a == b }) Some(environment)
-        // we want to apply the same subsetting logic to child objects.
-        if(pat.length > lit.length) None
-        else foldLeftOpt(pat zip lit, environment) { (env, pl) =>
-          val (subPat, subLit) = pl
-          matches(subLit, Literal(subPat), environment)
-        }
-      }
-    case Literal(pat: JObject) => // matches if x is an object and pat is a subset of that object
-      x.cast[JObject] flatMap { lit =>
-        // instead of just doing
-        //   if(pat.forall { case (k, v) => lit.get(k) == Some(v) }) Some(environment)
-        // we want to apply the same subsetting logic to child objects.
-        foldLeftOpt(pat, environment) { (env, kv) =>
-          val (k,v) = kv
-          lit.get(k).flatMap(matches(_, Literal(v), environment))
-        }
-      }
     case FLiteral(recognizer) =>
       if(recognizer(x)) Some(environment)
       else None
@@ -103,10 +82,7 @@ object Pattern {
       }
       loop()
     case POption(subPattern) =>
-      matches(x, subPattern, environment) orElse {
-        if(x == JNull) Some(environment)
-        else None
-      }
+      matches(x, subPattern, environment)
   }
 }
 
