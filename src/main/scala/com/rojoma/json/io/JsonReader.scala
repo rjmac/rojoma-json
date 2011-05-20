@@ -19,7 +19,10 @@ case class JsonUnknownIdentifier(identifier: String) extends JsonParseException(
   * the end.
   *
   * This class does many small reads; it may be a good idea to wrap
-  * the input `Reader` into a `BufferedReader`. */
+  * the input `Reader` into a `BufferedReader`.
+  *
+  * As extensions, this reader supports single-quoted strings as well
+  * as unquoted field-names. */
 class JsonReader(r: Reader) {
   private var isPeeked: Boolean = false
   private var peeked: Char = _
@@ -104,11 +107,17 @@ class JsonReader(r: Reader) {
         didOne = true
       }
 
-      if(peek() == '"' | peek() == '\'') {
-        val JString(k) = readString()
+      def readRestOfField(field: String) {
         expect(':')
         val v = read()
-        result += (k -> v)
+        result += (field -> v)
+      }
+
+      if(peek() == '"' | peek() == '\'') {
+        val JString(k) = readString()
+        readRestOfField(k)
+      } else if(Character.isUnicodeIdentifierStart(peek())) {
+        readRestOfField(readIdentifier())
       }
     }
     error("Can't get here")
