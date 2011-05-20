@@ -58,7 +58,16 @@ class JsonReader(r: Reader) {
     skipWhitespace()
     val n = next()
     if(n != c) throw JsonUnexpectedCharacter(n, c.toString)
+  }
+
+  private def hopeFor(c: Char) = {
     skipWhitespace()
+    if(peek() == c) {
+      next()
+      true
+    } else {
+      false
+    }
   }
 
   /** Read one JSON datum out of the `Reader`.
@@ -87,25 +96,21 @@ class JsonReader(r: Reader) {
     case other => throw JsonUnknownIdentifier(other)
   }
 
-  private def readObject(): JObject = {
+  private def readObject() = {
     // It's bad practice to rely on this, but we'll preserve the order
     // of elements as they're read (barring duplication).
     val result = new scala.collection.mutable.LinkedHashMap[String, JValue]
     next() // skip '{'
 
     var didOne = false
-    while(true) {
-      skipWhitespace()
-      if(peek() == '}') {
-        next() // skip it
-        return JObject(result)
-      }
-
+    while(!hopeFor('}')) {
       if(didOne) {
         expect(',')
       } else {
         didOne = true
       }
+
+      skipWhitespace()
 
       def readRestOfField(field: String) {
         expect(':')
@@ -120,30 +125,28 @@ class JsonReader(r: Reader) {
         readRestOfField(readIdentifier())
       }
     }
-    error("Can't get here")
+
+    JObject(result)
   }
 
-  private def readArray(): JArray = {
+  private def readArray() = {
     val builder = IndexedSeq.newBuilder[JValue]
     next() // skip '['
 
     var didOne = false
-    while(true) {
-      skipWhitespace()
-      if(peek() == ']') {
-        next() // skip it
-        return JArray(builder.result())
-      }
-
+    while(!hopeFor(']')) {
       if(didOne) {
         expect(',')
       } else {
         didOne = true
       }
 
+      skipWhitespace()
+
       builder += read()
     }
-    error("Can't get here")
+
+    JArray(builder.result())
   }
 
   private def readString() = { // TODO: validate surrogate pairs
