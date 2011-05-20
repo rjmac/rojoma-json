@@ -21,6 +21,9 @@ private[codec] object CBHolder {
 object JsonCodec {
   import CBHolder._
 
+  def toJValue[T : JsonCodec](x: T) = implicitly[JsonCodec[T]].encode(x)
+  def fromJValue[T : JsonCodec](x: JValue) = implicitly[JsonCodec[T]].decode(x)
+
   // I would like all of these codecs' encode methods to use view, but unfortunately in scala 2.8.1,
   // empty views and non-views are not symmetrically comparable (Nil.view == Nil, but Nil != Nil.view).  This
   // is fixed in 2.9.  Once we've migrated there, I think these should become views again.
