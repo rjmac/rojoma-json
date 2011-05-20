@@ -41,13 +41,13 @@ object ArbitraryJson {
     x <- arbitrary[String]
   } yield JString(x)
 
-  def arrayGen(sz: Int): Gen[JArray] = Gen.sized { sz =>
+  val arrayGen: Gen[JArray] = Gen.sized { sz =>
     for {
       x <-Gen.containerOf[List, JValue](Gen.resize(sz/2, valueGen))
     } yield JArray(x)
   }
 
-  def objectGen(sz: Int): Gen[JObject] = Gen.sized { sz =>
+  val objectGen: Gen[JObject] = Gen.sized { sz =>
     def pairGen = for {
       x <- arbitrary[String]
       y <- valueGen
@@ -58,7 +58,7 @@ object ArbitraryJson {
     } yield JObject(x.toMap)
   }
 
-  val valueGen = Gen.sized { sz => Gen.oneOf(JNull, boolGen, numGen, stringGen, arrayGen(sz), objectGen(sz)) }
+  val valueGen = Gen.oneOf(JNull, boolGen, numGen, stringGen, arrayGen, objectGen)
 
   implicit val ArbitraryJson = Arbitrary[JValue](valueGen)
 }
