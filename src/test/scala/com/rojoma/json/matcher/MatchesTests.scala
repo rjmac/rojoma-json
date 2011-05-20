@@ -71,40 +71,40 @@ class MatchesTests extends FunSuite with MustMatchers {
   }
 
   test("variables get filled in") {
-    val x = Variable.raw[JBoolean]()
+    val x = Variable[JBoolean]()
     (x matches JBoolean(true)) must equal (Some(Map(x -> JBoolean(true))))
     (x matches JBoolean(false)) must equal (Some(Map(x -> JBoolean(false))))
   }
 
   test("variables don't match") {
-    val x = Variable.raw[JString]()
+    val x = Variable[JString]()
     (x matches JBoolean(true)) must equal (None)
   }
 
   test("sequence variables match") {
-    val middle = Variable.raw[JIntegral]()
+    val middle = Variable[JIntegral]()
     (PArray(1, middle, 3) matches j("""[1,2,3]""")) must equal (Some(Map(middle -> JIntegral(2))))
   }
 
   test("nested sequence variables match") {
-    val a = Variable.raw[JIntegral]()
-    val b = Variable.raw[JString]()
+    val a = Variable[JIntegral]()
+    val b = Variable[JString]()
     (PArray(1, a, PArray("hello", b, "world"), 3) matches j("""[1,2,["hello","there","world"],3]""")) must equal (Some(Map(a -> JIntegral(2), b -> JString("there"))))
   }
 
   test("object variables match") {
-    val a = Variable.raw[JNumber]()
+    val a = Variable[JNumber]()
     (PObject("hello" -> 1, "there" -> a, "world" -> 3) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (Some(Map(a -> JIntegral(2))))
   }
 
   test("object variables can be optional") {
-    val a = Variable.raw[JNumber]()
+    val a = Variable[JNumber]()
     (PObject("hello" -> 1, "there" -> 2, "world" -> POption(a)) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (Some(Map(a -> JIntegral(3))))
     (PObject("hello" -> 1, "there" -> 2, "world" -> POption(a)) matches j("""{'hello':1,'there':2}""")) must equal (Some(Map.empty))
   }
 
   test("optional variables are bound only once") {
-    val a = Variable.raw[JNumber]()
+    val a = Variable[JNumber]()
     (PObject("hello" -> 1, "there" -> POption(a), "world" -> POption(a)) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (None)
     (PObject("hello" -> 1, "there" -> a, "world" -> POption(a)) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (None)
     (PObject("hello" -> 1, "there" -> POption(a), "world" -> a) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (None)
@@ -113,7 +113,7 @@ class MatchesTests extends FunSuite with MustMatchers {
   }
 
   test("omitted optional variables don't affect present ones") {
-    val a = Variable.raw[JNumber]()
+    val a = Variable[JNumber]()
     (PObject("hello" -> 1, "there" -> POption(a), "world" -> a) matches j("""{'hello':1,'world':2}""")) must equal (Some(Map(a -> JIntegral(2))))
   }
 
@@ -122,67 +122,65 @@ class MatchesTests extends FunSuite with MustMatchers {
   }
 
   test("optional fields will match null only if the subpattern doesn't acept it") {
-    var a = Variable.raw[JValue]
+    var a = Variable[JValue]
     (PObject("hello" -> POption(a)) matches j("""{'hello':null}""")) must equal (Some(Map(a -> JNull)))
   }
 
   test("nest variables match") {
-    val a = Variable.raw[JNumber]()
-    val b = Variable.raw[JString]()
+    val a = Variable[JNumber]()
+    val b = Variable[JString]()
     (PObject("hello" -> 1, "there" -> a, "gnu" -> PObject("smiling" -> b), "world" -> 3) matches j("""{'hello':1,'there':2,'world':3,'gnu':{'smiling':'gnus','are':'happy'}}""")) must equal (Some(Map(a -> JIntegral(2), b -> JString("gnus"))))
   }
 
   test("variables look up results") {
-    val a = Variable.raw[JNumber]()
+    val a = Variable[JNumber]()
     val results: Pattern.Results = Map(a -> JIntegral(5))
     a(results) must equal (JIntegral(5))
   }
 
   test("variables look up failure") {
-    val a = Variable.raw[JValue]()
+    val a = Variable[JValue]()
     val results: Pattern.Results = Map.empty
     evaluating { a(results) } must produce [NoSuchElementException]
   }
 
   test("variables can match the same thing twice") {
-    val a = Variable.raw[JValue]()
+    val a = Variable[JValue]()
     (PObject("hello" -> a, "there" -> a) matches j("""{'hello':'happy','there':'happy'}""")) must equal (Some(Map(a -> JString("happy"))))
   }
 
   test("variables fail to match different things") {
-    val a = Variable.raw[JValue]()
+    val a = Variable[JValue]()
     (PObject("hello" -> a, "there" -> a) matches j("""{'hello':'happy','there':'sad'}""")) must equal (None)
   }
 
   test("codecs can be matched") {
-    import codec.JsonCodecs._
-    val a = Variable.cooked[List[String]]()
+    val a = Variable[List[String]]()
     (PObject("hello" -> a) matches j("""{'hello':['happy','there','sad']}""")) must equal (Some(Map(a -> List("happy","there","sad"))))
   }
 
   test("types with codecs can be matched as literals") {
-    import codec.JsonCodecs._
     (PObject("hello" -> List("happy","there","sad")) matches j("""{'hello':['happy','there','sad']}""")) must equal (Some(Map.empty))
     (PObject("hello" -> List("happy")) matches j("""{'hello':['happy','there','sad']}""")) must equal (None)
+    (PObject("hello" -> "world") matches j("""{'hello':'world'}""")) must equal (Some(Map.empty))
   }
 
   test("codecs match normally") {
-    import codec.JsonCodecs._
-    val a = Variable.cooked[String]()
+    val a = Variable[String]()
     (PObject("hello" -> a, "world" -> a) matches j("""{'hello':'happy','world':'gnu'}""")) must equal (None)
     (PObject("hello" -> a, "world" -> a) matches j("""{'hello':'happy','world':'happy'}""")) must equal (Some(Map(a -> "happy")))
   }
 
   test("switch matches the first possibility") {
-    val a = Variable.raw[JString]()
-    val b = Variable.raw[JBoolean]()
+    val a = Variable[JString]()
+    val b = Variable[JBoolean]()
     (FirstOf(a, b) matches JString("hello")) must equal (Some(Map(a -> JString("hello"))))
     (FirstOf(a, b) matches JBoolean(true)) must equal (Some(Map(b -> JBoolean(true))))
   }
 
   test("patterns can be matched") {
-    val a = Variable.raw[JNumber]()
-    val b = Variable.raw[JString]()
+    val a = Variable[JNumber]()
+    val b = Variable[JString]()
     val Pattern1 = Literal(JNull)
     val Pattern2 = PObject("hello" -> 1, "there" -> a, "gnu" -> PObject("smiling" -> b), "world" -> 3)
     val scrutinee = j("""{'hello':1,'there':2,'world':3,'gnu':{'smiling':'gnus','are':'happy'}}""")

@@ -28,17 +28,21 @@ package com.rojoma.json.codec
  * `JsonCodec[T]`: a typeclass for converting objects to/from JSON
    * `encode(x: T): JValue`
    * `decode(x: JValue): Option[T]`
- * `JsonCodecs` : implicit `JsonCodec` objects and defs
 
-The following types have codecs in `JsonCodecs`:
+The following types have implicit codecs in `JsonCodec`'s compantion:
 
  * `String`
  * `Boolean`
- * `JValue`
+ * all subclasses of `JValue`
  * Any subclass of `Seq[T]` if `T` has a `JsonCodec`
  * Any subclass of `Map[String, T]` if `T` has a `JsonCodec`
  * `java.util.List[T]` if `T` has a `JsonCodec`
  * `java.util.Map[String, T]` if `T` has a `JsonCodec`
+
+I am not yet certain what the best way to handle number is; namely
+whether it is better to match strictly (so that a match fails if the
+number in the JSON is not representable as the requested type) or
+loosely (so that numbers may be rounded or otherwise mangled).
 
 package com.rojoma.json.io
 --------------------------
@@ -69,8 +73,8 @@ package com.rojoma.json.matcher
 These are probably best understood with a simple example:
 
 ```scala
-val channel = Variable.cooked[String]()
-val text = Variable.cooked[String]()
+val channel = Variable[String]() // Could be anything with a JsonCodec instance
+val text = Variable[String]()
 val ChatPattern =
   PObject("command" -> "chat",
           "to" -> channel,
@@ -99,13 +103,14 @@ def process(message: JValue) = message match {
 literal forms into `Pattern`s.
 
 Information is extracted by means of `Variable` patterns.  `Variable`s
-can be created with either of two methods on the companion, `raw[T <:
-JValue]()`, or `cooked[T : JsonCodec]()`.  At some point these will
-probably be unified, at which point they will become `apply`.  They
+can be created with the `apply` method on the companion object.  They
 are typed and will only succeed in matching if the value at their
 position is of the correct type.  If a single `Variable` appears more
 than once in a `Pattern`, it is not an error, but all appearances must
 match the same value.
+
+Any object with an implicit `JsonCodec` instance in scope can be
+automatically coerced to a literal `Pattern`.
 
 The result of a match is an opaque object which can be given to a
 `Variable` to extract the data, either by applying the `Variable` like

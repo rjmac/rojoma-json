@@ -8,11 +8,8 @@ sealed trait OptPattern
 
 object OptPattern {
   implicit def litify[T : JsonCodec](x: T): Pattern = FLiteral(j => implicitly[JsonCodec[T]].decode(j) == Some(x))
-  implicit def litify(x: JValue): Pattern = Literal(x)
   implicit def litify(x: Long): Pattern = Literal(JNumber(x))
   implicit def litify(x: Double): Pattern = Literal(JNumber(x))
-  implicit def litify(x: String): Pattern = Literal(JString(x))
-  implicit def litify(x: Boolean): Pattern = Literal(JBoolean(x))
 }
 
 sealed trait Pattern extends OptPattern {
@@ -34,7 +31,7 @@ object Pattern {
     return Some(acc)
   }
 
-  private [matcher] def matches(x: JValue, pattern: OptPattern, environment: Results): Option[Results] = pattern match {
+  private def matches(x: JValue, pattern: OptPattern, environment: Results): Option[Results] = pattern match {
     case Literal(lit) =>
       if(x == lit) Some(environment)
       else None
@@ -89,22 +86,27 @@ object Pattern {
 case class Literal(underlying: JValue) extends Pattern
 case class FLiteral(x: JValue => Boolean) extends Pattern
 
-sealed abstract class Variable[+T] extends Pattern {
+sealed abstract class Variable[+T] extends Pattern with PartialFunction[Pattern.Results, T] {
   def apply(results: Pattern.Results): T =
     results(this).asInstanceOf[T]
 
   def get(results: Pattern.Results): Option[T] =
     results.get(this).map(_.asInstanceOf[T])
 
+  def getOrElse[U >: T](results: Pattern.Results, alternative: => U): U =
+    results.get(this).map(_.asInstanceOf[T]).getOrElse(alternative)
+
+  def isDefinedAt(results: Pattern.Results) = results.isDefinedAt(this)
+
+  def isBound(results: Pattern.Results) = isDefinedAt(results)
+
   private [matcher] def maybeFill(x: JValue, environment: Pattern.Results): Option[Pattern.Results]
 }
 
-private[matcher] final class JVariable[T <: JValue : ClassManifest] extends Variable[T] {
-  def maybeFill(x: JValue, environment: Pattern.Results): Option[Pattern.Results] = {
-    x.cast[T] match {
-      case None =>
-        None
-      case Some(r1) =>
+object Variable {
+  def apply[T : JsonCodec](): Variable[T] = new Variable[T] {
+    def maybeFill(x: JValue, environment: Pattern.Results): Option[Pattern.Results] = {
+      implicitly[JsonCodec[T]].decode(x) flatMap { r1 =>
         environment.get(this) match {
           case None =>
             Some(environment + (this -> r1))
@@ -113,28 +115,9 @@ private[matcher] final class JVariable[T <: JValue : ClassManifest] extends Vari
           case _ =>
             None
         }
-    }
-  }
-}
-
-private[matcher] final class CVariable[T : JsonCodec] extends Variable[T] {
-  def maybeFill(x: JValue, environment: Pattern.Results): Option[Pattern.Results] = {
-    implicitly[JsonCodec[T]].decode(x) flatMap { r1 =>
-      environment.get(this) match {
-        case None =>
-          Some(environment + (this -> r1))
-        case Some(r2) if r2 == r1 =>
-          Some(environment)
-        case _ =>
-          None
       }
     }
   }
-}
-
-object Variable {
-  def raw[T <: JValue : ClassManifest](): Variable[T] = new JVariable[T]()
-  def cooked[T : JsonCodec](): Variable[T] = new CVariable[T]
 }
 case class PArray(subPatterns: Pattern*) extends Pattern
 case class PObject(subPatterns: (String, OptPattern)*) extends Pattern
