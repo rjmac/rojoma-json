@@ -12,14 +12,17 @@ object OptPattern {
   implicit def litify(x: Double): Pattern = Literal(JNumber(x))
 }
 
-sealed trait Pattern extends OptPattern {
-  def matches(x: JValue) = Pattern.matches(x, this, Map.empty[Variable[_], AnyRef])
+trait Pattern extends OptPattern {
+  def matches(x: JValue) = evaluate(x, Map.empty)
+  def evaluate(x: JValue, environment: Pattern.Results): Option[Pattern.Results]
+
   def unapply(x: JValue) = matches(x)
 }
+
 object Pattern {
   type Results = Map[Variable[_], Any]
 
-  private def foldLeftOpt[A, B](seq: Iterable[B], init: A)(f: (A, B) => Option[A]): Option[A] = {
+  private[matcher] def foldLeftOpt[A, B](seq: Iterable[B], init: A)(f: (A, B) => Option[A]): Option[A] = {
     val it = seq.iterator
     var acc = init
     while(it.hasNext) {
@@ -30,63 +33,21 @@ object Pattern {
     }
     return Some(acc)
   }
-
-  private def matches(x: JValue, pattern: OptPattern, environment: Results): Option[Results] = pattern match {
-    case Literal(lit) =>
-      if(x == lit) Some(environment)
-      else None
-    case FLiteral(recognizer) =>
-      if(recognizer(x)) Some(environment)
-      else None
-    case v: Variable[_] =>
-      v.maybeFill(x, environment)
-    case PArray(subPatterns @ _*) =>
-      x.cast[JArray] flatMap { arr =>
-        if(arr.length < subPatterns.length) {
-          None
-        } else {
-          foldLeftOpt(arr zip subPatterns, environment) { (env, vp) =>
-            val (subValue, subPattern) = vp
-            matches(subValue, subPattern, env)
-          }
-        }
-      }
-    case PObject(subPatterns @ _*) =>
-      x.cast[JObject] flatMap { obj =>
-        foldLeftOpt(subPatterns, environment) { (env, sp) =>
-          val (subKey, subPat) = sp
-          obj.get(subKey) match {
-            case Some(subValue) =>
-              matches(subValue, subPat, env)
-            case None =>
-              subPat match {
-                case _: Pattern =>
-                  None
-                case _: POption =>
-                  Some(env)
-              }
-          }
-        }
-      }
-    case FirstOf(subPatterns @ _*) =>
-      val it = subPatterns.iterator
-      def loop(): Option[Results] = {
-        if(!it.hasNext) None
-        else matches(x, it.next(), environment) match {
-          case None => loop()
-          case res => res
-        }
-      }
-      loop()
-    case POption(subPattern) =>
-      matches(x, subPattern, environment)
-  }
 }
 
-case class Literal(underlying: JValue) extends Pattern
-case class FLiteral(x: JValue => Boolean) extends Pattern
+case class Literal(literal: JValue) extends Pattern {
+  def evaluate(x: JValue, environment: Pattern.Results) =
+    if(x == literal) Some(environment)
+    else None
+}
 
-sealed abstract class Variable[+T] extends Pattern with PartialFunction[Pattern.Results, T] {
+case class FLiteral(recognizer: JValue => Boolean) extends Pattern {
+  def evaluate(x: JValue, environment: Pattern.Results) =
+    if(recognizer(x)) Some(environment)
+    else None
+}
+
+abstract class Variable[+T] extends Pattern with PartialFunction[Pattern.Results, T] {
   def apply(results: Pattern.Results): T =
     results(this).asInstanceOf[T]
 
@@ -99,13 +60,11 @@ sealed abstract class Variable[+T] extends Pattern with PartialFunction[Pattern.
   def isDefinedAt(results: Pattern.Results) = results.isDefinedAt(this)
 
   def isBound(results: Pattern.Results) = isDefinedAt(results)
-
-  private [matcher] def maybeFill(x: JValue, environment: Pattern.Results): Option[Pattern.Results]
 }
 
 object Variable {
   def apply[T : JsonCodec](): Variable[T] = new Variable[T] {
-    def maybeFill(x: JValue, environment: Pattern.Results): Option[Pattern.Results] = {
+    def evaluate(x: JValue, environment: Pattern.Results): Option[Pattern.Results] = {
       implicitly[JsonCodec[T]].decode(x) flatMap { r1 =>
         environment.get(this) match {
           case None =>
@@ -119,8 +78,56 @@ object Variable {
     }
   }
 }
-case class PArray(subPatterns: Pattern*) extends Pattern
-case class PObject(subPatterns: (String, OptPattern)*) extends Pattern
-case class FirstOf(subPatterns: Pattern*) extends Pattern
+case class PArray(subPatterns: Pattern*) extends Pattern {
+  def evaluate(x: JValue, environment: Pattern.Results) =
+    x.cast[JArray] flatMap { arr =>
+      if(arr.length < subPatterns.length) {
+        None
+      } else {
+        Pattern.foldLeftOpt(arr zip subPatterns, environment) { (env, vp) =>
+          val (subValue, subPattern) = vp
+          subPattern.evaluate(subValue, env)
+        }
+      }
+    }
+}
+
+case class PObject(subPatterns: (String, OptPattern)*) extends Pattern {
+  def evaluate(x: JValue, environment: Pattern.Results) =
+    x.cast[JObject] flatMap { obj =>
+      Pattern.foldLeftOpt(subPatterns, environment) { (env, sp) =>
+        sp match {
+          case (subKey, subPat: Pattern) =>
+            obj.get(subKey) match {
+              case Some(subValue) =>
+                subPat.evaluate(subValue, env)
+              case None =>
+                None
+            }
+          case (subKey, POption(subPat)) =>
+            obj.get(subKey) match {
+              case Some(subValue) =>
+                subPat.evaluate(subValue, env)
+              case None =>
+                Some(env)
+            }
+        }
+      }
+    }
+}
+
+case class FirstOf(subPatterns: Pattern*) extends Pattern {
+  def evaluate(x: JValue, environment: Pattern.Results) = {
+    val it = subPatterns.iterator
+    def loop(): Option[Pattern.Results] = {
+      if(!it.hasNext) None
+      else it.next().evaluate(x, environment) match {
+        case None => loop()
+        case res => res
+      }
+    }
+    loop()
+  }
+}
 
 case class POption(subPattern: Pattern) extends OptPattern
