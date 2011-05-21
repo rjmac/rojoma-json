@@ -48,8 +48,8 @@ package com.rojoma.json.io
 --------------------------
  * `JsonReader`: Convert character data to `JValues`
  * `JsonWriter`: Convert `JValues` to character data
-   * CompactJsonWriter
-   * PrettyJsonWriter
+   * `CompactJsonWriter`
+   * `PrettyJsonWriter`
 
 The two concrete `JsonWriter` classes have `toWriter` and `toString`
 convenience methods on their companion objects.  `JsonReader`,
@@ -66,9 +66,9 @@ package com.rojoma.json.matcher
      * `FLiteral(f: JValue => Boolean)`: conditionally match a value
      * `PArray(subpatterns: Pattern*)`: match an array containing values that match a series of patterns
      * `PObject(subpatterns: (String, OptPattern)*)`: match an object containing fields that match patterns
-     * `FirstOf(subpatterns: Pattern*)`: Try to match a series of patterns in turn
-     * `Variable[T]`: Try to match a value of type T; either a "raw" JValue or a "cooked" product of a JsonCodec
+     * `FirstOf(subpatterns: Pattern*)`: try to match a series of patterns in turn
      * `AllOf(subpatterns: OptPattern*)`: match a series of patterns in turn
+     * `Variable[T : JsonCodec]`: match a value of type `T`
    * `POption(subpattern: Pattern)`: Optionally match a pattern.  Only valid in a `PObject` and `AllOf`.
 
 These are probably best understood with a simple example:
@@ -131,3 +131,10 @@ In this context, `POption(p)` is a shorthand for `FirstOf(p, Variable[JValue]())
 
 Custom matchers can be defined by subclassing `Pattern` and
 implementing the method `evaluate(x: JValue, environment: Pattern.Results): Option[Pattern.Results]`.
+
+package com.rojoma.json.util
+----------------------------
+Utility operations that combine parts from other packages.  Currently
+the only member of this package is the object `JsonUtil` which contains
+convenience methods for moving data all the way between character data
+and usable object.s
