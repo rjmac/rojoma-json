@@ -245,6 +245,7 @@ object PrettyJsonWriter {
     * @throws `IOException` if a low-level IO exception occurs.
     * @throws [[com.rojoma.json.io.JsonInvalidFloat]] if a NaN or infinite floating-point value is written.
     * @see [[com.rojoma.json.io.PrettyJsonWriter]] */
+  @throws(classOf[java.io.IOException])
   def toWriter(w: Writer, datum: JValue) = new PrettyJsonWriter(w).write(datum)
 
   /** Utility function for writing a single datum to a `String`.

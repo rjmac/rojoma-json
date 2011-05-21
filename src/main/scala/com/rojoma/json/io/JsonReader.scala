@@ -74,6 +74,8 @@ class JsonReader(r: Reader) {
     * @return The [[com.rojoma.json.ast.JValue]] read.
     * @throws [[com.rojoma.json.io.JsonParseException]] if a complete object cannot be read.
     * @throws `IOException` if a low-level IO error occurs. */
+  @throws(classOf[JsonParseException])
+  @throws(classOf[java.io.IOException])
   def read(): JValue = {
     skipWhitespace()
     peek() match {
