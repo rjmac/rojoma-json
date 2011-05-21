@@ -137,4 +137,4 @@ package com.rojoma.json.util
 Utility operations that combine parts from other packages.  Currently
 the only member of this package is the object `JsonUtil` which contains
 convenience methods for moving data all the way between character data
-and usable object.s
+and usable objects.
