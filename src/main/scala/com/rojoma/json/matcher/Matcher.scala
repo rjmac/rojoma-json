@@ -130,4 +130,16 @@ case class FirstOf(subPatterns: Pattern*) extends Pattern {
   }
 }
 
+case class AllOf(subPatterns: OptPattern*) extends Pattern {
+  def evaluate(x: JValue, environment: Pattern.Results) =
+    Pattern.foldLeftOpt(subPatterns, environment) { (env, subPat) =>
+      subPat match {
+        case pat: Pattern =>
+          pat.evaluate(x, env)
+        case POption(pat) =>
+          pat.evaluate(x, env) orElse Some(env)
+      }
+    }
+}
+
 case class POption(subPattern: Pattern) extends OptPattern

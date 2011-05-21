@@ -68,7 +68,8 @@ package com.rojoma.json.matcher
      * `PObject(subpatterns: (String, OptPattern)*)`: match an object containing fields that match patterns
      * `FirstOf(subpatterns: Pattern*)`: Try to match a series of patterns in turn
      * `Variable[T]`: Try to match a value of type T; either a "raw" JValue or a "cooked" product of a JsonCodec
-   * `POption(subpattern: Pattern)`: Optionally match a pattern.  Only valid in a `PObject`.
+     * `AllOf(subpatterns: OptPattern*)`: match a series of patterns in turn
+   * `POption(subpattern: Pattern)`: Optionally match a pattern.  Only valid in a `PObject` and `AllOf`.
 
 These are probably best understood with a simple example:
 
@@ -123,3 +124,10 @@ field is marked optional by wrapping it in a `POption`, it either must
 match the subpattern or not appear at all.  To tolerate random
 unparsable data in a field, use FirstOf with a final branch that
 accepts anything.
+
+In `AllOf`, if a field is marked with POption, the value under
+consideration is allowed to _not_ match that particular subpattern.
+In this context, `POption(p)` is a shorthand for `FirstOf(p, Variable[JValue]())`.
+
+Custom matchers can be defined by subclassing `Pattern` and
+implementing the method `evaluate(x: JValue, environment: Pattern.Results): Option[Pattern.Results]`.
