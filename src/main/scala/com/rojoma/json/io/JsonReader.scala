@@ -149,17 +149,46 @@ class JsonReader(r: Reader) {
     JArray(builder.result())
   }
 
-  private def readString() = { // TODO: validate surrogate pairs
+  private def readString() = {
     val sb = new StringBuilder
     val Boundary = next()
     while(peek() != Boundary) {
-      next() match {
-        case '\\' => sb += readEscapedCharacter()
-        case c => sb += c
-      }
+      readPotentialSurrogatePairInto(sb, readChar(), Boundary)
     }
     next() // skip closing character
     JString(sb.toString)
+  }
+
+  @annotation.tailrec
+  private def readPotentialSurrogatePairInto(sb: StringBuilder, c: Char, endOfString: Char) {
+    if(c >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE) {
+      val badChar = 0xfffd.toChar
+      if(Character.isHighSurrogate(c)) {
+        if(peek() == endOfString) {
+          sb += badChar
+        } else {
+          val potentialSecondHalf = readChar()
+          if(Character.isLowSurrogate(potentialSecondHalf)) {
+            sb += c
+            sb += potentialSecondHalf
+          } else {
+            sb += badChar
+            readPotentialSurrogatePairInto(sb, potentialSecondHalf, endOfString)
+          }
+        }
+      } else {
+        sb += badChar
+      }
+    } else {
+      sb += c
+    }
+  }
+
+  private def readChar() = {
+    next() match {
+      case '\\' => readEscapedCharacter()
+      case c => c
+    }
   }
 
   private def readEscapedCharacter(): Char = {

@@ -3,6 +3,7 @@ package io
 
 import org.scalatest.FunSuite
 import org.scalatest.prop.Checkers
+import org.scalatest.matchers.MustMatchers
 
 import org.scalacheck.Arbitrary
 import org.scalacheck.Gen
@@ -10,9 +11,9 @@ import org.scalacheck.Gen
 import org.scalacheck.Prop._
 
 import ast.ArbitraryJValue.ArbitraryJValue
-import ast.JValue
+import ast.{JValue, JString}
 
-class JsonIoTests extends FunSuite with Checkers {
+class JsonIoTests extends FunSuite with Checkers with MustMatchers {
 
   // Strings with surrogate characters that make valid surrogate pairs
   implicit val ArbitraryValidString = Arbitrary[String] {
@@ -41,6 +42,25 @@ class JsonIoTests extends FunSuite with Checkers {
     check(forAll { x: JValue =>
       JsonReader.fromString(PrettyJsonWriter.toString(x)) == x
     })
+  }
+
+  test("reading replaces broken surrogate pairs") {
+    JsonReader.fromString("'\ud800'") must equal (JString("\ufffd"))
+    JsonReader.fromString("'\ud800x'") must equal (JString("\ufffdx"))
+    JsonReader.fromString("'\udc00'") must equal (JString("\ufffd"))
+    JsonReader.fromString("'\udc00x'") must equal (JString("\ufffdx"))
+    JsonReader.fromString("'\udc00\ud800\udc00'") must equal (JString("\ufffd\ud800\udc00"))
+
+    JsonReader.fromString("'\\ud800'") must equal (JString("\ufffd"))
+    JsonReader.fromString("'\\ud800x'") must equal (JString("\ufffdx"))
+    JsonReader.fromString("'\\udc00'") must equal (JString("\ufffd"))
+    JsonReader.fromString("'\\udc00x'") must equal (JString("\ufffdx"))
+    JsonReader.fromString("'\\udc00\\ud800\\udc00'") must equal (JString("\ufffd\ud800\udc00"))
+  }
+
+  test("reading handles mixed escaped/unescaped surrogate pairs") {
+    JsonReader.fromString("'\\ud800\udc00'") must equal (JString("\ud800\udc00"))
+    JsonReader.fromString("'\ud800\\udc00'") must equal (JString("\ud800\udc00"))
   }
 }
 
