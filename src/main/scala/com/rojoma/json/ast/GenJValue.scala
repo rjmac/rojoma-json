@@ -19,15 +19,15 @@ object GenJValue {
     x <- arbitrary[Long]
   } yield JIntegral(x)
 
-  val genJNumber = Gen.oneOf(genJFloatingPoint, genJIntegral)
+  val genJNumber: Gen[JNumber] = Gen.oneOf(genJFloatingPoint, genJIntegral)
   
   def genJString(implicit arbString: Arbitrary[String]) = for {
     x <- arbString.arbitrary
   } yield JString(x)
 
-  val genJNull = Gen.value(JNull) // Just for completeness' sake
+  val genJNull: Gen[JNull] = Gen.value(JNull) // Just for completeness' sake
 
-  def genJAtom(implicit arbString: Arbitrary[String]) =
+  def genJAtom(implicit arbString: Arbitrary[String]): Gen[JAtom] =
     Gen.oneOf(genJNull, genJBoolean, genJNumber, genJString)
 
   def genJArray(elementGen: Gen[JValue] = genJValue, sizeFactor: Double = 0.5): Gen[JArray] = Gen.sized { sz =>

@@ -64,7 +64,8 @@ case class JString(string: String) extends JAtom
 case class JBoolean(boolean: Boolean) extends JAtom
 
 /** Null. */
-case object JNull extends JAtom
+sealed abstract class JNull extends JAtom // so the object has a nameable type
+case object JNull extends JNull
 
 /** The common superclass of arrays and objects.  This and [[com.rojoma.json.ast.JAtom]] form
   * a partition of the set of valid [[com.rojoma.json.ast.JValue]]s. */
