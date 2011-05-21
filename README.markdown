@@ -4,16 +4,16 @@ rojoma-json
 package com.rojoma.json.ast
 ---------------------------
  * `JValue`: An AST for JSON
-   * `JAtom`
-     * `JNull`
-     * `JBoolean(boolean: Boolean)`
-     * `JString(string: String)`
-     * `JNumber`
-       * `JIntegral(integral: Long)`
-       * `JFloatingPoint(floatingPoint: Double)`
-   * `JCompound`
-     * `JArray(toSeq: scala.collection.Seq[JValue])`
-     * `JObject(data: scala.collection.Map[String, JValue])`
+    * `JAtom`
+       * `JNull`
+       * `JBoolean(boolean: Boolean)`
+       * `JString(string: String)`
+       * `JNumber`
+          * `JIntegral(integral: Long)`
+          * `JFloatingPoint(floatingPoint: Double)`
+    * `JCompound`
+       * `JArray(toSeq: scala.collection.Seq[JValue])`
+       * `JObject(data: scala.collection.Map[String, JValue])`
 
 The `JCompound` classes extend `Iterable` and have convenience methods
 that make them act like `Seq` and `Map` respectively, but are not
@@ -26,8 +26,8 @@ downcast to a more specific type.
 package com.rojoma.json.codec
 -----------------------------
  * `JsonCodec[T]`: a typeclass for converting objects to/from JSON
-   * `encode(x: T): JValue`
-   * `decode(x: JValue): Option[T]`
+    * `encode(x: T): JValue`
+    * `decode(x: JValue): Option[T]`
 
 The following types have implicit codecs in `JsonCodec`'s compantion:
 
@@ -48,8 +48,8 @@ package com.rojoma.json.io
 --------------------------
  * `JsonReader`: Convert character data to `JValues`
  * `JsonWriter`: Convert `JValues` to character data
-   * `CompactJsonWriter`
-   * `PrettyJsonWriter`
+    * `CompactJsonWriter`
+    * `PrettyJsonWriter`
 
 The two concrete `JsonWriter` classes have `toWriter` and `toString`
 convenience methods on their companion objects.  `JsonReader`,
@@ -61,15 +61,15 @@ probably a good idea to ensure that it is buffered.
 package com.rojoma.json.matcher
 -------------------------------
  * `OptPattern`: The base class of all `Pattern`s, plus `POption`
-   * `Pattern`: A specification for extracting data from `JValue`s
-     * `Literal(x: JValue)`: match a literal value
-     * `FLiteral(f: JValue => Boolean)`: conditionally match a value
-     * `PArray(subpatterns: Pattern*)`: match an array containing values that match a series of patterns
-     * `PObject(subpatterns: (String, OptPattern)*)`: match an object containing fields that match patterns
-     * `FirstOf(subpatterns: Pattern*)`: try to match a series of patterns in turn
-     * `AllOf(subpatterns: OptPattern*)`: match a series of patterns in turn
-     * `Variable[T : JsonCodec]`: match a value of type `T`
-   * `POption(subpattern: Pattern)`: Optionally match a pattern.  Only valid in a `PObject` and `AllOf`.
+    * `Pattern`: A specification for extracting data from `JValue`s
+       * `Literal(x: JValue)`: match a literal value
+       * `FLiteral(f: JValue => Boolean)`: conditionally match a value
+       * `PArray(subpatterns: Pattern*)`: match an array containing values that match a series of patterns
+       * `PObject(subpatterns: (String, OptPattern)*)`: match an object containing fields that match patterns
+       * `FirstOf(subpatterns: Pattern*)`: try to match a series of patterns in turn
+       * `AllOf(subpatterns: OptPattern*)`: match a series of patterns in turn
+       * `Variable[T : JsonCodec]`: match a value of type `T`
+    * `POption(subpattern: Pattern)`: Optionally match a pattern.  Only valid in a `PObject` and `AllOf`.
 
 These are probably best understood with a simple example:
 
@@ -136,12 +136,12 @@ package com.rojoma.json.zipper
 ------------------------------
 A zipper for navigating JSON.  There are six interfaces:
 
-* `JsonZipper`
-  * `JAtomZipper`
-  * `JCompoundZipper`
-    * `JArrayZipper`
-    * `JObjectZipper`
-* `NothingZipper`
+ * `JsonZipper`
+    * `JAtomZipper`
+    * `JCompoundZipper`
+       * `JArrayZipper`
+       * `JObjectZipper`
+ * `NothingZipper`
 
 Each of the first five allows you to move `up`, to the `top` of the
 object, or find the object `here` or `replace` it.  In addition, the
