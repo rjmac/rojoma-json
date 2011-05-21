@@ -132,6 +132,29 @@ In this context, `POption(p)` is a shorthand for `FirstOf(p, Variable[JValue]())
 Custom matchers can be defined by subclassing `Pattern` and
 implementing the method `evaluate(x: JValue, environment: Pattern.Results): Option[Pattern.Results]`.
 
+package com.rojoma.json.zipper
+------------------------------
+A zipper for navigating JSON.  There are six interfaces:
+
+* `JsonZipper`
+  * `JAtomZipper`
+  * `JCompoundZipper`
+    * `JArrayZipper`
+    * `JObjectZipper`
+* `NothingZipper`
+
+Each of the first five allows you to move `up`, to the `top` of the
+object, or find the object `here` or `replace` it.  In addition, the
+array and object zippers allow `replace`ing or `remove`ing child
+elements.
+
+The `NothingZipper` is special -- it is what is returned from removing
+the current object.  With a `NothingZipper` you can either put a new
+object in the hole it represents (via the `replace` method) or move
+`up` or to the `top`.  Unlike the `JsonZipper` classes, when you have
+nothing `top` might not return anything, since it is possible that the
+root object is what was removed.
+
 package com.rojoma.json.util
 ----------------------------
 Utility operations that combine parts from other packages.  Currently
