@@ -143,6 +143,11 @@ A zipper for navigating JSON.  There are six interfaces:
        * `JObjectZipper`
  * `NothingZipper`
 
+Each one is parameterized with the type of its "parent" zipper in the
+path from the root of the JSON object being traversed.  An array
+or object zipper may be acquired by calling `asArray` or `asObject`
+on a generic zipper.
+
 Each of the first five allows you to move `up`, to the `top` of the
 object, or find the object `here` or `replace` it.  In addition, the
 array and object zippers allow `replace`ing or `remove`ing child
