@@ -103,6 +103,8 @@ object JsonZipper {
     case array: JArray => apply(array)
     case obj: JObject => apply(obj)
   }
+
+  implicit def toCastable[T <: JsonZipper](x: T) = new com.rojoma.`json-impl`.DownCaster(x)
 }
 
 // TOP LEVEL

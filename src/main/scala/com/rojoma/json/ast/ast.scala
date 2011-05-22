@@ -25,7 +25,7 @@ object JValue {
     *   } getOrElse(throw "couldn't find interesting elements")
     * }}}
     */
-  implicit def toCastable[T <: JValue](x: T) = new `ast-impl`.DownCaster(x)
+  implicit def toCastable[T <: JValue](x: T) = new com.rojoma.`json-impl`.DownCaster(x)
 }
 
 /** A JSON "atom" — anything except arrays or objects.  This and [[com.rojoma.json.ast.JCompound]] form

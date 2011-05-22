@@ -1,4 +1,4 @@
-package com.rojoma.json.`ast-impl`
+package com.rojoma.`json-impl`
 
 class DownCaster[T <: AnyRef](x : T) {
   def cast[U <: T : ClassManifest]: Option[U] = {
