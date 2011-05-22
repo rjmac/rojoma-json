@@ -36,8 +36,9 @@ sealed trait JsonZipper[Parent] {
 
   def remove: NothingZipper[Parent]
 
-  def asObject: Option[JObjectZipper[Parent]] = this.cast[JObjectZipper[Parent]]
-  def asArray: Option[JArrayZipper[Parent]] = this.cast[JArrayZipper[Parent]]
+  def asAtom = this.cast[JAtomZipper[Parent]]
+  def asArray = this.cast[JArrayZipper[Parent]]
+  def asObject = this.cast[JObjectZipper[Parent]]
 }
 
 sealed trait JAtomZipper[Parent] extends JsonZipper[Parent] {
