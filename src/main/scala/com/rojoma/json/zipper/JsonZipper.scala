@@ -3,9 +3,7 @@ package zipper
 
 import ast._
 
-sealed trait NothingZipper[Parent] {
-  def top: Option[JsonZipper[Nothing]]
-
+sealed trait ZipperLike[Parent] {
   def up: Parent
 
   def replace(newValue: JAtom): JAtomZipper[Parent]
@@ -19,20 +17,13 @@ sealed trait NothingZipper[Parent] {
   }
 }
 
-sealed trait JsonZipper[Parent] {
-  def up: Parent
+sealed trait NothingZipper[Parent] extends ZipperLike[Parent] {
+  def top: Option[JsonZipper[Nothing]]
+}
+
+sealed trait JsonZipper[Parent] extends ZipperLike[Parent] {
   def top: JsonZipper[Nothing]
   def here: JValue
-
-  def replace(newValue: JAtom): JAtomZipper[Parent]
-  def replace(newValue: JArray): JArrayZipper[Parent]
-  def replace(newValue: JObject): JObjectZipper[Parent]
-
-  def replace(newValue: JValue): JsonZipper[Parent] = newValue match {
-    case atom: JAtom => replace(atom)
-    case array: JArray => replace(array)
-    case obj: JObject => replace(obj)
-  }
 
   def remove: NothingZipper[Parent]
 
@@ -45,6 +36,10 @@ sealed trait JAtomZipper[Parent] extends JsonZipper[Parent] {
   def here: JAtom
 }
 
+object JAtomZipper {
+  def unapply[P](zipper: JsonZipper[P]) = zipper.cast[JAtomZipper[P]]
+}
+
 sealed trait JCompoundZipper[Parent] extends JsonZipper[Parent] {
   def here: JCompound
 }
@@ -52,10 +47,19 @@ sealed trait JCompoundZipper[Parent] extends JsonZipper[Parent] {
 sealed trait JArrayZipper[Parent] extends JCompoundZipper[Parent] {
   def here: JArray
 
-  def down(idx: Int): JsonZipper[JArrayZipper[Parent]] = here(idx) match {
+  private def subZipper(elem: JValue, idx: Int) = elem match {
     case atom: JAtom => new UnchangedArrayElementAtomZipper[JArrayZipper[Parent]](atom, this, idx)
     case array: JArray => new UnchangedArrayElementArrayZipper[JArrayZipper[Parent]](array, this, idx)
     case obj: JObject => new UnchangedArrayElementObjectZipper[JArrayZipper[Parent]](obj, this, idx)
+  }
+
+  def down(idx: Int): JsonZipper[JArrayZipper[Parent]] = subZipper(here(idx), idx)
+
+  def map[P](f: JsonZipper[JArrayZipper[Parent]] => ZipperLike[JArrayZipper[Parent]]) = {
+    here.toSeq.view.zipWithIndex.foldLeft(this : JArrayZipper[Parent]) { (newSelf, childIdx) =>
+      val (child, idx) = childIdx
+      f(newSelf.subZipper(child, idx)).up
+    }
   }
 
   def remove(idx: Int): JArrayZipper[Parent]
@@ -63,14 +67,32 @@ sealed trait JArrayZipper[Parent] extends JCompoundZipper[Parent] {
   def length = size
 }
 
+object JArrayZipper {
+  def unapply[P](zipper: JsonZipper[P]) = zipper.cast[JArrayZipper[P]]
+}
+
 sealed trait JObjectZipper[Parent] extends JCompoundZipper[Parent] {
   def here: JObject
-  def down(field: String): JsonZipper[JObjectZipper[Parent]] = here(field) match {
+
+  private def subZipper(elem: JValue, field: String) = elem match {
     case atom: JAtom => new UnchangedObjectElementAtomZipper[JObjectZipper[Parent]](atom, this, field)
     case array: JArray => new UnchangedObjectElementArrayZipper[JObjectZipper[Parent]](array, this, field)
     case obj: JObject => new UnchangedObjectElementObjectZipper[JObjectZipper[Parent]](obj, this, field)
   }
+
+  def down(field: String): JsonZipper[JObjectZipper[Parent]] = subZipper(here(field), field)
   def remove(field: String): JObjectZipper[Parent]
+
+  def map(f: (String, JsonZipper[JObjectZipper[Parent]]) => ZipperLike[JObjectZipper[Parent]]) = {
+    here.fields.foldLeft(this : JObjectZipper[Parent]) { (newSelf, fieldChild) =>
+      val (field, child) = fieldChild
+      f(field, newSelf.subZipper(child, field)).up
+    }
+  }
+}
+
+object JObjectZipper {
+  def unapply[P](zipper: JsonZipper[P]) = zipper.cast[JObjectZipper[P]]
 }
 
 object JsonZipper {
