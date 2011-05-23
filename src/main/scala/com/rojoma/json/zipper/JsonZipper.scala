@@ -148,7 +148,7 @@ private[zipper] abstract class ArrayElementZipperLike[Parent <: JArrayZipper[_]]
   def remove = new ChangedArrayElementNothingZipper(parent, idx)
 }
 
-private[zipper] abstract class ArrayElementZipper[Parent <: JArrayZipper[_]](parent: Parent, idx: Int) extends ArrayElementZipperLike(parent, idx) {
+private[zipper] abstract class ArrayElementZipper[Parent <: JArrayZipper[_]](p: Parent, i: Int) extends ArrayElementZipperLike(p, i) {
   def top = parent.top
 }
 
@@ -176,7 +176,7 @@ private[zipper] abstract class ObjectElementZipperLike[Parent <: JObjectZipper[_
   def remove = new ChangedObjectElementNothingZipper(parent, field)
 }
 
-private[zipper] abstract class ObjectElementZipper[Parent <: JObjectZipper[_]](parent: Parent, field: String) extends ObjectElementZipperLike(parent, field) {
+private[zipper] abstract class ObjectElementZipper[Parent <: JObjectZipper[_]](p: Parent, f: String) extends ObjectElementZipperLike(p, f) {
   def top = parent.top
 }
 

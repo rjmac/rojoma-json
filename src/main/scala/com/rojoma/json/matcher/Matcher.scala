@@ -7,9 +7,9 @@ import codec.JsonCodec
 sealed trait OptPattern
 
 object OptPattern {
-  implicit def litify[T : JsonCodec](x: T): Pattern = FLiteral(j => implicitly[JsonCodec[T]].decode(j) == Some(x))
-  implicit def litify(x: Long): Pattern = Literal(JNumber(x))
-  implicit def litify(x: Double): Pattern = Literal(JNumber(x))
+  implicit def litifyCodec[T : JsonCodec](x: T): Pattern = FLiteral(j => implicitly[JsonCodec[T]].decode(j) == Some(x))
+  implicit def litifyLong(x: Long): Pattern = Literal(JNumber(x))
+  implicit def litifyDouble(x: Double): Pattern = Literal(JNumber(x))
 }
 
 trait Pattern extends OptPattern {
