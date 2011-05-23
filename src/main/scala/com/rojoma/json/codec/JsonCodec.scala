@@ -26,13 +26,14 @@ object JsonCodec {
 
   // I would like all of these codecs' encode methods to use view, but unfortunately in scala 2.8.1,
   // empty views and non-views are not symmetrically comparable (Nil.view == Nil, but Nil != Nil.view).  This
-  // is fixed in 2.9.  Once we've migrated there, I think these should become views again.
-  //
-  // I've marked all the lines which "should" be views with "VIEWIFY"
+  // is fixed in 2.9.
 
   implicit def seqCodec[T, S[X] <: sc.Seq[X]](implicit tCodec: JsonCodec[T], buildFactory: CB[T, S[T]]) = new JsonCodec[S[T]] {
     def encode(x: S[T]): JValue = {
-      JArray(x.map(implicitly[JsonCodec[T]].encode)) // VIEWIFY
+      if(x.nonEmpty)
+        JArray(x.view.map(implicitly[JsonCodec[T]].encode))
+      else
+        JArray(Nil)
     }
 
     def decode(xs: JValue): Option[S[T]] = xs match {
@@ -55,7 +56,10 @@ object JsonCodec {
 
   implicit def arrayCodec[T: JsonCodec: ClassManifest] = new JsonCodec[Array[T]] {
     def encode(x: Array[T]): JValue =
-      JArray(x.map(implicitly[JsonCodec[T]].encode)) // VIEWIFY
+      if(x.length > 0)
+        JArray(x.view.map(implicitly[JsonCodec[T]].encode))
+      else
+        JArray(Nil)
 
     def decode(xs: JValue): Option[Array[T]] = xs match {
       case JArray(jElems) =>
@@ -77,7 +81,10 @@ object JsonCodec {
 
   implicit def juListCodec[T: JsonCodec] = new JsonCodec[ju.List[T]] {
     def encode(x: ju.List[T]): JValue = {
-      JArray(x.map(implicitly[JsonCodec[T]].encode)) // VIEWIFY
+      if(!x.isEmpty)
+        JArray(x.view.map(implicitly[JsonCodec[T]].encode))
+      else
+        JArray(Nil)
     }
 
     def decode(xs: JValue): Option[ju.List[T]] = xs match {
