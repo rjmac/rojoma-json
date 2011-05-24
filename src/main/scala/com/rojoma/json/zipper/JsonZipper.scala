@@ -5,6 +5,7 @@ import ast._
 
 sealed trait ZipperLike[Parent] {
   def up(implicit ev: Parent <:< JCompoundZipper[_]): Parent
+  def upOpt: Option[JsonZipper[_]]
 
   def replace(newValue: JAtom): JAtomZipper[Parent]
   def replace(newValue: JArray): JArrayZipper[Parent]
@@ -114,6 +115,7 @@ sealed abstract trait Root // phantom
 
 private[zipper] class TopLevelZipperLike {
   def up(implicit ev: Root <:< JCompoundZipper[_]) = throw new Exception("Can't go up from the top")
+  def upOpt = None
 
   def replace(newValue: JAtom) = new TopLevelAtomZipper(newValue)
   def replace(newValue: JArray) = new TopLevelArrayZipper(newValue)
@@ -141,8 +143,24 @@ private[zipper] class TopLevelObjectZipper(val here: JObject) extends TopLevelZi
 
 // ARRAY ELEMENT BUT UNCHANGED
 
-private[zipper] abstract class ArrayElementZipperLike[Parent <: JArrayZipper[_]](val parent: Parent, val idx: Int) {
+private[zipper] abstract class ElementZipperLike[Parent <: JCompoundZipper[_]](val parent: Parent) {
   def up(implicit ev: Parent <:< JCompoundZipper[_]) = parent
+  def upOpt = Some(up)
+}
+
+private[zipper] trait ElementZipper[Parent <: JCompoundZipper[_]] extends JsonZipper[Parent] { this: ElementZipperLike[Parent] =>
+  def top = {
+    def loop(last: JsonZipper[_], next: Option[JsonZipper[_]]): JsonZipper[_] = {
+      next match {
+        case None => last
+        case Some(p) => loop(p, p.upOpt)
+      }
+    }
+    loop(this, upOpt).asInstanceOf[JsonZipper[Root]]
+  }
+}
+
+private[zipper] abstract class ArrayElementZipperLike[Parent <: JArrayZipper[_]](p: Parent, val idx: Int) extends ElementZipperLike(p) {
   def replace(newValue: JAtom) = new ChangedArrayElementAtomZipper(newValue, parent, idx)
   def replace(newValue: JArray) = new ChangedArrayElementArrayZipper(newValue, parent, idx)
   def replace(newValue: JObject) = new ChangedArrayElementObjectZipper(newValue, parent, idx)
@@ -150,9 +168,7 @@ private[zipper] abstract class ArrayElementZipperLike[Parent <: JArrayZipper[_]]
   def remove = new ChangedArrayElementNothingZipper(parent, idx)
 }
 
-private[zipper] abstract class ArrayElementZipper[Parent <: JArrayZipper[_]](p: Parent, i: Int) extends ArrayElementZipperLike(p, i) {
-  def top = parent.top
-}
+private[zipper] abstract class ArrayElementZipper[Parent <: JArrayZipper[_]](p: Parent, i: Int) extends ArrayElementZipperLike(p, i)  with ElementZipper[Parent]
 
 private[zipper] trait ArrayElementArrayZipper[Parent <: JArrayZipper[_]] extends JArrayZipper[Parent] { this: ArrayElementZipper[Parent] =>
   def remove(removed: Int) = new ChangedArrayElementArrayZipper(JArray(here.toSeq.patch(removed, Nil, 1)), parent, idx)
@@ -170,17 +186,15 @@ private[zipper] class UnchangedArrayElementObjectZipper[Parent <: JArrayZipper[_
 
 // OBJECT ELEMENT BUT UNCHANGED
 
-private[zipper] abstract class ObjectElementZipperLike[Parent <: JObjectZipper[_]](val parent: Parent, val field: String) {
-  def up(implicit ev: Parent <:< JCompoundZipper[_]) = parent
+private[zipper] abstract class ObjectElementZipperLike[Parent <: JObjectZipper[_]](p: Parent, val field: String) extends ElementZipperLike(p) {
   def replace(newValue: JAtom) = new ChangedObjectElementAtomZipper(newValue, parent, field)
   def replace(newValue: JArray) = new ChangedObjectElementArrayZipper(newValue, parent, field)
   def replace(newValue: JObject) = new ChangedObjectElementObjectZipper(newValue, parent, field)
+
   def remove = new ChangedObjectElementNothingZipper(parent, field)
 }
 
-private[zipper] abstract class ObjectElementZipper[Parent <: JObjectZipper[_]](p: Parent, f: String) extends ObjectElementZipperLike(p, f) {
-  def top = parent.top
-}
+private[zipper] abstract class ObjectElementZipper[Parent <: JObjectZipper[_]](p: Parent, f: String) extends ObjectElementZipperLike(p, f) with ElementZipper[Parent]
 
 private[zipper] trait ObjectElementArrayZipper[Parent <: JObjectZipper[_]] extends JArrayZipper[Parent] { this: ObjectElementZipper[Parent] =>
   def remove(removed: Int) = new ChangedObjectElementArrayZipper(JArray(here.toSeq.patch(removed, Nil, 1)), parent, field)
@@ -201,7 +215,6 @@ private[zipper] class UnchangedObjectElementObjectZipper[Parent <: JObjectZipper
 private[zipper] abstract class ChangedArrayElementZipper[Parent <: JArrayZipper[_]](parent: Parent, idx: Int) extends ArrayElementZipper(parent, idx) {
   def here: JValue
   override def up(implicit ev: Parent <:< JCompoundZipper[_]) = parent.replace(JArray(parent.here.toSeq.updated(idx, here))).asInstanceOf[Parent]
-  override def top = up.top
 }
 
 private[zipper] class ChangedArrayElementAtomZipper[Parent <: JArrayZipper[_]](val here: JAtom, parent: Parent, idx: Int) extends ChangedArrayElementZipper(parent, idx) with JAtomZipper[Parent]
@@ -215,10 +228,9 @@ private[zipper] class ChangedArrayElementNothingZipper[Parent <: JArrayZipper[_]
 
 // OBJECT ELEMENT AND CHANGED
 
-private[zipper] abstract class ChangedObjectElementZipper[Parent <: JObjectZipper[_]](parent: Parent, field: String) extends ObjectElementZipper(parent, field) {
+private[zipper] abstract class ChangedObjectElementZipper[Parent <: JObjectZipper[_]](parent: Parent, field: String) extends ObjectElementZipper(parent, field) with ElementZipper[Parent] {
   def here: JValue
   override def up(implicit ev: Parent <:< JCompoundZipper[_]) = parent.replace(JObject(parent.here.fields.updated(field, here))).asInstanceOf[Parent]
-  override def top = up.top
 }
 
 private[zipper] class ChangedObjectElementAtomZipper[Parent <: JObjectZipper[_]](val here: JAtom, parent: Parent, field: String) extends ChangedObjectElementZipper(parent, field) with JAtomZipper[Parent]
