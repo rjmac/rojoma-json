@@ -40,34 +40,26 @@ object JPath {
     input.down_?(target).toStream
   }
 
-  private def downAllOp(input: JsonZipper[_]): Stream[JsonZipper[_]] = {
-    input match {
-      case _: JAtomZipper[_] => Stream.empty
-      case arr: JArrayZipper[_] => Stream.range(0, arr.size - 1).map(arr.down)
-      case obj: JObjectZipper[_] => (obj.here.fields.keys).toStream.map(obj.down)
-    }
+  private val downAllOp: Stage = _ match {
+    case _: JAtomZipper[_] => Stream.empty
+    case arr: JArrayZipper[_] => Stream.range(0, arr.size - 1).map(arr.down)
+    case obj: JObjectZipper[_] => (obj.here.fields.keys).toStream.map(obj.down)
   }
 
-  private def downLastOp(input: JsonZipper[_]): Stream[JsonZipper[_]] = {
-    input.last_?.toStream
-  }
+  private val downLastOp: Stage = _.last_?.toStream
 
-  private def downFirstOp(input: JsonZipper[_]): Stream[JsonZipper[_]] = {
-    input.first_?.toStream
-  }
+  private val downFirstOp: Stage = _.first_?.toStream
 
-  private def downRecOp(input: JsonZipper[_]): Stream[JsonZipper[_]] = {
-    input #:: downAllOp(input).flatMap(downRecOp)
-  }
+  private val downRecOp: Stage = input => input #:: downAllOp(input).flatMap(downRecOp)
 
   private def whereOp(pref: JsonZipper[_] => Boolean)(input: JsonZipper[_]): Stream[JsonZipper[_]] = {
     if(pref(input)) Stream(input)
     else Stream.empty
   }
 
-  private def upOp(input: JsonZipper[_]): Stream[JsonZipper[_]] = input.up_?.toStream
+  private val upOp: Stage = _.up_?.toStream
 
-  private def nextOp(input: JsonZipper[_]): Stream[JsonZipper[_]] = input.next_?.toStream
+  private val nextOp: Stage = _.next_?.toStream
 
-  private def prevOp(input: JsonZipper[_]): Stream[JsonZipper[_]] = input.prev_?.toStream
+  private val prevOp: Stage = _.prev_?.toStream
 }
