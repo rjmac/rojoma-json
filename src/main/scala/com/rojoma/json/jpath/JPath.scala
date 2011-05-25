@@ -6,14 +6,14 @@ import zipper._
 
 import JPath._
 
-class JPath private (cursors: Seq[JsonZipper[_]]) {
-  def this(input: JValue) = this(Seq(JsonZipper(input)))
+class JPath private (cursors: Stream[JsonZipper[_]]) {
+  def this(input: JValue) = this(Stream(JsonZipper(input)))
 
   def finish = cursors.map(_.here)
 
   private def step(op: Stage): JPath = {
     if(cursors.isEmpty) this
-    else new JPath(cursors.flatMap(op).distinct)
+    else new JPath(cursors.flatMap(op))
   }
 
   def down(target: String) = step(downOp(target))
@@ -21,67 +21,53 @@ class JPath private (cursors: Seq[JsonZipper[_]]) {
   def * = step(downAllOp)
   def downLast = step(downLastOp)
   def downFirst = step(downFirstOp)
-  def downRec(target: String) = step(downRecOp(target))
-  def downRec(target: Int) = step(downRecOp(target))
+  def downRec = step(downRecOp)
+  def where(pred: JsonZipper[_] => Boolean) = step(whereOp(pred))
+  def downWhere(pred: JsonZipper[_] => Boolean) = *.where(pred)
   def up = step(upOp)
   def next = step(nextOp)
   def prev = step(prevOp)
 }
 
 object JPath {
-  type Stage = JsonZipper[_] => Seq[JsonZipper[_]]
+  type Stage = JsonZipper[_] => Stream[JsonZipper[_]]
 
-  private def downOp(target: String)(input: JsonZipper[_]): Seq[JsonZipper[_]] = {
-    input.down_?(target).toSeq
+  private def downOp(target: String)(input: JsonZipper[_]): Stream[JsonZipper[_]] = {
+    input.down_?(target).toStream
   }
 
-  private def downOp(target: Int)(input: JsonZipper[_]): Seq[JsonZipper[_]] = {
-    input.down_?(target).toSeq
+  private def downOp(target: Int)(input: JsonZipper[_]): Stream[JsonZipper[_]] = {
+    input.down_?(target).toStream
   }
 
-  private def downAllOp(input: JsonZipper[_]): Seq[JsonZipper[_]] = {
+  private def downAllOp(input: JsonZipper[_]): Stream[JsonZipper[_]] = {
     input match {
-      case _: JAtomZipper[_] => Nil
-      case arr: JArrayZipper[_] => (0 until arr.size).map(arr.down)
-      case obj: JObjectZipper[_] => (obj.here.fields.keys).map(obj.down).toSeq
+      case _: JAtomZipper[_] => Stream.empty
+      case arr: JArrayZipper[_] => Stream.range(0, arr.size - 1).map(arr.down)
+      case obj: JObjectZipper[_] => (obj.here.fields.keys).toStream.map(obj.down)
     }
   }
 
-  private def downLastOp(input: JsonZipper[_]): Seq[JsonZipper[_]] = {
-    input.last_?.toSeq
+  private def downLastOp(input: JsonZipper[_]): Stream[JsonZipper[_]] = {
+    input.last_?.toStream
   }
 
-  private def downFirstOp(input: JsonZipper[_]): Seq[JsonZipper[_]] = {
-    input.first_?.toSeq
+  private def downFirstOp(input: JsonZipper[_]): Stream[JsonZipper[_]] = {
+    input.first_?.toStream
   }
 
-  private def downRecOp(target: String)(input: JsonZipper[_]): Seq[JsonZipper[_]] = {
-    input match {
-      case _: JAtomZipper[_] => Nil
-      case arr: JArrayZipper[_] =>
-        (0 until arr.size).map(arr.down).flatMap(downRecOp(target))
-      case obj: JObjectZipper[_] =>
-        val subResults = (obj.here.fields.keys).map(obj.down).flatMap(downRecOp(target)).toSeq
-        if(obj.here.contains(target)) obj.down(target) +: subResults
-        else subResults
-    }
+  private def downRecOp(input: JsonZipper[_]): Stream[JsonZipper[_]] = {
+    input #:: downAllOp(input).flatMap(downRecOp)
   }
 
-  private def downRecOp(target: Int)(input: JsonZipper[_]): Seq[JsonZipper[_]] = {
-    input match {
-      case _: JAtomZipper[_] => Nil
-      case arr: JArrayZipper[_] =>
-        val subResults = (0 until arr.size).map(arr.down).flatMap(downRecOp(target)).toSeq
-        if(0 <= target && target < arr.size) arr.down(target) +: subResults
-        else subResults
-      case obj: JObjectZipper[_] =>
-        (obj.here.fields.keys).map(obj.down).flatMap(downRecOp(target)).toSeq
-    }
+  private def whereOp(pref: JsonZipper[_] => Boolean)(input: JsonZipper[_]): Stream[JsonZipper[_]] = {
+    if(pref(input)) Stream(input)
+    else Stream.empty
   }
 
-  private def upOp(input: JsonZipper[_]): Seq[JsonZipper[_]] = input.up_?.toSeq
+  private def upOp(input: JsonZipper[_]): Stream[JsonZipper[_]] = input.up_?.toStream
 
-  private def nextOp(input: JsonZipper[_]): Seq[JsonZipper[_]] = input.next_?.toSeq
+  private def nextOp(input: JsonZipper[_]): Stream[JsonZipper[_]] = input.next_?.toStream
 
-  private def prevOp(input: JsonZipper[_]): Seq[JsonZipper[_]] = input.prev_?.toSeq
+  private def prevOp(input: JsonZipper[_]): Stream[JsonZipper[_]] = input.prev_?.toStream
 }
