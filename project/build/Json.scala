@@ -9,5 +9,12 @@ class Json(info: ProjectInfo) extends DefaultProject(info) with rsync.RsyncPubli
       case x => error("Unsupported Scala version " + x)
     }
 
+  override def packageSrcJar = defaultJarPath("-sources.jar")
+  val sourceArtifact = Artifact.sources(artifactID)
+
+  override def artifacts = super.artifacts ++ Seq(sourceArtifact)
+
+  override def packageToPublishActions = super.packageToPublishActions ++ Seq(packageSrc)
+
   def rsyncRepo = "rojoma.com:public_html/maven"
 }
