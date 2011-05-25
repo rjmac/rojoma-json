@@ -104,7 +104,7 @@ sealed trait JArrayZipper[Parent] extends JCompoundZipper[Parent] {
   def down(field: String)(implicit ev: Self <:< JObjectZipper[_]): JsonZipper[Self] = JsonZipper.badUserNoCookie()
 
   def down_?(idx: Int): Option[JsonZipper[Self]] = {
-    if(0 <= idx && here.toSeq.lengthCompare(size) >= 0) Some(down(idx))
+    if(0 <= idx && here.toSeq.lengthCompare(idx) > 0) Some(down(idx))
     else None
   }
   def down_?(field: String): Option[JsonZipper[Self]] = None
