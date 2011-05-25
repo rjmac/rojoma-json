@@ -6,35 +6,26 @@ import zipper._
 
 import JPath._
 
-class JPath private (ops: Seq[Stage]) {
-  def this() = this(Vector.empty)
+class JPath private (cursors: Seq[JsonZipper[_]]) {
+  def this(input: JValue) = this(Seq(JsonZipper(input)))
 
-  def apply(source: JValue) = apply2(Seq(JsonZipper(source)), ops.toStream).map(_.here).distinct
+  def finish = cursors.map(_.here)
 
-  private def apply2(source: Seq[JsonZipper[_]], ops: Stream[Stage]): Seq[JsonZipper[_]] = {
-    ops match {
-      case op #:: remainder =>
-        val newSource = for {
-          start <- source
-          end <- op(start)
-        } yield end
-        if(newSource.isEmpty) newSource
-        else apply2(newSource.distinct, remainder)
-      case _ =>
-        source
-    }
+  private def step(op: Stage): JPath = {
+    if(cursors.isEmpty) this
+    else new JPath(cursors.flatMap(op).distinct)
   }
 
-  def down(target: String) = new JPath(ops :+ downOp(target)_)
-  def down(target: Int) = new JPath(ops :+ downOp(target)_)
-  def * = new JPath(ops :+ downAllOp _)
-  def downLast = new JPath(ops :+ downLastOp _)
-  def downFirst = new JPath(ops :+ downFirstOp _)
-  def downRec(target: String) = new JPath(ops :+ downRecOp(target)_)
-  def downRec(target: Int) = new JPath(ops :+ downRecOp(target)_)
-  def up = new JPath(ops :+ upOp _)
-  def next = new JPath(ops :+ nextOp _)
-  def prev = new JPath(ops :+ prevOp _)
+  def down(target: String) = step(downOp(target))
+  def down(target: Int) = step(downOp(target))
+  def * = step(downAllOp)
+  def downLast = step(downLastOp)
+  def downFirst = step(downFirstOp)
+  def downRec(target: String) = step(downRecOp(target))
+  def downRec(target: Int) = step(downRecOp(target))
+  def up = step(upOp)
+  def next = step(nextOp)
+  def prev = step(prevOp)
 }
 
 object JPath {
