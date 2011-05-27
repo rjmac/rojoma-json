@@ -4,8 +4,8 @@ class Json(info: ProjectInfo) extends DefaultProject(info) with rsync.RsyncPubli
   lazy val scalaCheck = "org.scala-tools.testing" %% "scalacheck" % "1.8" % "optional"
   val scalaTest =
     buildScalaVersion match {
-      case "2.8.1" => "org.scalatest" % "scalatest" % "1.3"
-      case "2.9.0" => "org.scalatest" %% "scalatest" % "1.4.1"
+      case "2.8.1" => "org.scalatest" % "scalatest" % "1.3" % "test->default"
+      case "2.9.0" => "org.scalatest" %% "scalatest" % "1.4.1" % "test->default"
       case x => error("Unsupported Scala version " + x)
     }
 
