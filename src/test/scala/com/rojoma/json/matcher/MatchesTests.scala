@@ -194,4 +194,35 @@ class MatchesTests extends FunSuite with MustMatchers {
         fail("It should have matched Pattern2")
     }
   }
+
+  test("patterns can generate JSON") {
+    val a = Variable[JNumber]()
+    val b = Variable[String]()
+    val pattern = PObject("hello" -> 1, "there" -> a, "gnu" -> PObject("smiling" -> b, "are" -> "happy"), "world" -> 3)
+    pattern.generate(a := JNumber(2), b := "gnus") must equal (j("""{'hello':1,'there':2,'world':3,'gnu':{'smiling':'gnus','are':'happy'}}"""))
+  }
+
+  test("optional fields that fail to generate provide nothing") {
+    val a = Variable[JNumber]()
+    val b = Variable[String]()
+    val pattern = PObject("hello" -> POption(a), "there" -> b)
+    pattern.generate(b := "gnus") must equal (j("""{'there':'gnus'}"""))
+  }
+
+  test("non-optional fields throw an exception") {
+    val a = Variable[JNumber]()
+    val pattern = PObject("hello" -> a)
+    evaluating(pattern.generate()) must produce [JsonGenerationException]
+  }
+
+  test("generating from AllOf throws an exception") {
+    val pattern = AllOf("hello", "world")
+    evaluating(pattern.generate()) must produce [JsonGenerationException]
+  }
+
+  test("generating from FirstOf produces the first option that can be generated") {
+    val a = Variable[String]
+    val pattern = FirstOf(a, "hello", "world")
+    pattern.generate() must equal (JString("hello"))
+  }
 }

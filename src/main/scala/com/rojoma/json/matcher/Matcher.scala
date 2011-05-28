@@ -4,10 +4,14 @@ package matcher
 import ast._
 import codec.JsonCodec
 
+case class JsonGenerationException() extends RuntimeException("Cannot generate JSON; this is always a logic error.  You've forgotten to bind a variable, or you've used a pattern that cannot generate.")
+
 sealed trait OptPattern
 
 object OptPattern {
-  implicit def litifyCodec[T : JsonCodec](x: T): Pattern = FLiteral(j => implicitly[JsonCodec[T]].decode(j) == Some(x))
+  implicit def litifyCodec[T : JsonCodec](x: T): Pattern = new FLiteral(j => implicitly[JsonCodec[T]].decode(j) == Some(x)) {
+    override def generate(env: Pattern.Results) = Some(implicitly[JsonCodec[T]].encode(x))
+  }
   implicit def litifyLong(x: Long): Pattern = Literal(JNumber(x))
   implicit def litifyDouble(x: Double): Pattern = Literal(JNumber(x))
 }
@@ -15,6 +19,11 @@ object OptPattern {
 trait Pattern extends OptPattern {
   def matches(x: JValue) = evaluate(x, Map.empty)
   def evaluate(x: JValue, environment: Pattern.Results): Option[Pattern.Results]
+
+  def generate(bindings: (Pattern.Results => Pattern.Results)*): JValue =
+    generate(bindings.foldLeft(Map.empty : Pattern.Results) { (e, b) => b(e) }).getOrElse(throw JsonGenerationException())
+
+  def generate(environment: Pattern.Results): Option[JValue]
 
   def unapply(x: JValue) = matches(x)
 }
@@ -39,15 +48,19 @@ case class Literal(literal: JValue) extends Pattern {
   def evaluate(x: JValue, environment: Pattern.Results) =
     if(x == literal) Some(environment)
     else None
+
+  def generate(environment: Pattern.Results) = Some(literal)
 }
 
 case class FLiteral(recognizer: JValue => Boolean) extends Pattern {
   def evaluate(x: JValue, environment: Pattern.Results) =
     if(recognizer(x)) Some(environment)
     else None
+
+  def generate(environment: Pattern.Results): Option[JValue] = None
 }
 
-abstract class Variable[+T] extends Pattern with PartialFunction[Pattern.Results, T] {
+abstract class Variable[T] extends Pattern with PartialFunction[Pattern.Results, T] {
   def apply(results: Pattern.Results): T =
     results(this).asInstanceOf[T]
 
@@ -60,6 +73,8 @@ abstract class Variable[+T] extends Pattern with PartialFunction[Pattern.Results
   def isDefinedAt(results: Pattern.Results) = results.isDefinedAt(this)
 
   def isBound(results: Pattern.Results) = isDefinedAt(results)
+
+  def := (x: T) = (v: Pattern.Results) => v + (this -> x)
 }
 
 object Variable {
@@ -76,6 +91,8 @@ object Variable {
         }
       }
     }
+
+    def generate(environment: Pattern.Results) = get(environment).map(implicitly[JsonCodec[T]].encode)
   }
 }
 case class PArray(subPatterns: Pattern*) extends Pattern {
@@ -90,6 +107,14 @@ case class PArray(subPatterns: Pattern*) extends Pattern {
         }
       }
     }
+
+  def generate(environment: Pattern.Results) = {
+    val subValues = subPatterns.map(_.generate(environment))
+    if(subValues.forall(_.isDefined))
+      Some(JArray(subValues.map(_.get)))
+    else
+      None
+  }
 }
 
 case class PObject(subPatterns: (String, OptPattern)*) extends Pattern {
@@ -114,6 +139,29 @@ case class PObject(subPatterns: (String, OptPattern)*) extends Pattern {
         }
       }
     }
+
+
+  def generate(environment: Pattern.Results) = {
+    val newObject = Pattern.foldLeftOpt(subPatterns, Map.empty[String, JValue]) { (result, sp) =>
+      sp match {
+        case (subKey, subPat: Pattern) =>
+          subPat.generate(environment) match {
+            case Some(subValue) =>
+              Some(result + (subKey -> subValue))
+            case None =>
+              None
+          }
+        case (subKey, POption(subPat)) =>
+          subPat.generate(environment) match {
+            case Some(subValue) =>
+              Some(result + (subKey -> subValue))
+            case None =>
+              Some(result)
+          }
+      }
+    }
+    newObject.map(JObject)
+  }
 }
 
 case class FirstOf(subPatterns: Pattern*) extends Pattern {
@@ -122,6 +170,18 @@ case class FirstOf(subPatterns: Pattern*) extends Pattern {
     def loop(): Option[Pattern.Results] = {
       if(!it.hasNext) None
       else it.next().evaluate(x, environment) match {
+        case None => loop()
+        case res => res
+      }
+    }
+    loop()
+  }
+
+  def generate(environment: Pattern.Results) = {
+    val it = subPatterns.iterator
+    def loop(): Option[JValue] = {
+      if(!it.hasNext) None
+      else it.next().generate(environment) match {
         case None => loop()
         case res => res
       }
@@ -140,6 +200,8 @@ case class AllOf(subPatterns: OptPattern*) extends Pattern {
           pat.evaluate(x, env) orElse Some(env)
       }
     }
+
+  def generate(environment: Pattern.Results) = None
 }
 
 case class POption(subPattern: Pattern) extends OptPattern
