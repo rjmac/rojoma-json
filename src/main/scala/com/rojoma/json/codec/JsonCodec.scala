@@ -121,6 +121,54 @@ object JsonCodec {
     }
   }
 
+  implicit object byteCodec extends JsonCodec[Byte] {
+    def encode(x: Byte) = JNumber(x.toLong)
+    def decode(x: JValue) = x match {
+      case num: JNumber => Some(num.integral.toByte)
+      case _ => None
+    }
+  }
+
+  implicit object shortCodec extends JsonCodec[Short] {
+    def encode(x: Short) = JNumber(x.toLong)
+    def decode(x: JValue) = x match {
+      case num: JNumber => Some(num.integral.toShort)
+      case _ => None
+    }
+  }
+
+  implicit object intCodec extends JsonCodec[Int] {
+    def encode(x: Int) = JNumber(x.toLong)
+    def decode(x: JValue) = x match {
+      case num: JNumber => Some(num.integral.toInt)
+      case _ => None
+    }
+  }
+
+  implicit object longCodec extends JsonCodec[Long] {
+    def encode(x: Long) = JNumber(x)
+    def decode(x: JValue) = x match {
+      case num: JNumber => Some(num.integral)
+      case _ => None
+    }
+  }
+
+  implicit object floatCodec extends JsonCodec[Float] {
+    def encode(x: Float) = JNumber(x)
+    def decode(x: JValue) = x match {
+      case num: JNumber => Some(num.floatingPoint.toFloat)
+      case _ => None
+    }
+  }
+
+  implicit object doubleCodec extends JsonCodec[Double] {
+    def encode(x: Double) = JNumber(x)
+    def decode(x: JValue) = x match {
+      case num: JNumber => Some(num.floatingPoint)
+      case _ => None
+    }
+  }
+
   implicit def jvalueCodec[T <: JValue : ClassManifest] = new JsonCodec[T] {
     def encode(x: T) = x
     def decode(x: JValue) = x.cast[T]

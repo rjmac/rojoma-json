@@ -12,8 +12,6 @@ object OptPattern {
   implicit def litifyCodec[T : JsonCodec](x: T): Pattern = new FLiteral(j => implicitly[JsonCodec[T]].decode(j) == Some(x)) {
     override def generate(env: Pattern.Results) = Some(implicitly[JsonCodec[T]].encode(x))
   }
-  implicit def litifyLong(x: Long): Pattern = Literal(JNumber(x))
-  implicit def litifyDouble(x: Double): Pattern = Literal(JNumber(x))
 }
 
 trait Pattern extends OptPattern {

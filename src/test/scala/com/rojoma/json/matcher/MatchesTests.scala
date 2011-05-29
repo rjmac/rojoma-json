@@ -93,28 +93,28 @@ class MatchesTests extends FunSuite with MustMatchers {
   }
 
   test("object variables match") {
-    val a = Variable[JNumber]()
-    (PObject("hello" -> 1, "there" -> a, "world" -> 3) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (Some(Map(a -> JIntegral(2))))
+    val a = Variable[Int]()
+    (PObject("hello" -> 1, "there" -> a, "world" -> 3) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (Some(Map(a -> 2)))
   }
 
   test("object variables can be optional") {
-    val a = Variable[JNumber]()
-    (PObject("hello" -> 1, "there" -> 2, "world" -> POption(a)) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (Some(Map(a -> JIntegral(3))))
+    val a = Variable[Int]()
+    (PObject("hello" -> 1, "there" -> 2, "world" -> POption(a)) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (Some(Map(a -> 3)))
     (PObject("hello" -> 1, "there" -> 2, "world" -> POption(a)) matches j("""{'hello':1,'there':2}""")) must equal (Some(Map.empty))
   }
 
   test("optional variables are bound only once") {
-    val a = Variable[JNumber]()
+    val a = Variable[Int]()
     (PObject("hello" -> 1, "there" -> POption(a), "world" -> POption(a)) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (None)
     (PObject("hello" -> 1, "there" -> a, "world" -> POption(a)) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (None)
     (PObject("hello" -> 1, "there" -> POption(a), "world" -> a) matches j("""{'hello':1,'there':2,'world':3}""")) must equal (None)
-    (PObject("hello" -> 1, "there" -> a, "world" -> POption(a)) matches j("""{'hello':1,'there':2,'world':2}""")) must equal (Some(Map(a -> JIntegral(2))))
-    (PObject("hello" -> 1, "there" -> POption(a), "world" -> a) matches j("""{'hello':1,'there':2,'world':2}""")) must equal (Some(Map(a -> JIntegral(2))))
+    (PObject("hello" -> 1, "there" -> a, "world" -> POption(a)) matches j("""{'hello':1,'there':2,'world':2}""")) must equal (Some(Map(a -> 2)))
+    (PObject("hello" -> 1, "there" -> POption(a), "world" -> a) matches j("""{'hello':1,'there':2,'world':2}""")) must equal (Some(Map(a -> 2)))
   }
 
   test("omitted optional variables don't affect present ones") {
-    val a = Variable[JNumber]()
-    (PObject("hello" -> 1, "there" -> POption(a), "world" -> a) matches j("""{'hello':1,'world':2}""")) must equal (Some(Map(a -> JIntegral(2))))
+    val a = Variable[Int]()
+    (PObject("hello" -> 1, "there" -> POption(a), "world" -> a) matches j("""{'hello':1,'world':2}""")) must equal (Some(Map(a -> 2)))
   }
 
   test("optional fields will not match null") {
@@ -127,15 +127,15 @@ class MatchesTests extends FunSuite with MustMatchers {
   }
 
   test("nest variables match") {
-    val a = Variable[JNumber]()
-    val b = Variable[JString]()
-    (PObject("hello" -> 1, "there" -> a, "gnu" -> PObject("smiling" -> b), "world" -> 3) matches j("""{'hello':1,'there':2,'world':3,'gnu':{'smiling':'gnus','are':'happy'}}""")) must equal (Some(Map(a -> JIntegral(2), b -> JString("gnus"))))
+    val a = Variable[Int]()
+    val b = Variable[String]()
+    (PObject("hello" -> 1, "there" -> a, "gnu" -> PObject("smiling" -> b), "world" -> 3) matches j("""{'hello':1,'there':2,'world':3,'gnu':{'smiling':'gnus','are':'happy'}}""")) must equal (Some(Map(a -> 2, b -> "gnus")))
   }
 
   test("variables look up results") {
-    val a = Variable[JNumber]()
-    val results: Pattern.Results = Map(a -> JIntegral(5))
-    a(results) must equal (JIntegral(5))
+    val a = Variable[Int]()
+    val results: Pattern.Results = Map(a -> 5)
+    a(results) must equal (5)
   }
 
   test("variables look up failure") {
@@ -179,8 +179,8 @@ class MatchesTests extends FunSuite with MustMatchers {
   }
 
   test("patterns can be matched") {
-    val a = Variable[JNumber]()
-    val b = Variable[JString]()
+    val a = Variable[Int]()
+    val b = Variable[String]()
     val Pattern1 = Literal(JNull)
     val Pattern2 = PObject("hello" -> 1, "there" -> a, "gnu" -> PObject("smiling" -> b), "world" -> 3)
     val scrutinee = j("""{'hello':1,'there':2,'world':3,'gnu':{'smiling':'gnus','are':'happy'}}""")
@@ -188,29 +188,29 @@ class MatchesTests extends FunSuite with MustMatchers {
       case Pattern1(results) =>
         fail("It should not have matched Pattern1")
       case Pattern2(results) =>
-        a(results) must equal (JIntegral(2))
-        b(results) must equal (JString("gnus"))
+        a(results) must equal (2)
+        b(results) must equal ("gnus")
       case _ =>
         fail("It should have matched Pattern2")
     }
   }
 
   test("patterns can generate JSON") {
-    val a = Variable[JNumber]()
+    val a = Variable[Int]()
     val b = Variable[String]()
     val pattern = PObject("hello" -> 1, "there" -> a, "gnu" -> PObject("smiling" -> b, "are" -> "happy"), "world" -> 3)
-    pattern.generate(a := JNumber(2), b := "gnus") must equal (j("""{'hello':1,'there':2,'world':3,'gnu':{'smiling':'gnus','are':'happy'}}"""))
+    pattern.generate(a := 2, b := "gnus") must equal (j("""{'hello':1,'there':2,'world':3,'gnu':{'smiling':'gnus','are':'happy'}}"""))
   }
 
   test("optional fields that fail to generate provide nothing") {
-    val a = Variable[JNumber]()
+    val a = Variable[Int]()
     val b = Variable[String]()
     val pattern = PObject("hello" -> POption(a), "there" -> b)
     pattern.generate(b := "gnus") must equal (j("""{'there':'gnus'}"""))
   }
 
   test("non-optional fields throw an exception") {
-    val a = Variable[JNumber]()
+    val a = Variable[Int]()
     val pattern = PObject("hello" -> a)
     evaluating(pattern.generate()) must produce [JsonGenerationException]
   }
