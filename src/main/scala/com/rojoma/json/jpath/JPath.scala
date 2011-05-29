@@ -21,7 +21,7 @@ class JPath private (cursors: Stream[JsonZipper[_]]) {
   def * = step(downAllOp)
   def downLast = step(downLastOp)
   def downFirst = step(downFirstOp)
-  def downRec = step(downRecOp)
+  def rec = step(recOp)
   def where(pred: JsonZipper[_] => Boolean) = step(whereOp(pred))
   def downWhere(pred: JsonZipper[_] => Boolean) = *.where(pred)
   def up = step(upOp)
@@ -50,7 +50,7 @@ object JPath {
 
   private val downFirstOp: Stage = _.first_?.toStream
 
-  private val downRecOp: Stage = input => input #:: downAllOp(input).flatMap(downRecOp)
+  private val recOp: Stage = input => input #:: downAllOp(input).flatMap(recOp)
 
   private def whereOp(pref: JsonZipper[_] => Boolean)(input: JsonZipper[_]): Stream[JsonZipper[_]] = {
     if(pref(input)) Stream(input)
