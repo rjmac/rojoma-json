@@ -113,6 +113,10 @@ sealed trait JArrayZipper[Parent] extends JCompoundZipper[Parent] {
     }
   }
 
+  def set(idx: Int, value: JValue): Self = down(idx).replace(value).up
+  def append(value: JValue): Self
+  def prepend(value: JValue): Self
+
   def size = here.size
   def length = size
 }
@@ -138,6 +142,7 @@ sealed trait JObjectZipper[Parent] extends JCompoundZipper[Parent] {
   def down_?(field: String): Option[JsonZipper[Self]] = if(here.contains(field)) Some(down(field)) else None
 
   def remove(field: String): Self = down_?(field).map(_.remove.up).getOrElse(this)
+  def set(field: String, value: JValue): Self
 
   def map(f: (String, JsonZipper[JObjectZipper[Parent]]) => ZipperLike[JObjectZipper[Parent]]) = {
     here.fields.foldLeft(this : JObjectZipper[Parent]) { (newSelf, fieldChild) =>
@@ -241,8 +246,13 @@ private[zipper] class TopLevelZipper extends TopLevelZipperLike { this: JsonZipp
 }
 
 private[zipper] class TopLevelAtomZipper(val here: JAtom) extends TopLevelZipper with JAtomZipper[Root]
-private[zipper] class TopLevelArrayZipper(val here: JArray) extends TopLevelZipper with JArrayZipper[Root]
-private[zipper] class TopLevelObjectZipper(val here: JObject) extends TopLevelZipper with JObjectZipper[Root]
+private[zipper] class TopLevelArrayZipper(val here: JArray) extends TopLevelZipper with JArrayZipper[Root] {
+  def append(value: JValue): JArrayZipper[Root] = new TopLevelArrayZipper(JArray(here.toSeq :+ value))
+  def prepend(value: JValue): JArrayZipper[Root] = new TopLevelArrayZipper(JArray(value +: here.toSeq))
+}
+private[zipper] class TopLevelObjectZipper(val here: JObject) extends TopLevelZipper with JObjectZipper[Root] {
+  def set(field: String, value: JValue): JObjectZipper[Root] = new TopLevelObjectZipper(JObject(here.fields + (field -> value)))
+}
 
 // CODE COMMON TO ALL "ELEMENT" ZIPPER(LIKE)S
 
@@ -299,9 +309,12 @@ private[zipper] abstract class ArrayElementZipper[Parent <: JArrayZipper[_]](p: 
 }
 
 private[zipper] trait ArrayElementArrayZipper[Parent <: JArrayZipper[_]] { this: ArrayElementZipper[Parent] with JArrayZipper[Parent] =>
+  def append(value: JValue): JArrayZipper[Parent] = new ChangedArrayElementArrayZipper(JArray(here.toSeq :+ value), parent, idxInParent)
+  def prepend(value: JValue): JArrayZipper[Parent] = new ChangedArrayElementArrayZipper(JArray(value +: here.toSeq), parent, idxInParent)
 }
 
 private[zipper] trait ArrayElementObjectZipper[Parent <: JArrayZipper[_]] { this: ArrayElementZipper[Parent] with JObjectZipper[Parent] =>
+  def set(field: String, value: JValue): JObjectZipper[Parent] = new ChangedArrayElementObjectZipper(JObject(here.fields + (field -> value)), parent, idxInParent)
 }
 
 // OBJECT ELEMENT, CHANGED OR NOT
@@ -341,9 +354,12 @@ private[zipper] abstract class ObjectElementZipper[Parent <: JObjectZipper[_]](p
 }
 
 private[zipper] trait ObjectElementArrayZipper[Parent <: JObjectZipper[_]] { this: ObjectElementZipper[Parent] with JArrayZipper[Parent] =>
+  def append(value: JValue): JArrayZipper[Parent] = new ChangedObjectElementArrayZipper(JArray(here.toSeq :+ value), parent, fieldInParent)
+  def prepend(value: JValue): JArrayZipper[Parent] = new ChangedObjectElementArrayZipper(JArray(value +: here.toSeq), parent, fieldInParent)
 }
 
 private[zipper] trait ObjectElementObjectZipper[Parent <: JObjectZipper[_]] { this: ObjectElementZipper[Parent] with JObjectZipper[Parent] =>
+  def set(field: String, value: JValue): JObjectZipper[Parent] = new ChangedObjectElementObjectZipper(JObject(here.fields + (field -> value)), parent, fieldInParent)
 }
 
 // ARRAY ELEMENT BUT UNCHANGED
