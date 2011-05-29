@@ -137,7 +137,7 @@ sealed trait JObjectZipper[Parent] extends JCompoundZipper[Parent] {
   def down_?(idx: Int): Option[JsonZipper[Self]] = None
   def down_?(field: String): Option[JsonZipper[Self]] = if(here.contains(field)) Some(down(field)) else None
 
-  def remove(field: String): Self = down(field).remove.up
+  def remove(field: String): Self = down_?(field).map(_.remove.up).getOrElse(this)
 
   def map(f: (String, JsonZipper[JObjectZipper[Parent]]) => ZipperLike[JObjectZipper[Parent]]) = {
     here.fields.foldLeft(this : JObjectZipper[Parent]) { (newSelf, fieldChild) =>
