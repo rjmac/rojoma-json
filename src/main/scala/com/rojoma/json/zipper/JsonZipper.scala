@@ -157,7 +157,7 @@ sealed trait JObjectZipper[Parent] extends JCompoundZipper[Parent] {
   def first_? : Option[JsonZipper[Self]] = if(!here.isEmpty) Some(first) else None
   def last_? : Option[JsonZipper[Self]] = if(!here.isEmpty) Some(last) else None
 
-  def contains(f: String) = fields.contains(f)
+  def contains(f: String) = here.contains(f)
 
   protected lazy val fields = {
     val f = new java.util.TreeSet[String]
