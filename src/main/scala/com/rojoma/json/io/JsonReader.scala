@@ -269,7 +269,7 @@ class JsonReader(r: Reader) {
     val number = sb.toString
 
     try {
-      JNumber(math.BigDecimal(number))
+      JNumber(math.BigDecimal(number, java.math.MathContext.UNLIMITED))
     } catch {
       case _: NumberFormatException =>
         throw JsonNumberOutOfRange(number)

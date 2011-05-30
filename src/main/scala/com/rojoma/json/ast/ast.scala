@@ -39,7 +39,7 @@ object JValue {
 sealed abstract class JAtom extends JValue
 
 /** A number. */
-case class JNumber(toBigDecimal: math.BigDecimal) extends JAtom {
+case class JNumber(number: math.BigDecimal) extends JAtom {
   def toByte = toBigDecimal.toByte
   def toByteExact = toBigDecimal.toByteExact
   def toShort = toBigDecimal.toShort
@@ -53,16 +53,18 @@ case class JNumber(toBigDecimal: math.BigDecimal) extends JAtom {
 
   def toDouble = toBigDecimal.toDouble
   def toFloat = toBigDecimal.toFloat
+
+  def toBigDecimal = number
 }
 
 object JNumber {
   import math._
 
-  def apply(b: Byte): JNumber = new JNumber(BigDecimal(b))
-  def apply(s: Short): JNumber = new JNumber(BigDecimal(s))
-  def apply(i: Int): JNumber = new JNumber(BigDecimal(i))
-  def apply(l: Long): JNumber = new JNumber(BigDecimal(l))
-  def apply(bi: BigInt): JNumber = new JNumber(BigDecimal(bi))
+  def apply(b: Byte): JNumber = new JNumber(BigDecimal(b, java.math.MathContext.UNLIMITED))
+  def apply(s: Short): JNumber = new JNumber(BigDecimal(s, java.math.MathContext.UNLIMITED))
+  def apply(i: Int): JNumber = new JNumber(BigDecimal(i, java.math.MathContext.UNLIMITED))
+  def apply(l: Long): JNumber = new JNumber(BigDecimal(l, java.math.MathContext.UNLIMITED))
+  def apply(bi: BigInt): JNumber = new JNumber(BigDecimal(bi, java.math.MathContext.UNLIMITED))
 
   def apply(f: Float): JNumber = {
     if(f.isNaN || f.isInfinite) throw JsonInvalidFloat(f)
