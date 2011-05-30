@@ -44,6 +44,20 @@ class JsonCodecTests extends FunSuite with Checkers {
     doCheck[BigInt]()
   }
 
+  test("float roundtrips") {
+    doCheck[Float]()
+  }
+
+  test("double roundtrips") {
+    doCheck[Double]()
+  }
+
+  // Unfortunately, scalacheck's Arbitrary[BigDecimal] instance
+  // occasionally explodes...  I've sent a patch!
+  // test("bigdecimal roundtrips") {
+  //   doCheck[BigDecimal]()
+  // }
+
   locally {
     import ast.ArbitraryJValue._
     import ast._

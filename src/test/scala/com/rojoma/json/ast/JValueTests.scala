@@ -33,8 +33,20 @@ class JValueTests extends FunSuite with Checkers {
   }
 
   test("bigint roundtrips") {
-    check(forAll { x: math.BigInt =>
+    check(forAll { x: BigInt =>
       JNumber(x).toBigInt == x
+    })
+  }
+
+  test("float roundtrips") {
+    check(forAll { x: Float =>
+      JNumber(x).toFloat == x
+    })
+  }
+
+  test("double roundtrips") {
+    check(forAll { x: Double =>
+      JNumber(x).toDouble == x
     })
   }
 }
