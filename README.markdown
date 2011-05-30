@@ -8,9 +8,7 @@ package com.rojoma.json.ast
        * `JNull`
        * `JBoolean(boolean: Boolean)`
        * `JString(string: String)`
-       * `JNumber`
-          * `JIntegral(integral: Long)`
-          * `JFloatingPoint(floatingPoint: Double)`
+       * `JNumber(bigdecimal: BigDecimal)`
     * `JCompound`
        * `JArray(toSeq: scala.collection.Seq[JValue])`
        * `JObject(data: scala.collection.Map[String, JValue])`
