@@ -82,14 +82,14 @@ class MatchesTests extends FunSuite with MustMatchers {
   }
 
   test("sequence variables match") {
-    val middle = Variable[JIntegral]()
-    (PArray(1, middle, 3) matches j("""[1,2,3]""")) must equal (Some(Map(middle -> JIntegral(2))))
+    val middle = Variable[Int]()
+    (PArray(1, middle, 3) matches j("""[1,2,3]""")) must equal (Some(Map(middle -> 2)))
   }
 
   test("nested sequence variables match") {
-    val a = Variable[JIntegral]()
-    val b = Variable[JString]()
-    (PArray(1, a, PArray("hello", b, "world"), 3) matches j("""[1,2,["hello","there","world"],3]""")) must equal (Some(Map(a -> JIntegral(2), b -> JString("there"))))
+    val a = Variable[Int]()
+    val b = Variable[String]()
+    (PArray(1, a, PArray("hello", b, "world"), 3) matches j("""[1,2,["hello","there","world"],3]""")) must equal (Some(Map(a -> 2, b -> "there")))
   }
 
   test("object variables match") {

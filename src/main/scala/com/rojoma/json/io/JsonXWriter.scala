@@ -30,11 +30,7 @@ object JsonX {
     x match {
       case JNull =>
         <json:null/>
-      case JIntegral(x) =>
-        <json:number>{x}</json:number>
-      case JFloatingPoint(x) =>
-        if(x.isNaN || x.isInfinite)
-          throw JsonInvalidFloat(x)
+      case JNumber(x) =>
         <json:number>{x}</json:number>
       case JString(x) =>
         if(x.length > MaximumStringLength) throw StringTooLongException()

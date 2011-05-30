@@ -5,8 +5,6 @@ import scala.{collection => sc}
 
 import ast._
 
-case class JsonInvalidFloat(value: Double) extends RuntimeException("Attempted to serialize a NaN or infinite value into a JSON stream.")
-
 /** An object that can serialize [[com.rojoma.json.ast.JValue]]s. The intention
   * is to produce a (series of) JSON objects. */
 trait JsonWriter {
@@ -27,10 +25,8 @@ trait JsonWriter {
         writeBoolean(bool)
       case JNull =>
         writeNull()
-      case JFloatingPoint(dbl) =>
-        writeDouble(dbl)
-      case JIntegral(i) =>
-        writeLong(i)
+      case JNumber(num) =>
+        writeNumber(num)
     }
   }
 
@@ -39,7 +35,6 @@ trait JsonWriter {
   protected def writeString(s: String)
   protected def writeBoolean(b: Boolean)
   protected def writeNull()
-  protected def writeDouble(dbl: Double)
-  protected def writeLong(l: Long)
+  protected def writeNumber(num: math.BigDecimal)
 }
 

@@ -11,15 +11,10 @@ object GenJValue {
     x <- arbitrary[Boolean]
   } yield JBoolean(x)
 
-  val genJFloatingPoint = for {
-    x <- arbitrary[Double] suchThat { d => !d.isNaN && !d.isInfinity }
-  } yield JFloatingPoint(x)
-
-  val genJIntegral = for {
-    x <- arbitrary[Long]
-  } yield JIntegral(x)
-
-  val genJNumber: Gen[JNumber] = Gen.oneOf(genJFloatingPoint, genJIntegral)
+  val genJNumber: Gen[JNumber] = for {
+    unscaledVal <- arbitrary[math.BigInt]
+    scale <- Gen.choose(-Int.MaxValue, Int.MaxValue) // MinValue itself isn't a valid scale
+  } yield JNumber(math.BigDecimal(unscaledVal, scale))
   
   def genJString(implicit arbString: Arbitrary[String]) = for {
     x <- arbString.arbitrary

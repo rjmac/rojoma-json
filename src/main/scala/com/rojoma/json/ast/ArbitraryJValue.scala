@@ -7,8 +7,6 @@ object ArbitraryJValue {
   import GenJValue._
 
   implicit val ArbitraryJBoolean = Arbitrary(genJBoolean)
-  implicit val ArbitraryJFloatingPoint = Arbitrary(genJFloatingPoint)
-  implicit val ArbitraryJIntegral = Arbitrary(genJIntegral)
   implicit val ArbitraryJNumber = Arbitrary(genJNumber)
   implicit val ArbitraryJNull = Arbitrary(genJNull)
   implicit def ArbitraryJString(implicit arbString: Arbitrary[String]) = Arbitrary(genJString)

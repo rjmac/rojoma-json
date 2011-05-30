@@ -65,8 +65,7 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
     case JNull => "null".length
     case JBoolean(x) => x.toString.length
     case JString(s) => WriterUtils.formatString(s).length
-    case JIntegral(x) => x.toString.length
-    case JFloatingPoint(x) => x.toString.length
+    case JNumber(x) => x.toString.length
   }
 
   private def willFitIn(elem: JValue, space: Int): Option[Int] = elem match {
@@ -226,12 +225,7 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
     output.write("null")
   }
 
-  protected def writeDouble(x: Double) {
-    if(x.isNaN || x.isInfinite) throw JsonInvalidFloat(x)
-    output.write(x.toString)
-  }
-
-  protected def writeLong(x: Long) {
+  protected def writeNumber(x: math.BigDecimal) {
     output.write(x.toString)
   }
 

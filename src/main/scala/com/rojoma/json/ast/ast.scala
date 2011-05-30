@@ -3,6 +3,12 @@ package ast
 
 import scala.{collection => sc}
 
+sealed abstract class JsonInvalidValue(msg: String) extends RuntimeException(msg) {
+  def value: Any
+}
+case class JsonInvalidFloat(value: Float) extends JsonInvalidValue("Attempted to place a NaN or infinite value into a JSON AST.")
+case class JsonInvalidDouble(value: Double) extends JsonInvalidValue("Attempted to place a NaN or infinite value into a JSON AST.")
+
 /** A JSON datum.  This can be safely downcast to a more-specific type
   * using the `cast` method which is implicitly added to this class
   * in the companion object.*/
@@ -32,28 +38,40 @@ object JValue {
   * a partition of the set of valid [[com.rojoma.json.ast.JValue]]s. */
 sealed abstract class JAtom extends JValue
 
-/** A number.  This JSON implementation stores floating-point values
-  * in IEEE 754 doubles and integers in 64-bit signed ints, and has the
-  * corresponding limitations.  Numbers outside that range may be silently
-  * changed. */
-sealed abstract class JNumber extends JAtom {
-  def floatingPoint: Double
-  def integral: Long
+/** A number. */
+case class JNumber(toBigDecimal: math.BigDecimal) extends JAtom {
+  def toByte = toBigDecimal.toByte
+  def toByteExact = toBigDecimal.toByteExact
+  def toShort = toBigDecimal.toShort
+  def toShortExact = toBigDecimal.toShortExact
+  def toInt = toBigDecimal.toInt
+  def toIntExact = toBigDecimal.toIntExact
+  def toLong = toBigDecimal.toLong
+  def toLongExact = toBigDecimal.toLong
+  def toBigInt = toBigDecimal.toBigInt
+  def toBigIntExact = toBigDecimal.toBigIntExact
+
+  def toDouble = toBigDecimal.toDouble
+  def toFloat = toBigDecimal.toFloat
 }
 
 object JNumber {
-  def apply(x: Double): JNumber = JFloatingPoint(x)
-  def apply(x: Long): JNumber = JIntegral(x)
-}
+  import math._
 
-/** A floating-point [[com.rojoma.json.ast.JNumber]]. */
-case class JFloatingPoint(floatingPoint: Double) extends JNumber {
-  def integral = floatingPoint.toLong
-}
+  def apply(b: Byte): JNumber = new JNumber(BigDecimal(b))
+  def apply(s: Short): JNumber = new JNumber(BigDecimal(s))
+  def apply(i: Int): JNumber = new JNumber(BigDecimal(i))
+  def apply(l: Long): JNumber = new JNumber(BigDecimal(l))
+  def apply(bi: BigInt): JNumber = new JNumber(BigDecimal(bi))
 
-/** An integer [[com.rojoma.json.ast.JNumber]]. */
-case class JIntegral(integral: Long) extends JNumber {
-  def floatingPoint = integral.toDouble
+  def apply(f: Float): JNumber = {
+    if(f.isNaN || f.isInfinite) throw JsonInvalidFloat(f)
+    new JNumber(BigDecimal(f))
+  }
+  def apply(d: Double): JNumber = {
+    if(d.isNaN || d.isInfinite) throw JsonInvalidDouble(d)
+    new JNumber(BigDecimal(d))
+  }
 }
 
 /** A JSON string.  This does not yet enforce well-formedness with

@@ -9,6 +9,7 @@ sealed abstract class JsonParseException(message: String) extends Exception(mess
 case class JsonEOF() extends JsonParseException("Unexpected end of input")
 case class JsonUnexpectedCharacter(character: Char, expected: String) extends JsonParseException("Expected " + expected + "; got character " + character.toInt)
 case class JsonUnknownIdentifier(identifier: String) extends JsonParseException("Unknown identifier " + identifier)
+case class JsonNumberOutOfRange(number: String) extends JsonParseException("Cannot store in BigDecimal: " + number)
 
 /** Parses a character-stream into a [[com.rojoma.json.ast.JValue]].
   * 
@@ -265,10 +266,13 @@ class JsonReader(r: Reader) {
       do { sb += readDigit() } while(!atEOF() && isDigit(peek()))
     }
 
-    if(hasFrac || hasExponent) { // floating point!
-      JNumber(sb.toString.toDouble)
-    } else {
-      JNumber(sb.toString.toLong)
+    val number = sb.toString
+
+    try {
+      JNumber(math.BigDecimal(number))
+    } catch {
+      case _: NumberFormatException =>
+        throw JsonNumberOutOfRange(number)
     }
   }
 }

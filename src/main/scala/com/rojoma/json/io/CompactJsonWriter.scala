@@ -43,12 +43,7 @@ class CompactJsonWriter(output: Writer) extends JsonWriter {
     output.write("null")
   }
 
-  protected def writeDouble(x: Double) {
-    if(x.isNaN || x.isInfinite) throw JsonInvalidFloat(x)
-    output.write(x.toString)
-  }
-
-  protected def writeLong(x: Long) {
+  protected def writeNumber(x: math.BigDecimal) {
     output.write(x.toString)
   }
 

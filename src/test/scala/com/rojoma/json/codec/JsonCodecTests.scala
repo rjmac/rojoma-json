@@ -24,6 +24,26 @@ class JsonCodecTests extends FunSuite with Checkers {
     doCheck[String]()
   }
 
+  test("byte roundtrips") {
+    doCheck[Byte]()
+  }
+
+  test("short roundtrips") {
+    doCheck[Short]()
+  }
+
+  test("int roundtrips") {
+    doCheck[Int]()
+  }
+
+  test("long roundtrips") {
+    doCheck[Long]()
+  }
+
+  test("bigint roundtrips") {
+    doCheck[BigInt]()
+  }
+
   locally {
     import ast.ArbitraryJValue._
     import ast._
@@ -35,10 +55,6 @@ class JsonCodecTests extends FunSuite with Checkers {
         test("jboolean roundtrips") { doCheck[JBoolean] }
         test("jstring roundtrips") { doCheck[JString] }
         test("jnumber roundtrips") { doCheck[JNumber] }
-        locally {
-          test("jintegral roundtrips") { doCheck[JIntegral] }
-          test("jfloatingpoint roundtrips") { doCheck[JFloatingPoint] }
-        }
       }
       test("jcompound roundtrips") { doCheck[JCompound] }
       locally {
