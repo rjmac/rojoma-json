@@ -33,16 +33,17 @@ The following types have implicit codecs in `JsonCodec`'s compantion:
 
  * `String`
  * `Boolean`
+ * Numeric types, including `BigInt`, `BigDecimal`, and their `java.math` counterparts.
  * all subclasses of `JValue`
  * Any subclass of `Seq[T]` if `T` has a `JsonCodec`
  * Any subclass of `Map[String, T]` if `T` has a `JsonCodec`
  * `java.util.List[T]` if `T` has a `JsonCodec`
  * `java.util.Map[String, T]` if `T` has a `JsonCodec`
 
-I am not yet certain what the best way to handle number is; namely
-whether it is better to match strictly (so that a match fails if the
-number in the JSON is not representable as the requested type) or
-loosely (so that numbers may be rounded or otherwise mangled).
+Numeric codecs are "lenient" -- that is, if a number is out of range
+of the requested type, it undergoes the normal truncation
+`BigDecimal.toXXX` does.  If this is not desired, request a
+`BigDecimal` or a `JValue` and use the `.toXXXExact` alternatives.
 
 package com.rojoma.json.io
 --------------------------
@@ -132,6 +133,9 @@ In this context, `POption(p)` is a shorthand for `FirstOf(p, Variable[JValue]())
 Custom matchers can be defined by subclassing `Pattern` and
 implementing the method `evaluate(x: JValue, environment: Pattern.Results): Option[Pattern.Results]`.
 
+Most `Pattern`s can also be used to generate JSON using the `generate`
+method, passing in a list of variable bindings in the form `variable := value`.
+
 package com.rojoma.json.zipper
 ------------------------------
 A zipper for navigating JSON.  There are six interfaces:
@@ -159,6 +163,12 @@ object in the hole it represents (via the `replace` method) or move
 `up` or to the `top`.  Unlike the `JsonZipper` classes, when you have
 nothing `top` might not return anything, since it is possible that the
 root object is what was removed.
+
+package com.rojoma.json.jpath
+-----------------------------
+The `JPath` class is a simple wrapper over `JsonZipper`s for doing
+"xpath-style" queries on a `JValue`.  This is currently somewhat
+experimental, but is so far promising.
 
 package com.rojoma.json.util
 ----------------------------
