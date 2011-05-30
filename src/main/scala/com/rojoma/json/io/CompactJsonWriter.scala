@@ -43,7 +43,7 @@ class CompactJsonWriter(output: Writer) extends JsonWriter {
     output.write("null")
   }
 
-  protected def writeNumber(x: math.BigDecimal) {
+  protected def writeNumber(x: BigDecimal) {
     output.write(x.toString)
   }
 

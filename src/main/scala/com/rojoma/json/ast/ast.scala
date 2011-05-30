@@ -39,7 +39,7 @@ object JValue {
 sealed abstract class JAtom extends JValue
 
 /** A number. */
-case class JNumber(number: math.BigDecimal) extends JAtom {
+case class JNumber(number: BigDecimal) extends JAtom {
   def toByte = toBigDecimal.toByte
   def toByteExact = toBigDecimal.toByteExact
   def toShort = toBigDecimal.toShort
@@ -58,8 +58,6 @@ case class JNumber(number: math.BigDecimal) extends JAtom {
 }
 
 object JNumber {
-  import math._
-
   def apply(b: Byte): JNumber = new JNumber(BigDecimal(b, java.math.MathContext.UNLIMITED))
   def apply(s: Short): JNumber = new JNumber(BigDecimal(s, java.math.MathContext.UNLIMITED))
   def apply(i: Int): JNumber = new JNumber(BigDecimal(i, java.math.MathContext.UNLIMITED))

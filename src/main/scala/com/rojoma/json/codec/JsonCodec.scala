@@ -153,8 +153,8 @@ object JsonCodec {
     }
   }
 
-  implicit object bigintCodec extends JsonCodec[math.BigInt] {
-    def encode(x: math.BigInt) = JNumber(x)
+  implicit object bigintCodec extends JsonCodec[BigInt] {
+    def encode(x: BigInt) = JNumber(x)
     def decode(x: JValue) = x match {
       case JNumber(num) => Some(num.toBigInt)
       case _ => None
@@ -162,7 +162,7 @@ object JsonCodec {
   }
 
   implicit object bigintegerCodec extends JsonCodec[java.math.BigInteger] {
-    def encode(x: java.math.BigInteger) = JNumber(new math.BigInt(x))
+    def encode(x: java.math.BigInteger) = JNumber(new BigInt(x))
     def decode(x: JValue) = x match {
       case JNumber(num) => Some(num.toBigInt.underlying)
       case _ => None
@@ -185,8 +185,8 @@ object JsonCodec {
     }
   }
 
-  implicit object bigdecimalCodec extends JsonCodec[math.BigDecimal] {
-    def encode(x: math.BigDecimal) = JNumber(x)
+  implicit object bigdecimalCodec extends JsonCodec[BigDecimal] {
+    def encode(x: BigDecimal) = JNumber(x)
     def decode(x: JValue) = x match {
       case JNumber(num) => Some(num)
       case _ => None
@@ -194,7 +194,7 @@ object JsonCodec {
   }
 
   implicit object jbigdecimalCodec extends JsonCodec[java.math.BigDecimal] {
-    def encode(x: java.math.BigDecimal) = JNumber(math.BigDecimal(x))
+    def encode(x: java.math.BigDecimal) = JNumber(BigDecimal(x))
     def decode(x: JValue) = x match {
       case JNumber(num) => Some(num.underlying)
       case _ => None

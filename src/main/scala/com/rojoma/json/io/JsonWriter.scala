@@ -35,6 +35,6 @@ trait JsonWriter {
   protected def writeString(s: String)
   protected def writeBoolean(b: Boolean)
   protected def writeNull()
-  protected def writeNumber(num: math.BigDecimal)
+  protected def writeNumber(num: BigDecimal)
 }
 

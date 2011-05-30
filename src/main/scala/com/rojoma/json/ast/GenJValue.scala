@@ -11,11 +11,12 @@ object GenJValue {
     x <- arbitrary[Boolean]
   } yield JBoolean(x)
 
-  val genJNumber: Gen[JNumber] = for {
-    unscaledVal <- arbitrary[math.BigInt]
-    scale <- Gen.choose(-Int.MaxValue, Int.MaxValue) // MinValue itself isn't a valid scale
-  } yield JNumber(math.BigDecimal(unscaledVal, scale))
-  
+  val genJNumber: Gen[JNumber] = {
+    val genJInteger = arbitrary[BigInt].map(JNumber.apply)
+    val genJFloatingPoint = arbitrary[Double].map(JNumber.apply) // When ScalaCheck's BigDecimal generator is fixed, replace this
+    Gen.oneOf(genJInteger, genJFloatingPoint)
+  }
+
   def genJString(implicit arbString: Arbitrary[String]) = for {
     x <- arbString.arbitrary
   } yield JString(x)
