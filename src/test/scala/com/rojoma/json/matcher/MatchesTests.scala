@@ -225,4 +225,12 @@ class MatchesTests extends FunSuite with MustMatchers {
     val pattern = FirstOf(a, "hello", "world")
     pattern.generate() must equal (JString("hello"))
   }
+
+  test(":=? works") {
+    val a = Variable[String]
+    val b = Variable[Int]
+    val pattern = FirstOf(a, b)
+    pattern.generate(a :=? None, b := 5) must equal (JNumber(5))
+    pattern.generate(a :=? Some("gnu"), b := 5) must equal (JString("gnu"))
+  }
 }

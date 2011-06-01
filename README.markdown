@@ -132,7 +132,9 @@ Custom matchers can be defined by subclassing `Pattern` and
 implementing the method `evaluate(x: JValue, environment: Pattern.Results): Option[Pattern.Results]`.
 
 Most `Pattern`s can also be used to generate JSON using the `generate`
-method, passing in a list of variable bindings in the form `variable := value`.
+method, passing in a list of variable bindings in the form `variable := value` or,
+if the variable occurs in an "optional" position (i.e., inside a `POption`
+or `FirstOf`) `variable :=? optValue`, where `optValue` is an `Option`.
 
 package com.rojoma.json.zipper
 ------------------------------

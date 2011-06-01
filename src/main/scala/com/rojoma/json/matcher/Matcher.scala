@@ -73,6 +73,11 @@ abstract class Variable[T] extends Pattern with PartialFunction[Pattern.Results,
   def isBound(results: Pattern.Results) = isDefinedAt(results)
 
   def := (x: T) = (v: Pattern.Results) => v + (this -> x)
+
+  def :=? (x: Option[T]) = x match {
+    case Some(x) => this := x
+    case None => (v: Pattern.Results) => v
+  }
 }
 
 object Variable {
