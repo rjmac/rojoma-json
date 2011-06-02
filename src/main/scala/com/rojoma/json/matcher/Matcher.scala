@@ -207,4 +207,7 @@ case class AllOf(subPatterns: OptPattern*) extends Pattern {
   def generate(environment: Pattern.Results) = None
 }
 
-case class POption(subPattern: Pattern) extends OptPattern
+case class POption(subPattern: Pattern) extends OptPattern {
+  def orNull = POption(FirstOf(subPattern, JNull))
+}
+
