@@ -9,6 +9,7 @@ case class JsonGenerationException() extends RuntimeException("Cannot generate J
 sealed trait OptPattern
 
 object OptPattern {
+  implicit def litifyJValue(x: JValue): Pattern = Literal(x)
   implicit def litifyCodec[T : JsonCodec](x: T): Pattern = new FLiteral(j => implicitly[JsonCodec[T]].decode(j) == Some(x)) {
     override def generate(env: Pattern.Results) = Some(implicitly[JsonCodec[T]].encode(x))
   }
@@ -146,21 +147,26 @@ case class PObject(subPatterns: (String, OptPattern)*) extends Pattern {
 
   def generate(environment: Pattern.Results) = {
     val newObject = Pattern.foldLeftOpt(subPatterns, Map.empty[String, JValue]) { (result, sp) =>
+      def require(subKey: String, subPat: Pattern) = {
+        subPat.generate(environment) match {
+          case Some(subValue) =>
+            Some(result + (subKey -> subValue))
+          case None =>
+            None
+        }
+      }
+      def permit(subKey: String, subPat: Pattern) = {
+        subPat.generate(environment) match {
+          case Some(subValue) =>
+            Some(result + (subKey -> subValue))
+          case None =>
+            Some(result)
+        }
+      }
       sp match {
-        case (subKey, subPat: Pattern) =>
-          subPat.generate(environment) match {
-            case Some(subValue) =>
-              Some(result + (subKey -> subValue))
-            case None =>
-              None
-          }
-        case (subKey, POption(subPat)) =>
-          subPat.generate(environment) match {
-            case Some(subValue) =>
-              Some(result + (subKey -> subValue))
-            case None =>
-              Some(result)
-          }
+        case (subKey, subPat: Pattern) => require(subKey, subPat)
+        case (subKey, POption(FirstOf(subPat, Literal(JNull)))) => permit(subKey, subPat)
+        case (subKey, POption(subPat)) => permit(subKey, subPat)
       }
     }
     newObject.map(JObject)
@@ -208,6 +214,6 @@ case class AllOf(subPatterns: OptPattern*) extends Pattern {
 }
 
 case class POption(subPattern: Pattern) extends OptPattern {
-  def orNull = POption(FirstOf(subPattern, JNull))
+  def orNull = POption(FirstOf(subPattern, Literal(JNull)))
 }
 
