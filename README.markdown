@@ -57,6 +57,20 @@ nor the `JsonWriter`s make any effort to minimize the number of calls
 to `read()` or `write()` on the IO handle they're given, so it is
 probably a good idea to ensure that it is buffered.
 
+As extensions to the JSON specification, `JsonReader` accepts the
+following:
+
+ * single-quote delimited strings
+ * unquoted object keys
+ * Javascript-style comments
+
+The only limits on the sizes of strings and depth of nesting are
+those of the JVM.  Parsing is done recursively, and so stack space
+is the limiting factor in nesting.  Numbers are restricted to
+those which can fit in a Java `BigDecimal`.  The reader does validate
+surrogate pairs and will replace stray halves with the Unicode
+`REPLACEMENT_CHARACTER` character.
+
 package com.rojoma.json.matcher
 -------------------------------
  * `OptPattern`: The base class of all `Pattern`s, plus `POption`
