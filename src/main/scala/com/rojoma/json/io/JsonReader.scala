@@ -53,7 +53,27 @@ class JsonReader(r: Reader) {
     return false
   }
 
-  private def skipWhitespace() = while(Character.isWhitespace(peek())) next()
+  private def skipToEndOfLine() = while(peek() != '\n') next()
+
+  private def skipBlockComment() {
+    var last = next()
+    while(last != '*' || peek() != '/') last = next()
+    next() // skip final '/'
+  }
+
+  private def skipComment() {
+    next() // skip opening "/"
+    next() match {
+      case '/' => skipToEndOfLine()
+      case '*' => skipBlockComment()
+      case c => throw JsonUnexpectedCharacter(c, "/ or *")
+    }
+  }
+
+  private def skipWhitespace() {
+    while(Character.isWhitespace(peek())) next()
+    if(peek() == '/') { skipComment(); skipWhitespace() }
+  }
 
   private def expect(c: Char) {
     skipWhitespace()
