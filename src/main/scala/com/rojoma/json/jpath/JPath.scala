@@ -42,7 +42,7 @@ object JPath {
 
   private val downAllOp: Stage = _ match {
     case _: JAtomZipper[_] => Stream.empty
-    case arr: JArrayZipper[_] => Stream.range(0, arr.size - 1).map(arr.down)
+    case arr: JArrayZipper[_] => Stream.range(0, arr.size).map(arr.down)
     case obj: JObjectZipper[_] => (obj.here.fields.keys).toStream.map(obj.down)
   }
 
