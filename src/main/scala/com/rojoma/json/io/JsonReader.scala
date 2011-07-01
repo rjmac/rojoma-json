@@ -25,7 +25,9 @@ class JsonReader(input: Iterator[PositionedJsonToken]) {
     }
   }
 
-  /** Read one JSON datum out of the `Reader`.
+  /** Read one JSON datum out of the input.  If the input consists of more than one
+    * object, the input after this call is positioned such that the next item available
+    * is the first token after the produced object.
     * @return The [[com.rojoma.json.ast.JValue]] read.
     * @throws [[com.rojoma.json.io.JsonReaderException]] if a complete object cannot be read.
     * @throws `IOException` if a low-level IO error occurs. */
