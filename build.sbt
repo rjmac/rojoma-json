@@ -19,10 +19,3 @@ libraryDependencies <++= scalaVersion { sv =>
     case _ => error("Dependencies not set for scala version " + sv)
   }
 }
-
-publishTo <<= (version) { version =>
-  val suffix = if(version.trim.endsWith("SNAPSHOT")) "snapshots" else "releases"
-  Some("Sonatype Nexus Repository Manager" at ("http://maven.rojoma.com/content/repositories/" + suffix + "/"))
-}
-
-credentials <+= baseDirectory map { root => Credentials(root / "nexus.credentials") }
