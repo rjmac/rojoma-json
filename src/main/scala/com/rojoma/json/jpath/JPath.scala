@@ -24,6 +24,15 @@ class JPath private (cursors: Stream[JsonZipper[_]]) {
   def rec = step(recOp)
   def where(pred: JsonZipper[_] => Boolean) = step(whereOp(pred))
   def downWhere(pred: JsonZipper[_] => Boolean) = *.where(pred)
+
+  // This is basically mark-and-return.  E.g.,
+  //    x.having(_.down("foo").*.where(isNumberGreaterThan(5)))
+  // is the same as:
+  //    x.down("foo").*.where(isNumberGreaterThan(5)).up.up
+  // but also works if one of the inner steps is "rec", where the
+  // needed number of "up" calls is unknown.
+  def having(pred: JPath => JPath) = where(z => pred(new JPath(Stream(z))).finish.nonEmpty)
+
   def up = step(upOp)
   def next = step(nextOp)
   def prev = step(prevOp)
