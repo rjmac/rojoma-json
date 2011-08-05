@@ -14,6 +14,19 @@ case class JsonInvalidDouble(value: Double) extends JsonInvalidValue("Attempted 
   * in the companion object.*/
 sealed trait JValue {
   override def toString = io.PrettyJsonWriter.toString(this)
+
+  /** Forces this [[com.rojoma.json.ast.JValue]] to be fully evaluated.  In particular, the
+    * compound [[com.rojoma.json.codec.JsonCodec]]s will produce
+    * views of their inputs instead of fully-evaluated [[com.rojoma.json.ast.JValue]]s.  This
+    * can be problematic if the underlying structure can be mutated
+    * before this object is used, or if this object is passed to
+    * another thread.
+    *
+    * What is or is not copied is not defined; the only postcondition is that
+    * there are no lazy values left in the returned tree.
+    * 
+    * @return An equal [[com.rojoma.json.ast.JValue]] with strict values. */
+  def forced: JValue
 }
 
 object JValue {
@@ -36,7 +49,9 @@ object JValue {
 
 /** A JSON "atom" — anything except arrays or objects.  This and [[com.rojoma.json.ast.JCompound]] form
   * a partition of the set of valid [[com.rojoma.json.ast.JValue]]s. */
-sealed abstract class JAtom extends JValue
+sealed abstract class JAtom extends JValue {
+  def forced: this.type = this
+}
 
 /** A number. */
 case class JNumber(number: BigDecimal) extends JAtom {
@@ -87,7 +102,9 @@ case object JNull extends JNull
 
 /** The common superclass of arrays and objects.  This and [[com.rojoma.json.ast.JAtom]] form
   * a partition of the set of valid [[com.rojoma.json.ast.JValue]]s. */
-sealed trait JCompound extends JValue
+sealed trait JCompound extends JValue {
+  def forced: JCompound
+}
 
 /** A JSON array, implemented as a thin wrapper around a sequence of [[com.rojoma.json.ast.JValue]]s.
   * In many ways this can be treated as a `Seq`, but it is in fact not one. */
@@ -102,6 +119,13 @@ case class JArray(override val toSeq: sc.Seq[JValue]) extends Iterable[JValue] w
   def apply(idx: Int) = toSeq(idx)
   def isDefinedAt(idx: Int) = toSeq.isDefinedAt(idx)
   def iterator = toSeq.iterator
+
+  def forced: JArray = {
+    val forcedArray: IndexedSeq[JValue] = toSeq.map(_.forced)(sc.breakOut)
+    new JArray(forcedArray) {
+      override def forced = this
+    }
+  }
 }
 
 /** A JSON object, implemented as a thin wrapper around a map from `String` to [[com.rojoma.json.ast.JValue]].
@@ -122,4 +146,19 @@ case class JObject(val fields: sc.Map[String, JValue]) extends Iterable[(String,
   def mapValues[C](f: JValue => C): sc.Map[String, C] = fields.mapValues(f)
   override def toSeq = fields.toSeq
   override def toMap[T, U] (implicit ev: <:<[(String, JValue), (T, U)]): Map[T, U] = fields.toMap
+
+  def forced: JObject = {
+    // would be nice to freeze this into an actual immutable Map in
+    // order to preserve ordering and yet be actually unchangable, but
+    // instead we'll just trust that the Bad People who are relying on
+    // the ordering of fields in their JSON objects are not *so* bad
+    // that they'll downcast an sc.Map to an scm.Map.  Unchangability
+    // of the result isn't part of "forced"'s contract anyway; merely
+    // full evaluation.
+    val forcedMap = new sc.mutable.LinkedHashMap[String, JValue]
+    for((k, v) <- fields) forcedMap += k -> v.forced
+    new JObject(forcedMap) {
+      override def forced = this
+    }
+  }
 }
