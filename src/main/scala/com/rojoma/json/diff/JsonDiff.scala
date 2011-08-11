@@ -7,83 +7,118 @@ import sc.{immutable => sci}
 import ast._
 
 object JsonDiff {
-  type Path = Vector[PathElement]
-
-  type Diff = Map[Path, DiffOp]
-
-  // 2.9 has an ordering for seqs, but 2.8 doesn't, so...
-  private implicit val pathOrdering = new Ordering[Path] {
-    def compare(a: Path, b: Path): Int = {
-      val aIt = a.iterator
-      val bIt = b.iterator
- 
-      while(aIt.hasNext && bIt.hasNext) {
-        val elemCmp = PathElementOrdering.compare(aIt.next(), bIt.next())
-        if(elemCmp != 0) return elemCmp
-      }
-
-      if(aIt.hasNext) 1
-      else if(bIt.hasNext) -1
-      else 0
+  def printDiff(diff: DiffTree, indent: Int = 0) {
+    def p(x: Any) {
+      print(" " * indent)
+      println(x)
+    }
+    diff match {
+      case Addition(jvalue) =>
+        p("+ " + jvalue)
+      case Removal(jvalue) =>
+        p("- " + jvalue)
+      case Replacement(oldv, newv) =>
+        p("- " + oldv)
+        p("+ " + newv)
+      case ArrayDiff(elemDiffs) =>
+        for((k, v) <- elemDiffs.toSeq.sorted(Ordering.by((x: (Int, DiffTree)) => x._1))) {
+          v match {
+            case Addition(jvalue) =>
+              p("+ " + k + " : " + jvalue)
+            case Removal(jvalue) =>
+              p("- " + k + " : " + jvalue)
+            case Replacement(oldv, newv) =>
+              p("+ " + k + " : " + oldv)
+              p("- " + k + " : " + newv)
+            case _ =>
+              p(k + " :")
+              printDiff(v, indent + 2)
+          }
+        }
+      case ObjectDiff(fieldDiffs) =>
+        for((k, v) <- fieldDiffs.toSeq.sorted(Ordering.by((x: (String, DiffTree)) => x._1))) {
+          v match {
+            case Addition(jvalue) =>
+              p("+ " + k + " : " + jvalue)
+            case Removal(jvalue) =>
+              p("- " + k + " : " + jvalue)
+            case Replacement(oldv, newv) =>
+              p("+ " + k + " : " + oldv)
+              p("- " + k + " : " + newv)
+            case _ =>
+              p(k + " :")
+              printDiff(v, indent + 2)
+          }
+        }
     }
   }
 
-  val emptyDiff: Diff = sci.TreeMap.empty[Path, DiffOp]
-
-  def jsonDiff(a: JValue, b: JValue): Diff = jsonDiff(a, b, Vector.empty, emptyDiff)
-
-  private def jsonDiff(a: JValue, b: JValue, pathToHere: Path, accumulator: Diff): Diff = (a, b) match {
+  def jsonDiff(a: JValue, b: JValue): Option[DiffTree] = (a, b) match {
     case (JObject(aFields), JObject(bFields)) =>
-      objectDiff(aFields, bFields, pathToHere, accumulator)
+      objectDiff(aFields, bFields)
     case (JArray(aElements), JArray(bElements)) =>
-      arrayDiff(aElements, bElements, pathToHere, accumulator)
+      arrayDiff(aElements, bElements)
     case (aValue, bValue) =>
-      if (aValue == bValue) accumulator
-      else accumulator + (pathToHere -> Replacement(aValue, bValue))
+      if (aValue == bValue) None
+      else Some(Replacement(aValue, bValue))
   }
 
-  private def objectDiff(aFields: sc.Map[String, JValue], bFields: sc.Map[String, JValue], pathToHere: Path, accumulator: Diff): Diff = {
-    val subsAndReplacements = aFields.foldLeft(accumulator) { (acc, aField) =>
+  private def objectDiff(aFields: sc.Map[String, JValue], bFields: sc.Map[String, JValue]): Option[DiffTree] = {
+    val subsAndReplacements = aFields.foldLeft(Map.empty[String, DiffTree]) { (acc, aField) =>
       val (aKey, aValue) = aField
-      val path = pathToHere :+ Field(aKey)
       bFields.get(aKey) match {
         case Some(bValue) =>
-          jsonDiff(aValue, bValue, path, acc)
+          jsonDiff(aValue, bValue) match {
+            case Some(diff) =>
+              acc + (aKey -> diff)
+            case None =>
+              acc
+          }
         case None =>
-          acc + (path -> Removal(aValue))
+          acc + (aKey -> Removal(aValue))
       }
     }
-    bFields.foldLeft(subsAndReplacements) { (diff, bKeyValue) =>
+    val fullDiff = bFields.foldLeft(subsAndReplacements) { (diff, bKeyValue) =>
       val (bKey, bValue) = bKeyValue
       if(aFields contains bKey) // Already handled (it was a replacement or a noop)
         diff
       else // in B but not A -- it was added.
-        diff + ((pathToHere :+ Field(bKey)) -> Addition(bValue))
+        diff + (bKey -> Addition(bValue))
     }
+    if(fullDiff.isEmpty) None
+    else Some(ObjectDiff(fullDiff))
   }
 
-  private def arrayDiff(aElements: Seq[JValue], bElements: Seq[JValue], pathToHere: Path, accumulator: Diff): Diff = {
+  private def arrayDiff(aElements: Seq[JValue], bElements: Seq[JValue]): Option[DiffTree] = {
     var aIt = aElements.iterator
     var bIt = bElements.iterator
     var idxIt = Iterator.from(0)
 
-    var prefixDiff = accumulator
+    var prefixDiff = Map.empty[Int, DiffTree]
     while(aIt.hasNext && bIt.hasNext) {
-      prefixDiff = jsonDiff(aIt.next(), bIt.next(), pathToHere :+ Index(idxIt.next()), prefixDiff)
+      val idx = idxIt.next()
+      jsonDiff(aIt.next(), bIt.next()) match {
+        case Some(subDiff) => prefixDiff += (idx -> subDiff)
+        case None => /* noop */
+      }
     }
 
-    if(aIt.hasNext) { // things were removed from the end
-      aIt.zip(idxIt).foldLeft(prefixDiff) { (diff, aElemIdx) =>
-        val (aElem, idx) = aElemIdx
-        diff + ((pathToHere :+ Index(idx)) -> Removal(aElem))
+    val fullDiff =
+      if(aIt.hasNext) { // things were removed from the end
+        aIt.zip(idxIt).foldLeft(prefixDiff) { (diff, aElemIdx) =>
+          val (aElem, idx) = aElemIdx
+          diff + (idx -> Removal(aElem))
+        }
+      } else if(bIt.hasNext) { // things were added on the end
+        bIt.zip(idxIt).foldLeft(prefixDiff) { (diff, bElemIdx) =>
+          val (bElem, idx) = bElemIdx
+          diff + (idx -> Addition(bElem))
+        }
+      } else {
+        prefixDiff
       }
-    } else if(bIt.hasNext) { // things were added on the end
-      bIt.zip(idxIt).foldLeft(prefixDiff) { (diff, bElemIdx) =>
-        val (bElem, idx) = bElemIdx
-        diff + ((pathToHere :+ Index(idx)) -> Addition(bElem))
-      }
-    } else {
-      prefixDiff
-    }
+
+    if(fullDiff.isEmpty) None
+    else Some(ArrayDiff(fullDiff))
   }
 }
