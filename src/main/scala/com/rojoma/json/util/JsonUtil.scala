@@ -1,7 +1,8 @@
 package com.rojoma.json
 package util
 
-import java.io.{Reader, BufferedReader, Writer, FilterWriter, BufferedWriter, IOException}
+import java.io.{Reader, BufferedReader, InputStreamReader, FileInputStream, Writer, FilterWriter, BufferedWriter, IOException, File}
+import scala.io.Codec
 
 import ast._
 import io._
@@ -15,6 +16,36 @@ object JsonUtil {
                       else reader
     JsonCodec.fromJValue[T](JsonReader.fromReader(finalReader))
   }
+
+  @throws(classOf[IOException])
+  @throws(classOf[JsonParseException])
+  def readJsonFile[T : JsonCodec](filename: String, codec: Codec): Option[T] = {
+    val stream = new FileInputStream(filename)
+    try {
+      readJson[T](new InputStreamReader(stream, codec.charSet), buffer = true)
+    } finally {
+      stream.close()
+    }
+  }
+
+  @throws(classOf[IOException])
+  @throws(classOf[JsonParseException])
+  def readJsonFile[T : JsonCodec](filename: String): Option[T] = readJsonFile[T](filename, Codec.default)
+
+  @throws(classOf[IOException])
+  @throws(classOf[JsonParseException])
+  def readJsonFile[T : JsonCodec](filename: File, codec: Codec): Option[T] = {
+    val stream = new FileInputStream(filename)
+    try {
+      readJson[T](new InputStreamReader(stream, codec.charSet), buffer = true)
+    } finally {
+      stream.close()
+    }
+  }
+
+  @throws(classOf[IOException])
+  @throws(classOf[JsonParseException])
+  def readJsonFile[T : JsonCodec](filename: File): Option[T] = readJsonFile[T](filename, Codec.default)
 
   @throws(classOf[JsonParseException])
   def parseJson[T : JsonCodec](string: String) = JsonCodec.fromJValue[T](JsonReader.fromString(string))
