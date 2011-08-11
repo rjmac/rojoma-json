@@ -12,6 +12,22 @@ object JsonDiff {
       print(" " * indent)
       println(x)
     }
+
+    def subDiff[K](k: K, v: DiffTree) {
+      v match {
+        case Addition(jvalue) =>
+          p("+ " + k + " : " + jvalue)
+        case Removal(jvalue) =>
+          p("- " + k + " : " + jvalue)
+        case Replacement(oldv, newv) =>
+          p("- " + k + " : " + oldv)
+          p("+ " + k + " : " + newv)
+        case _ =>
+          p("! " + k + " :")
+          printDiff(v, indent + 2)
+      }
+    }
+
     diff match {
       case Addition(jvalue) =>
         p("+ " + jvalue)
@@ -22,33 +38,11 @@ object JsonDiff {
         p("+ " + newv)
       case ArrayDiff(elemDiffs) =>
         for((k, v) <- elemDiffs.toSeq.sorted(Ordering.by((x: (Int, DiffTree)) => x._1))) {
-          v match {
-            case Addition(jvalue) =>
-              p("+ " + k + " : " + jvalue)
-            case Removal(jvalue) =>
-              p("- " + k + " : " + jvalue)
-            case Replacement(oldv, newv) =>
-              p("+ " + k + " : " + oldv)
-              p("- " + k + " : " + newv)
-            case _ =>
-              p(k + " :")
-              printDiff(v, indent + 2)
-          }
+          subDiff(k, v)
         }
       case ObjectDiff(fieldDiffs) =>
         for((k, v) <- fieldDiffs.toSeq.sorted(Ordering.by((x: (String, DiffTree)) => x._1))) {
-          v match {
-            case Addition(jvalue) =>
-              p("+ " + k + " : " + jvalue)
-            case Removal(jvalue) =>
-              p("- " + k + " : " + jvalue)
-            case Replacement(oldv, newv) =>
-              p("+ " + k + " : " + oldv)
-              p("- " + k + " : " + newv)
-            case _ =>
-              p(k + " :")
-              printDiff(v, indent + 2)
-          }
+          subDiff(JString(k), v) // wrap k in a jstring so this output has some hope of being machine-parsable
         }
     }
   }
