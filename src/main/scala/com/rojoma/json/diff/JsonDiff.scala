@@ -6,14 +6,39 @@ import sc.{immutable => sci}
 
 import ast._
 
-object JsonDiff {
-  def printDiff(diff: DiffTree, indent: Int = 0) {
+sealed abstract class JsonDiff {
+  def write(writer: JsonDiff.JavaPrinter) = JsonDiff.write(writer, this, 0)
+  def reverse: JsonDiff
+}
+case class ObjectDiff(fieldDiffs: Map[String, JsonDiff]) extends JsonDiff { self =>
+  def reverse: ObjectDiff = new ObjectDiff(fieldDiffs.mapValues(_.reverse)) {
+    override def reverse = self
+  }
+}
+case class ArrayDiff(elementDiffs: Map[Int, JsonDiff]) extends JsonDiff { self =>
+  def reverse: ArrayDiff = new ArrayDiff(elementDiffs.mapValues(_.reverse))  {
+    override def reverse = self
+  }
+}
+case class Addition(newValue: JValue) extends JsonDiff {
+  def reverse = Removal(newValue)
+}
+case class Replacement(oldValue: JValue, newValue: JValue) extends JsonDiff {
+  def reverse = Replacement(newValue, oldValue)
+}
+case class Removal(oldValue: JValue) extends JsonDiff {
+  def reverse = Addition(oldValue)
+}
+
+object JsonDiff extends Function2[JValue, JValue, Option[JsonDiff]] {
+  type JavaPrinter = { def println(thing: Any); def print(thing: Any) }
+  private def write(writer: JavaPrinter, diff: JsonDiff, indent: Int = 0) {
     def p(x: Any) {
-      print(" " * indent)
-      println(x)
+      writer.print(" " * indent)
+      writer.println(x)
     }
 
-    def subDiff[K](k: K, v: DiffTree) {
+    def subDiff[K](k: K, v: JsonDiff) {
       v match {
         case Addition(jvalue) =>
           p("+ " + k + " : " + jvalue)
@@ -24,7 +49,7 @@ object JsonDiff {
           p("+ " + k + " : " + newv)
         case _ =>
           p("! " + k + " :")
-          printDiff(v, indent + 2)
+          write(writer, v, indent + 2)
       }
     }
 
@@ -37,17 +62,17 @@ object JsonDiff {
         p("- " + oldv)
         p("+ " + newv)
       case ArrayDiff(elemDiffs) =>
-        for((k, v) <- elemDiffs.toSeq.sorted(Ordering.by((x: (Int, DiffTree)) => x._1))) {
+        for((k, v) <- elemDiffs.toSeq.sorted(Ordering.by((x: (Int, JsonDiff)) => x._1))) {
           subDiff(k, v)
         }
       case ObjectDiff(fieldDiffs) =>
-        for((k, v) <- fieldDiffs.toSeq.sorted(Ordering.by((x: (String, DiffTree)) => x._1))) {
+        for((k, v) <- fieldDiffs.toSeq.sorted(Ordering.by((x: (String, JsonDiff)) => x._1))) {
           subDiff(JString(k), v) // wrap k in a jstring so this output has some hope of being machine-parsable
         }
     }
   }
 
-  def jsonDiff(a: JValue, b: JValue): Option[DiffTree] = (a, b) match {
+  def apply(a: JValue, b: JValue): Option[JsonDiff] = (a, b) match {
     case (JObject(aFields), JObject(bFields)) =>
       objectDiff(aFields, bFields)
     case (JArray(aElements), JArray(bElements)) =>
@@ -57,12 +82,12 @@ object JsonDiff {
       else Some(Replacement(aValue, bValue))
   }
 
-  private def objectDiff(aFields: sc.Map[String, JValue], bFields: sc.Map[String, JValue]): Option[DiffTree] = {
-    val subsAndReplacements = aFields.foldLeft(Map.empty[String, DiffTree]) { (acc, aField) =>
+  private def objectDiff(aFields: sc.Map[String, JValue], bFields: sc.Map[String, JValue]): Option[JsonDiff] = {
+    val subsAndReplacements = aFields.foldLeft(Map.empty[String, JsonDiff]) { (acc, aField) =>
       val (aKey, aValue) = aField
       bFields.get(aKey) match {
         case Some(bValue) =>
-          jsonDiff(aValue, bValue) match {
+          apply(aValue, bValue) match {
             case Some(diff) =>
               acc + (aKey -> diff)
             case None =>
@@ -83,15 +108,15 @@ object JsonDiff {
     else Some(ObjectDiff(fullDiff))
   }
 
-  private def arrayDiff(aElements: Seq[JValue], bElements: Seq[JValue]): Option[DiffTree] = {
+  private def arrayDiff(aElements: Seq[JValue], bElements: Seq[JValue]): Option[JsonDiff] = {
     var aIt = aElements.iterator
     var bIt = bElements.iterator
     var idxIt = Iterator.from(0)
 
-    var prefixDiff = Map.empty[Int, DiffTree]
+    var prefixDiff = Map.empty[Int, JsonDiff]
     while(aIt.hasNext && bIt.hasNext) {
       val idx = idxIt.next()
-      jsonDiff(aIt.next(), bIt.next()) match {
+      apply(aIt.next(), bIt.next()) match {
         case Some(subDiff) => prefixDiff += (idx -> subDiff)
         case None => /* noop */
       }
