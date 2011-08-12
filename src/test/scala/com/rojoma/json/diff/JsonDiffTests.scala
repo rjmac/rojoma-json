@@ -43,4 +43,35 @@ class JsonIoTests extends FunSuite with Checkers with MustMatchers {
       y.nonEmpty ==> (JsonDiff(JArray(x.toSeq ++ y.toSeq), x) == Some(ArrayDiff(Stream.from(x.length).zip(y map Removal).toMap)))
     })
   }
+
+  test("adding a field produces an Addition") {
+    check(forAll { (x: JObject, k: String, y: JValue) =>
+      (!x.contains(k)) ==> (JsonDiff(x, JObject(x.fields + (k -> y))) == Some(ObjectDiff(Map(k -> Addition(y)))))
+    })
+  }
+
+  val genObjectWithField = for {
+    obj <- arbitrary[JObject] suchThat (_.nonEmpty)
+    i <- Gen.choose(0, obj.size - 1)
+  } yield (obj, obj.keys.toSeq(i))
+
+  test("replacing a field with an atom produces a Replacement") {
+    check(forAll(genObjectWithField, arbitrary[JAtom]) { (objField, atom) =>
+      val (obj, field) = objField
+      (obj(field) != atom) ==> (JsonDiff(obj, JObject(obj.fields + (field -> atom))) == Some(ObjectDiff(Map(field -> Replacement(obj(field), atom)))))
+    })
+  }
+
+  test("replacing a field with a value of a different type produces a Replacement") {
+    check(forAll(genObjectWithField, arbitrary[JValue]) { (objField, v) =>
+      val (obj, field) = objField
+      (obj(field).getClass != v.getClass) ==> (JsonDiff(obj, JObject(obj.fields + (field -> v))) == Some(ObjectDiff(Map(field -> Replacement(obj(field), v)))))
+    })
+  }
+
+  test("removing a field produces a Removal") {
+    check(forAll(genObjectWithField) { case (obj, field) =>
+      JsonDiff(obj, JObject(obj.fields - field)) == Some(ObjectDiff(Map(field -> Removal(obj(field)))))
+    })
+  }
 }
