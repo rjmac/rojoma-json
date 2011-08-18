@@ -12,7 +12,7 @@ class JsonReader(input: Iterator[PositionedJsonToken]) {
 
   private def expect(want: JsonToken) {
     val n = lexer.next()
-    if(n.token != want) throw JsonUnexpectedToken(n.token, want.asFragment, n.row, n.column)
+    if(n.token != want) throw JsonUnexpectedToken(n.token, want.asMeaning, n.row, n.column)
   }
 
   private def hopeFor(want: JsonToken) = {
