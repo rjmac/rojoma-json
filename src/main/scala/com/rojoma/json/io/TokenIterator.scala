@@ -16,7 +16,8 @@ import scala.annotation.switch
   * This class does many small reads; it may be a good idea to wrap
   * the input `Reader` into a `BufferedReader`.
   *
-  * As extensions, this reader supports single-quoted strings.
+  * As extensions, this reader supports single-quoted strings and
+  * Javascript-style comments.
   */
 class TokenIterator(reader: Reader) extends BufferedIterator[PositionedJsonToken] {
   private var isPeeked: Boolean = false
