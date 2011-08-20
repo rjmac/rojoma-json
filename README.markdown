@@ -11,11 +11,11 @@ package com.rojoma.json.ast
        * `JNumber(bigdecimal: BigDecimal)`
     * `JCompound`
        * `JArray(toSeq: scala.collection.Seq[JValue])`
-       * `JObject(data: scala.collection.Map[String, JValue])`
+       * `JObject(fields: scala.collection.Map[String, JValue])`
 
 The `JCompound` classes extend `Iterable` and have convenience methods
 that make them act like `Seq` and `Map` respectively, but are not
-themselves actually `Seq`s or `Map`s.  Use the `toSeq`, or `data` or
+themselves actually `Seq`s or `Map`s.  Use the `toSeq`, or `fields` or
 `toMap`, method to get a real one.
 
 All `JValue`s have a `cast[T]` method that can be used to safely
