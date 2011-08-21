@@ -121,9 +121,29 @@ class MatchesTests extends FunSuite with MustMatchers {
     (PObject("hello" -> POption(1)) matches j("""{'hello':null}""")) must equal (None)
   }
 
-  test("optional fields will match null only if the subpattern doesn't acept it") {
-    var a = Variable[JValue]
+  test("optional fields will match null if the subpattern does accept it") {
+    val a = Variable[JValue]
     (PObject("hello" -> POption(a)) matches j("""{'hello':null}""")) must equal (Some(Map(a -> JNull)))
+  }
+
+  test("optional fields reject if present but unmatching") {
+    val a = Variable[JString]
+    (PObject("hello" -> POption(a)) matches j("""{'hello':5}""")) must equal (None)
+  }
+
+  test("optional-or-null fields will match null") {
+    val a = Variable[Int]
+    (PObject("hello" -> POption(a).orNull) matches j("""{'hello':null}""")) must equal (Some(Map.empty))
+  }
+
+  test("optional-or-null fields will match if present") {
+    val a = Variable[Int]
+    (PObject("hello" -> POption(a).orNull) matches j("""{'hello':1}""")) must equal (Some(Map(a -> 1)))
+  }
+
+  test("optional-or-null fields will reject if present, non-null, and not-matching") {
+    val a = Variable[Int]
+    (PObject("hello" -> POption(a).orNull) matches j("""{'hello':'world'}""")) must equal (None)
   }
 
   test("nest variables match") {
@@ -224,6 +244,12 @@ class MatchesTests extends FunSuite with MustMatchers {
     val a = Variable[String]
     val pattern = FirstOf(a, "hello", "world")
     pattern.generate() must equal (JString("hello"))
+  }
+
+  test("Optional pattern-or-null produces nothing if the pattern doesn't generate") {
+    val a = Variable[String]
+    val pattern = PObject("hello" -> POption(FirstOf(a, JNull)))
+    pattern.generate() must equal (j("""{}"""))
   }
 
   test(":=? works") {
