@@ -13,7 +13,7 @@ import ast.ArbitraryJValue._
 
 import ast._
 
-class JsonIoTests extends FunSuite with Checkers with MustMatchers {
+class JsonDiffTests extends FunSuite with Checkers with MustMatchers {
   test("identical values have no difference") {
     check(forAll { (x: JValue) =>
       JsonDiff(x, x) == None
