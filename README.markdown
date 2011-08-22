@@ -31,10 +31,10 @@ The following types have implicit codecs in `JsonCodec`'s compantion:
 
  * `String`
  * `Boolean`
- * Numeric types, including `BigInt`, `BigDecimal`, and their `java.math` counterparts.
- * all subclasses of `JValue`
- * Any subclass of `Seq[T]` if `T` has a `JsonCodec`
- * Any subclass of `Map[String, T]` if `T` has a `JsonCodec`
+ * Numeric types, including `BigInt`, `BigDecimal`, and their `java.math` counterparts
+ * `JValue` and all its subclasses
+ * Any `S[T] <: Seq[T]` if `T` has a `JsonCodec` and `S` has an implicit `CanBuild`
+ * Any `M[String, T] <: Map[String, T]` if `T` has a `JsonCodec` and `M` has an implicit `CanBuild`
  * `java.util.List[T]` if `T` has a `JsonCodec`
  * `java.util.Map[String, T]` if `T` has a `JsonCodec`
 
