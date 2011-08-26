@@ -31,7 +31,8 @@ class JPath private (cursors: Stream[JsonZipper[_]]) {
   // is the same as:
   //    x.down("foo").*.where(isNumberGreaterThan(5)).up.up
   // but also works if one of the inner steps is "rec", where the
-  // needed number of "up" calls is unknown.
+  // needed number of "up" calls is unknown (and indeed variable
+  // depending on where in the tree a match was found).
   def having(pred: JPath => JPath) = where(z => pred(new JPath(Stream(z))).finish.nonEmpty)
 
   def up = step(upOp)
