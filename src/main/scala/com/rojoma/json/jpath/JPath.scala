@@ -22,6 +22,7 @@ class JPath private (cursors: Stream[JsonZipper[_]]) {
   def downLast = step(downLastOp)
   def downFirst = step(downFirstOp)
   def rec = step(recOp)
+  def ** = *.rec
   def where(pred: JsonZipper[_] => Boolean) = step(whereOp(pred))
   def downWhere(pred: JsonZipper[_] => Boolean) = *.where(pred)
 
