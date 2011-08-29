@@ -109,6 +109,8 @@ sealed trait JCompound extends JValue {
 /** A JSON array, implemented as a thin wrapper around a sequence of [[com.rojoma.json.ast.JValue]]s.
   * In many ways this can be treated as a `Seq`, but it is in fact not one. */
 case class JArray(override val toSeq: sc.Seq[JValue]) extends Iterable[JValue] with PartialFunction[Int, JValue] with JCompound {
+  import com.rojoma.`json-impl`.AnnoyingJArrayHack._
+
   override def size = toSeq.size
   def length = size
   override def toIndexedSeq[B >: JValue] = toSeq.toIndexedSeq[B]
@@ -121,17 +123,17 @@ case class JArray(override val toSeq: sc.Seq[JValue]) extends Iterable[JValue] w
   def iterator = toSeq.iterator
 
   def forced: JArray = {
-    val forcedArray: IndexedSeq[JValue] = toSeq.map(_.forced)(sc.breakOut)
+    // not just "toSeq.map(_forced)" because the seq might be a Stream or view
+    val forcedArray: Vector[JValue] = convertForForce(toSeq).map(_.forced)(sc.breakOut)
     new JArray(forcedArray) {
       override def forced = this
     }
   }
 
   override def equals(o: Any): Boolean = {
-    import com.rojoma.`json-impl`.AnnoyingJArrayHack._
     o match {
       case that: JArray =>
-        convert(this.toSeq) == convert(that.toSeq)
+        convertForEquals(this.toSeq) == convertForEquals(that.toSeq)
       case _ =>
         false
     }
