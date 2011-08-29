@@ -34,13 +34,13 @@ class JsonDiffTests extends FunSuite with Checkers with MustMatchers {
 
   test("lengthening an array produces Additions") {
     check(forAll { (x: JArray, y: JArray) =>
-      y.nonEmpty ==> (JsonDiff(x, JArray(x.toSeq ++ y.toSeq)) == Some(ArrayDiff(Stream.from(x.length).zip(y map Addition).toMap)))
+      y.nonEmpty ==> (JsonDiff(x, JArray(x.toSeq ++ y.toSeq)) == Some(ArrayDiffLengthening(Map.empty, y.toSeq)))
     })
   }
 
   test("shortening an array produces Removals") {
     check(forAll { (x: JArray, y: JArray) =>
-      y.nonEmpty ==> (JsonDiff(JArray(x.toSeq ++ y.toSeq), x) == Some(ArrayDiff(Stream.from(x.length).zip(y map Removal).toMap)))
+      y.nonEmpty ==> (JsonDiff(JArray(x.toSeq ++ y.toSeq), x) == Some(ArrayDiffShortening(Map.empty, y.toSeq)))
     })
   }
 
@@ -72,6 +72,22 @@ class JsonDiffTests extends FunSuite with Checkers with MustMatchers {
   test("removing a field produces a Removal") {
     check(forAll(genObjectWithField) { case (obj, field) =>
       JsonDiff(obj, JObject(obj.fields - field)) == Some(ObjectDiff(Map(field -> Removal(obj(field)))))
+    })
+  }
+
+  // these aren't the greatest tests in the world
+  // because it's so unlikely that two randomly-generated jvalues will produce an interesting diff
+  // but they are nonetheless true properties
+  test("applying the diff between two objects produces the second object") {
+    check(forAll { (a: JValue, b: JValue) =>
+      val maybeDiff = JsonDiff(a, b)
+      (maybeDiff != None) ==> (maybeDiff.get.applyTo(a) == b)
+    })
+  }
+  test("applying the reversed diff between two objects produces the first object") {
+    check(forAll { (a: JValue, b: JValue) =>
+      val maybeDiff = JsonDiff(a, b)
+      (maybeDiff != None) ==> (maybeDiff.get.reverse.applyTo(b) == a)
     })
   }
 }

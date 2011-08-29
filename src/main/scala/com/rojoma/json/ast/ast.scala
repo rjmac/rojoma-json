@@ -126,6 +126,16 @@ case class JArray(override val toSeq: sc.Seq[JValue]) extends Iterable[JValue] w
       override def forced = this
     }
   }
+
+  override def equals(o: Any): Boolean = {
+    import com.rojoma.`json-impl`.AnnoyingJArrayHack._
+    o match {
+      case that: JArray =>
+        convert(this.toSeq) == convert(that.toSeq)
+      case _ =>
+        false
+    }
+  }
 }
 
 /** A JSON object, implemented as a thin wrapper around a map from `String` to [[com.rojoma.json.ast.JValue]].
