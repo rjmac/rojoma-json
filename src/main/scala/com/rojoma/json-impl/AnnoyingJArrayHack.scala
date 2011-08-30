@@ -10,7 +10,7 @@ object AnnoyingJArrayHack {
     if(isConvertForEqualsNecessary && in.isInstanceOf[scala.collection.mutable.WrappedArray[_]]) Vector(in: _*)
     else in
 
-  val isConvertForForceNecessary =
+  val isConvertForForceNecessaryStream =
     try {
       Stream(1).map(_ + 1)(collection.breakOut) : IndexedSeq[Int]
       false
@@ -18,7 +18,16 @@ object AnnoyingJArrayHack {
       case _: ClassCastException => true
     }
 
+  val isConvertForForceNecessaryView = // SI-4190
+    try {
+      List(1).view.map(_ + 1)(collection.breakOut) : IndexedSeq[Int]
+      false
+    } catch {
+      case _: ClassCastException => true
+    }
+
   def convertForForce(in: Seq[JValue]): Seq[JValue] =
-    if(isConvertForForceNecessary && in.isInstanceOf[Stream[_]]) Vector(in : _*)
+    if(isConvertForForceNecessaryStream && in.isInstanceOf[Stream[_]]) Vector(in : _*)
+    else if(isConvertForForceNecessaryView && in.isInstanceOf[scala.collection.SeqViewLike[_, _, _]]) Vector(in : _*)
     else in
 }
