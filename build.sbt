@@ -2,7 +2,7 @@ organization := "com.rojoma"
 
 name := "rojoma-json"
 
-version := "1.3.21-SNAPSHOT"
+version := "1.3.21"
 
 crossScalaVersions := Seq("2.8.1", "2.9.0", "2.9.0-1")
 
