@@ -4,7 +4,7 @@ name := "rojoma-json"
 
 version := "1.3.22-SNAPSHOT"
 
-crossScalaVersions := Seq("2.8.1", "2.9.0", "2.9.0-1")
+crossScalaVersions := Seq("2.8.1", "2.9.0", "2.9.0-1", "2.9.1")
 
 libraryDependencies <++= scalaVersion { sv =>
   sv match {
