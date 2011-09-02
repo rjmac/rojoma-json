@@ -111,6 +111,9 @@ def process(message: JValue) = message match {
   case _ =>
     error("unknown command", message)
 }
+
+def leaveChannel(channelName: String, message: Option[String]): JValue =
+  LeavePattern.generate(channel := channelName, text :=? message)
 ```
 
 `OptPattern`'s companion contains implicit conversions from various
