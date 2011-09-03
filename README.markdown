@@ -189,7 +189,30 @@ experimental, but is so far promising.
 
 package com.rojoma.json.util
 ----------------------------
-Utility operations that combine parts from other packages.  Currently
-the only member of this package is the object `JsonUtil` which contains
+Utility operations that combine parts from other packages.  The main
+member of this package is the object `JsonUtil` which contains
 convenience methods for moving data all the way between character data
-and usable objects.
+and usable objects. 
+
+However, despite my distrust of all things reflective, this package
+also contains an object called `SimpleJsonCodecBuilder`, which uses a
+tiny amount of reflection to make producing `JsonCodec`s for case
+classes easier.  It's very straightforward to use:
+
+```scala
+case class Foo(a: Int, b: Option[String])
+object Foo {
+  implicit val jCodec = SimpleJsonCodecBuilder[Foo].gen("a", _.a, "b", _.b)
+}
+```
+
+This can be used to build codecs for any classes which have accessors
+that match up to their constructor parameters.  The names and
+accessors must be provided in the same order the constructor takes
+them, or you will either get an exception when `gen` is called
+(because it can't find the right constructor) or you'll get a
+`JsonCodec` that doesn't roundtrip properly (if the types of the
+accessors just happen to line up with the types of the constructor
+parameters).  The types of the values to be serialized must either
+have `JsonCodec`s themselves, or be `Option`s wrappring around such
+types.  `gen` comes in variants that will handle up to 22 fields.
