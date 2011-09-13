@@ -215,8 +215,30 @@ root object is what was removed.
 ### package com.rojoma.json.jpath
 
 The `JPath` class is a simple wrapper over `JsonZipper`s for doing
-"xpath-style" queries on a `JValue`.  This is currently somewhat
-experimental, but is so far promising.
+"xpath-style" queries on a `JValue`.
+
+Conceptually, a `JPath` object is a collection of pointers into a JSON
+object, on which operations (methods on the object) are performed in
+parallel, producing a new `JPath`.  If an operation cannot be
+performed on one of the pointers, it simply does not contribute to the
+new object.  The most important methods are:
+
+* `down(String)` : descend into the named field of an object.
+* `down(Int)` : descend into the specified index of an array.
+* `*` : in parallel, go down into all elements of an object or array.
+* `rec` : add every subobject to the collection recursively, including the current node.
+* `**` : add every subobject to the collection recursively, excluding the current node.
+* `where(JsonZipper[_] => Boolean)` : filter the collection to those nodes for which the predicate is true.
+* `having(JPath => JPath)` : filter the collection to those nodes for which the function returns a non-empty collection.
+* `up` : move up to the collection's nodes' parents.  Note: this does not re-combine identical nodes; `*.up` will have the original node(s) duplicated once for each of their children.
+
+In addition, there are a number of operations which I have found to be
+less useful in practice, but which still exist: `downLast` and
+`downFirst` (which act on arrays and objects); and `next` and `prev`
+which act on child-nodes.
+
+When done chaining operations, call `finish`, which turns the `JPath`
+object into a stream of `JValue`s.
 
 ### package com.rojoma.json.util
 
