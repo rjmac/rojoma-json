@@ -20,7 +20,7 @@ sourceGenerators in Compile <+= (baseDirectory, version) map { (baseDirectory, v
       in.close()
     }
   }
-  Nil
+  Seq.empty[File]
 }
 
 sourceGenerators in Compile <+= (sourceManaged in Compile) map { managedRoot =>
