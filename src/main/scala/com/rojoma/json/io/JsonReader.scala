@@ -25,8 +25,8 @@ class JsonReader(input: Iterator[PositionedJsonToken]) {
       case StartOfArrayEvent => readArray()
       case StringEvent(s) => JString(s)
       case NumberEvent(n) => JNumber(n)
-      case IdentifierEvent("true") => JBoolean(true)
-      case IdentifierEvent("false") => JBoolean(false)
+      case IdentifierEvent("true") => JsonReader.jtrue
+      case IdentifierEvent("false") => JsonReader.jfalse
       case IdentifierEvent("null") => JNull
       case IdentifierEvent(other) => throw JsonUnknownIdentifier(other, row, col)
       case EndOfObjectEvent | EndOfArrayEvent | FieldEvent(_) =>
@@ -95,4 +95,7 @@ object JsonReader {
     * @see [[com.rojoma.json.io.JsonReader]] */
   @throws(classOf[JsonReaderException])
   def fromString(s: String) = apply(s).read()
+
+  private val jtrue = JBoolean(true)
+  private val jfalse = JBoolean(false)
 }
