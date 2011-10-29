@@ -63,6 +63,14 @@ class JsonIoTests extends FunSuite with Checkers with MustMatchers {
     JsonReader.fromString("'\ud800\\udc00'") must equal (JString("\ud800\udc00"))
   }
 
+  test("reading leaves the event iterator empty") {
+    check(forAll { x: JValue =>
+      val reader = new JsonReader(new TokenIterator(new java.io.StringReader(x.toString)))
+      reader.read()
+      !reader.lexer.hasNext
+    })
+  }
+
   test("reading leaves the input iterator positioned on the next token") {
     def tokenAfterDatum(s: String) = {
       val it = new TokenIterator(new java.io.StringReader(s))

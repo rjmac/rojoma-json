@@ -14,3 +14,5 @@ case class JsonEOF(row: Int, col: Int) extends JsonReaderException("%d:%d: Unexp
 sealed trait JsonParseException
 case class JsonUnexpectedToken(token: JsonToken, expected: String, row: Int, col: Int) extends JsonReaderException("%d:%d: Expected %s; got token %s".format(row, col, expected, token.asFragment)) with JsonLexException
 case class JsonUnknownIdentifier(identifier: String, row: Int, col: Int) extends JsonReaderException("%d:%d: Unknown identifier " + identifier) with JsonParseException
+
+case class JsonBadParse(event: JsonEvent, row: Int, col: Int) extends JsonReaderException("%d:%d: Received unexpected event %s".format(event, row, col))

@@ -8,22 +8,7 @@ import ast._
 /** Parses a token-stream into a [[com.rojoma.json.ast.JValue]].  As an extension,
   * this parser accepts unquoted strings (i.e., identifiers) as field-names. */
 class JsonReader(input: Iterator[PositionedJsonToken]) {
-  val lexer = input.buffered
-
-  private def expect(want: JsonToken) {
-    val n = lexer.next()
-    if(n.token != want) throw JsonUnexpectedToken(n.token, want.asMeaning, n.row, n.column)
-  }
-
-  private def hopeFor(want: JsonToken) = {
-    val PositionedJsonToken(found, row, col) = lexer.head
-    if(found == want) {
-      lexer.next()
-      true
-    } else {
-      false
-    }
-  }
+  val lexer = new JsonEventIterator(input).buffered
 
   /** Read one JSON datum out of the input.  If the input consists of more than one
     * object, the input after this call is positioned such that the next item available
@@ -34,17 +19,27 @@ class JsonReader(input: Iterator[PositionedJsonToken]) {
   @throws(classOf[JsonReaderException])
   @throws(classOf[java.io.IOException])
   def read(): JValue = {
-    val PositionedJsonToken(token, row, col) = lexer.next
-    token match {
-      case TokenOpenBrace => readObject()
-      case TokenOpenBracket => readArray()
-      case TokenString(s) => JString(s)
-      case TokenNumber(n) => JNumber(n)
-      case TokenIdentifier("true") => JBoolean(true)
-      case TokenIdentifier("false") => JBoolean(false)
-      case TokenIdentifier("null") => JNull
-      case TokenIdentifier(other) => throw JsonUnknownIdentifier(other, row, col)
-      case other => throw JsonUnexpectedToken(other, "start of datum", row, col)
+    val PositionedJsonEvent(event, row, col) = lexer.next()
+    event match {
+      case StartOfObjectEvent => readObject()
+      case StartOfArrayEvent => readArray()
+      case StringEvent(s) => JString(s)
+      case NumberEvent(n) => JNumber(n)
+      case IdentifierEvent("true") => JBoolean(true)
+      case IdentifierEvent("false") => JBoolean(false)
+      case IdentifierEvent("null") => JNull
+      case IdentifierEvent(other) => throw JsonUnknownIdentifier(other, row, col)
+      case EndOfObjectEvent | EndOfArrayEvent | FieldEvent(_) =>
+        throw JsonBadParse(event, row, col)
+    }
+  }
+
+  private def hopeFor(event: JsonEvent): Boolean = {
+    if(event == lexer.head.event) {
+      lexer.next()
+      true
+    } else {
+      false
     }
   }
 
@@ -54,21 +49,13 @@ class JsonReader(input: Iterator[PositionedJsonToken]) {
     val result = new scala.collection.mutable.LinkedHashMap[String, JValue]
 
     var didOne = false
-    while(!hopeFor(TokenCloseBrace)) {
-      if(didOne) expect(TokenComma)
-      else didOne = true
-
-      def restOfField(field: String) {
-        expect(TokenColon)
-        val v = read()
-        result += (field -> v)
-      }
-
-      val PositionedJsonToken(token, row, col) = lexer.next()
-      token match {
-        case TokenString(s) => restOfField(s)
-        case TokenIdentifier(s) => restOfField(s)
-        case other => throw JsonUnexpectedToken(token, "string", row, col)
+    while(!hopeFor(EndOfObjectEvent)) {
+      lexer.next() match {
+        case PositionedJsonEvent(FieldEvent(field), _, _) =>
+          val value = read()
+          result += field -> value
+        case PositionedJsonEvent(event, row, col) =>
+          throw JsonBadParse(event, row, col)
       }
     }
 
@@ -79,10 +66,7 @@ class JsonReader(input: Iterator[PositionedJsonToken]) {
     val builder = IndexedSeq.newBuilder[JValue]
 
     var didOne = false
-    while(!hopeFor(TokenCloseBracket)) {
-      if(didOne) expect(TokenComma)
-      else didOne = true
-
+    while(!hopeFor(EndOfArrayEvent)) {
       builder += read()
     }
 
