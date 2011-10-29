@@ -1,6 +1,5 @@
 mappings in (Compile, packageSrc) <++= (sourceManaged in Compile, managedSources in Compile) map { (base, srcs) =>
   import Path.{flat, relativeTo}
-  println(srcs)
   srcs x (relativeTo(base) | flat)
 }
 
