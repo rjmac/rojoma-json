@@ -16,7 +16,6 @@ case object TokenOpenBracket extends SimpleJsonToken("[", "start of list")
 case object TokenCloseBracket extends SimpleJsonToken("]", "end of list")
 case object TokenColon extends SimpleJsonToken(":", "colon")
 case object TokenComma extends SimpleJsonToken(",", "comma")
-case object TokenEOF extends SimpleJsonToken("end of input", "end of input")
 case class TokenIdentifier(text: String) extends SimpleJsonToken(text, "identifier")
 case class TokenNumber(number: BigDecimal) extends JsonToken {
   lazy val asFragment = CompactJsonWriter.toString(JNumber(number))

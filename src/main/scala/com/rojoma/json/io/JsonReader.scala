@@ -18,7 +18,7 @@ class JsonReader(input: Iterator[PositionedJsonToken]) {
     * @throws `IOException` if a low-level IO error occurs. */
   @throws(classOf[JsonReaderException])
   @throws(classOf[java.io.IOException])
-  def read(): JValue = {
+  def read(): JValue = try {
     val PositionedJsonEvent(event, row, col) = lexer.next()
     event match {
       case StartOfObjectEvent => readObject()
@@ -32,6 +32,11 @@ class JsonReader(input: Iterator[PositionedJsonToken]) {
       case EndOfObjectEvent | EndOfArrayEvent | FieldEvent(_) =>
         throw JsonBadParse(event, row, col)
     }
+  } catch {
+    case NoSuchTokenException(r, c) =>
+      throw JsonEOF(r, c)
+    case _: NoSuchElementException =>
+      throw JsonEOF(-1, -1) // this won't happen with the standard tokenizer and eventer
   }
 
   private def hopeFor(event: JsonEvent): Boolean = {

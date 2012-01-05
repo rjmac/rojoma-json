@@ -40,7 +40,7 @@ class TokenIteratorTests extends FunSuite with MustMatchers {
   }
 
   test("EOF is allowed inside a line comment") {
-    t("// eof here --->") must equal (TokenEOF)
+    evaluating(t("// eof here --->")) must produce [NoSuchTokenException]
   }
 
   test("EOF is not allowed inside a block comment") {
@@ -49,40 +49,40 @@ class TokenIteratorTests extends FunSuite with MustMatchers {
 
   test("multiple tokens can be read without any intervening space") {
     def l(s: String) = new TokenIterator(r(s)).map(_.token).toList
-    l("\"hello\":") must equal (List(TokenString("hello"), TokenColon, TokenEOF))
-    l("hello:") must equal (List(TokenIdentifier("hello"), TokenColon, TokenEOF))
-    l("123:") must equal (List(TokenNumber(BigDecimal(123)), TokenColon, TokenEOF))
-    l("[:") must equal (List(TokenOpenBracket, TokenColon, TokenEOF))
-    l("]:") must equal (List(TokenCloseBracket, TokenColon, TokenEOF))
-    l("{:") must equal (List(TokenOpenBrace, TokenColon, TokenEOF))
-    l("}:") must equal (List(TokenCloseBrace, TokenColon, TokenEOF))
-    l("::") must equal (List(TokenColon, TokenColon, TokenEOF))
-    l(",:") must equal (List(TokenComma, TokenColon, TokenEOF))
+    l("\"hello\":") must equal (List(TokenString("hello"), TokenColon))
+    l("hello:") must equal (List(TokenIdentifier("hello"), TokenColon))
+    l("123:") must equal (List(TokenNumber(BigDecimal(123)), TokenColon))
+    l("[:") must equal (List(TokenOpenBracket, TokenColon))
+    l("]:") must equal (List(TokenCloseBracket, TokenColon))
+    l("{:") must equal (List(TokenOpenBrace, TokenColon))
+    l("}:") must equal (List(TokenCloseBrace, TokenColon))
+    l("::") must equal (List(TokenColon, TokenColon))
+    l(",:") must equal (List(TokenComma, TokenColon))
   }
 
   test("multiple tokens can be read with one intervening space") {
     def l(s: String) = new TokenIterator(r(s)).map(_.token).toList
-    l("\"hello\" :") must equal (List(TokenString("hello"), TokenColon, TokenEOF))
-    l("hello :") must equal (List(TokenIdentifier("hello"), TokenColon, TokenEOF))
-    l("123 :") must equal (List(TokenNumber(BigDecimal(123)), TokenColon, TokenEOF))
-    l("[ :") must equal (List(TokenOpenBracket, TokenColon, TokenEOF))
-    l("] :") must equal (List(TokenCloseBracket, TokenColon, TokenEOF))
-    l("{ :") must equal (List(TokenOpenBrace, TokenColon, TokenEOF))
-    l("} :") must equal (List(TokenCloseBrace, TokenColon, TokenEOF))
-    l(": :") must equal (List(TokenColon, TokenColon, TokenEOF))
-    l(", :") must equal (List(TokenComma, TokenColon, TokenEOF))
+    l("\"hello\" :") must equal (List(TokenString("hello"), TokenColon))
+    l("hello :") must equal (List(TokenIdentifier("hello"), TokenColon))
+    l("123 :") must equal (List(TokenNumber(BigDecimal(123)), TokenColon))
+    l("[ :") must equal (List(TokenOpenBracket, TokenColon))
+    l("] :") must equal (List(TokenCloseBracket, TokenColon))
+    l("{ :") must equal (List(TokenOpenBrace, TokenColon))
+    l("} :") must equal (List(TokenCloseBrace, TokenColon))
+    l(": :") must equal (List(TokenColon, TokenColon))
+    l(", :") must equal (List(TokenComma, TokenColon))
   }
 
   test("multiple tokens can be read with multiple intervening space") {
     def l(s: String) = new TokenIterator(r(s)).map(_.token).toList
-    l("\"hello\"  :") must equal (List(TokenString("hello"), TokenColon, TokenEOF))
-    l("hello \n:") must equal (List(TokenIdentifier("hello"), TokenColon, TokenEOF))
-    l("123 /*hello*/:") must equal (List(TokenNumber(BigDecimal(123)), TokenColon, TokenEOF))
-    l("[ //gnu\n:") must equal (List(TokenOpenBracket, TokenColon, TokenEOF))
-    l("] /*hello*/ :") must equal (List(TokenCloseBracket, TokenColon, TokenEOF))
-    l("{ //gnu\n   :") must equal (List(TokenOpenBrace, TokenColon, TokenEOF))
-    l("} \t\t\t:") must equal (List(TokenCloseBrace, TokenColon, TokenEOF))
-    l(":/*bleh*/ :") must equal (List(TokenColon, TokenColon, TokenEOF))
-    l(",// gnu\n  :") must equal (List(TokenComma, TokenColon, TokenEOF))
+    l("\"hello\"  :") must equal (List(TokenString("hello"), TokenColon))
+    l("hello \n:") must equal (List(TokenIdentifier("hello"), TokenColon))
+    l("123 /*hello*/:") must equal (List(TokenNumber(BigDecimal(123)), TokenColon))
+    l("[ //gnu\n:") must equal (List(TokenOpenBracket, TokenColon))
+    l("] /*hello*/ :") must equal (List(TokenCloseBracket, TokenColon))
+    l("{ //gnu\n   :") must equal (List(TokenOpenBrace, TokenColon))
+    l("} \t\t\t:") must equal (List(TokenCloseBrace, TokenColon))
+    l(":/*bleh*/ :") must equal (List(TokenColon, TokenColon))
+    l(",// gnu\n  :") must equal (List(TokenComma, TokenColon))
   }
 }

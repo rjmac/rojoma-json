@@ -81,5 +81,23 @@ class JsonIoTests extends FunSuite with Checkers with MustMatchers {
     tokenAfterDatum("[1,2,3] 4") must equal (TokenNumber(BigDecimal(4)))
     tokenAfterDatum("{a:1,b:2,c:3} 4") must equal (TokenNumber(BigDecimal(4)))
   }
+
+  test("Can read more than one thing from a single reader") {
+    check(forAll { (x: JValue, y: JValue) =>
+      val r = new JsonReader(new TokenIterator(new java.io.StringReader(x.toString + " " + y.toString)))
+      val newX = r.read()
+      val newY = r.read()
+      evaluating(r.read()) must produce[JsonEOF]
+      newX == x && newY == y
+    })
+  }
+
+  test("reading a partial object throws JsonEOF") {
+    evaluating(JsonReader.fromString("[1,2,3")) must produce [JsonEOF]
+  }
+
+  test("reading a partial string throws JsonEOF") {
+    evaluating(JsonReader.fromString("'")) must produce [JsonEOF]
+  }
 }
 

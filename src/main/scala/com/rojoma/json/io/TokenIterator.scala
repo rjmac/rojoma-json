@@ -23,7 +23,6 @@ class TokenIterator(reader: Reader) extends BufferedIterator[PositionedJsonToken
   private var isPeeked: Boolean = false
   private var peeked: Char = _
 
-  private var done = false
   private var nextToken: PositionedJsonToken = null
 
   private var nextCharRow = 1 // This is the position of the next char returned from "nextChar()" or "peekChar()"
@@ -86,25 +85,24 @@ class TokenIterator(reader: Reader) extends BufferedIterator[PositionedJsonToken
   }
 
   def hasNext: Boolean = {
-    if(!done && nextToken == null) advance()
-    !done
+    if(nextToken == null) advance()
+    nextToken != null
   }
 
   def head: PositionedJsonToken = {
-    if(!hasNext) throw new NoSuchElementException()
+    if(!hasNext) throw NoSuchTokenException(nextCharRow, nextCharCol)
     nextToken
   }
 
   def next(): PositionedJsonToken = {
     val result = head
-    if(result.token eq TokenEOF) done = true
     nextToken = null
     result
   }
 
   private def advance() {
     skipWhitespace()
-    if(atEOF()) { nextToken = PositionedJsonToken(TokenEOF, nextCharRow, nextCharCol); return }
+    if(atEOF()) { nextToken = null; return }
     val nextTokenStartRow = nextCharRow
     val nextTokenStartCol = nextCharCol
     val rawNextToken = (peekChar(): @switch) match {

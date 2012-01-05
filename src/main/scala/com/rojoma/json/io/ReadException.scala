@@ -1,6 +1,8 @@
 package com.rojoma.json
 package io
 
+case class NoSuchTokenException(row: Int, col: Int) extends NoSuchElementException("Empty iterator")
+
 sealed abstract class JsonReaderException(message: String) extends Exception(message) {
   def row: Int
   def col: Int

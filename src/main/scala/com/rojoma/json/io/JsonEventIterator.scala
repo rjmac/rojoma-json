@@ -13,22 +13,34 @@ case class StringEvent(string: String) extends JsonEvent
 
 case class PositionedJsonEvent(event: JsonEvent, row: Int, column: Int)
 
-class JsonEventIterator(underlying: Iterator[PositionedJsonToken]) extends BufferedIterator[PositionedJsonEvent] {
-  private var stack = new scala.collection.mutable.ArrayStack[State]
-  stack.push(AwaitingDatum)
+class JsonEventIterator(input: Iterator[PositionedJsonToken]) extends BufferedIterator[PositionedJsonEvent] {
+  import JsonEventIterator._
 
+  private val underlying = input.buffered
+  private var stack = new StateStack
   private var available: PositionedJsonEvent = null
+  private var atTop = true
 
-  def hasNext = {
-    while(available == null && !stack.isEmpty) {
-      val token = underlying.next()
-      stack.pop.handle(token)
+  def hasNext: Boolean = {
+    if(available != null) {
+      true
+    } else {
+      atTop = stack.isEmpty
+      if(underlying.hasNext) {
+        if(atTop) stack.push(AwaitingDatum) // start of new top-level object
+        do {
+          val token = underlying.next()
+          available = stack.pop.handle(token, stack)
+        } while(available == null && !stack.isEmpty)
+      }
+      available != null
     }
-    available != null
   }
 
   def head = {
-    if(available == null && !hasNext) throw new NoSuchElementException("Empty iterator")
+    if(available == null && !hasNext) {
+      underlying.next() // force NoSuchElementException
+    }
     available
   }
 
@@ -40,29 +52,35 @@ class JsonEventIterator(underlying: Iterator[PositionedJsonToken]) extends Buffe
 
   /**
    * Finish reading the "current" object or list, where "current" is
-   * defined as "until the end of the most recent compound object
-   * started by `next()` or `head`, depending on whether `fromHead`
-   * is true".  If `fromHead` is false and next() has not been called,
-   * this does nothing.  If this iterator is empty, a `NoSuchElementException`
-   * will be thrown.
+   * defined as "the most recent compound object started by `next()`.
+   * If a top-level object has not been started, this does nothing.
+   *
+   * Throws `JsonEOF` if the end-of-input occurs before finishing
+   * this object.
    */
-  def skipRestOfCompound(fromHead: Boolean = false): JsonEventIterator = {
-    if(fromHead) {
-      next()
-    } else if(stack.size == 1 && stack(0) == AwaitingDatum) {
-      return this
-    }
-    var count = 0
-    do {
-      val ev = next().event
-      ev match {
-        case StartOfObjectEvent | StartOfArrayEvent => count += 1
-        case EndOfObjectEvent | EndOfArrayEvent => count -= 1
-        case _ => /* nothing */
+  def skipRestOfCompound(): this.type= {
+    hasNext // hasNext to make sure atTop is in an accurate state
+    if(!atTop) {
+      try {
+        var count = 0
+        do {
+          val ev = next().event
+          ev match {
+            case StartOfObjectEvent | StartOfArrayEvent => count += 1
+            case EndOfObjectEvent | EndOfArrayEvent => count -= 1
+            case _ => /* nothing */
+          }
+        } while(count >= 0)
+      } catch {
+        case NoSuchTokenException(r,c) => throw JsonEOF(r,c)
+        case _: NoSuchElementException => throw JsonEOF(-1, -1)
       }
-    } while(hasNext && count >= 0)
+    }
     this
   }
+
+  @inline
+  final def dropRestOfCompound() = skipRestOfCompound()
 
   /** Skips the next datum that would be returned entirely.  If the next event
    * is the start of a list or object, `skipRestOfCompound()` is called to
@@ -72,19 +90,31 @@ class JsonEventIterator(underlying: Iterator[PositionedJsonToken]) extends Buffe
    * event.  Otherwise, it's an atom and is consumed.
    *
    * If the iterator is empty at the start of this call, `NoSuchElementException`
-   * is raised.
+   * is raised.  If it runs out while skipping the datum, `JsonEOF` is raised.
    */
-  def skipNextDatum(): JsonEventIterator = {
-    head.event match {
-      case StartOfObjectEvent | StartOfArrayEvent => skipRestOfCompound(fromHead = true)
-      case FieldEvent(_) => next(); skipNextDatum()
-      case EndOfObjectEvent | EndOfArrayEvent => this
-      case _ => next(); this
-    }
+  def skipNextDatum(): this.type = head.event match {
+    case StartOfObjectEvent | StartOfArrayEvent =>
+      next()
+      skipRestOfCompound()
+    case FieldEvent(_) =>
+      next()
+      skipNextDatum()
+    case EndOfObjectEvent | EndOfArrayEvent =>
+      this
+    case _ =>
+      next()
+      this
   }
 
+  @inline
+  final def dropNextDatum() = skipNextDatum()
+}
+
+object JsonEventIterator {
+  type StateStack = scala.collection.mutable.ArrayStack[State]
+
   sealed abstract class State {
-    def handle(token: PositionedJsonToken)
+    def handle(token: PositionedJsonToken, stack: StateStack): PositionedJsonEvent
   }
 
   private def error(got: PositionedJsonToken, expected: String): Nothing =
@@ -94,122 +124,113 @@ class JsonEventIterator(underlying: Iterator[PositionedJsonToken]) extends Buffe
     PositionedJsonEvent(ev, token.row, token.column)
 
   case object AwaitingDatum extends State {
-    def handle(token: PositionedJsonToken) {
-      token.token match {
-        case TokenOpenBrace =>
-          stack.push(AwaitingFieldNameOrEndOfObject)
-          available = p(token, StartOfObjectEvent)
-        case TokenOpenBracket =>
-          stack.push(AwaitingEntryOrEndOfArray)
-          available = p(token, StartOfArrayEvent)
-        case TokenIdentifier(text) =>
-          available = p(token, IdentifierEvent(text))
-        case TokenNumber(number) =>
-          available = p(token, NumberEvent(number))
-        case TokenString(string) =>
-          available = p(token, StringEvent(string))
-        case _ =>
-          error(token, "datum")
-      }
+    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
+      case TokenOpenBrace =>
+        stack.push(AwaitingFieldNameOrEndOfObject)
+        p(token, StartOfObjectEvent)
+      case TokenOpenBracket =>
+        stack.push(AwaitingEntryOrEndOfArray)
+        p(token, StartOfArrayEvent)
+      case TokenIdentifier(text) =>
+        p(token, IdentifierEvent(text))
+      case TokenNumber(number) =>
+        p(token, NumberEvent(number))
+      case TokenString(string) =>
+        p(token, StringEvent(string))
+      case _ =>
+        error(token, "datum")
     }
   }
 
   case object AwaitingEntryOrEndOfArray extends State {
-    def handle(token: PositionedJsonToken) {
-      token.token match {
-        case TokenOpenBrace =>
-          stack.push(AwaitingCommaOrEndOfArray)
-          stack.push(AwaitingFieldNameOrEndOfObject)
-          available = p(token, StartOfObjectEvent)
-        case TokenOpenBracket =>
-          stack.push(AwaitingCommaOrEndOfArray)
-          stack.push(AwaitingEntryOrEndOfArray)
-          available = p(token, StartOfArrayEvent)
-        case TokenIdentifier(text) =>
-          stack.push(AwaitingCommaOrEndOfArray)
-          available = p(token, IdentifierEvent(text))
-        case TokenNumber(number) =>
-          stack.push(AwaitingCommaOrEndOfArray)
-          available = p(token, NumberEvent(number))
-        case TokenString(string) =>
-          stack.push(AwaitingCommaOrEndOfArray)
-          available = p(token, StringEvent(string))
-        case TokenCloseBracket =>
-          available = p(token, EndOfArrayEvent)
-        case _ =>
-          error(token, "datum or end of list")
-      }
+    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
+      case TokenOpenBrace =>
+        stack.push(AwaitingCommaOrEndOfArray)
+        stack.push(AwaitingFieldNameOrEndOfObject)
+        p(token, StartOfObjectEvent)
+      case TokenOpenBracket =>
+        stack.push(AwaitingCommaOrEndOfArray)
+        stack.push(AwaitingEntryOrEndOfArray)
+        p(token, StartOfArrayEvent)
+      case TokenIdentifier(text) =>
+        stack.push(AwaitingCommaOrEndOfArray)
+        p(token, IdentifierEvent(text))
+      case TokenNumber(number) =>
+        stack.push(AwaitingCommaOrEndOfArray)
+        p(token, NumberEvent(number))
+      case TokenString(string) =>
+        stack.push(AwaitingCommaOrEndOfArray)
+        p(token, StringEvent(string))
+      case TokenCloseBracket =>
+        p(token, EndOfArrayEvent)
+      case _ =>
+        error(token, "datum or end of list")
     }
   }
 
   case object AwaitingCommaOrEndOfArray extends State {
-    def handle(token: PositionedJsonToken) {
-      token.token match {
-        case TokenComma =>
-          stack.push(AwaitingCommaOrEndOfArray)
-          stack.push(AwaitingDatum)
-        case TokenCloseBracket =>
-          available = p(token, EndOfArrayEvent)
-        case _ =>
-          error(token, "comma or end of list")
-      }
+    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
+      case TokenComma =>
+        stack.push(AwaitingCommaOrEndOfArray)
+        stack.push(AwaitingDatum)
+        null
+      case TokenCloseBracket =>
+        p(token, EndOfArrayEvent)
+      case _ =>
+        error(token, "comma or end of list")
     }
   }
 
   case object AwaitingFieldNameOrEndOfObject extends State {
-    def handle(token: PositionedJsonToken) {
-      token.token match {
-        case TokenCloseBrace =>
-          available = p(token, EndOfObjectEvent)
-        case TokenString(text) =>
-          stack.push(AwaitingKVSep)
-          available = p(token, FieldEvent(text))
-        case TokenIdentifier(text) =>
-          stack.push(AwaitingKVSep)
-          available = p(token, FieldEvent(text))
-        case _ =>
-          error(token, "field name or end of object")
-      }
+    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
+      case TokenCloseBrace =>
+        p(token, EndOfObjectEvent)
+      case TokenString(text) =>
+        stack.push(AwaitingCommaOrEndOfObject)
+        stack.push(AwaitingKVSep)
+        p(token, FieldEvent(text))
+      case TokenIdentifier(text) =>
+        stack.push(AwaitingCommaOrEndOfObject)
+        stack.push(AwaitingKVSep)
+        p(token, FieldEvent(text))
+      case _ =>
+        error(token, "field name or end of object")
     }
   }
 
   case object AwaitingFieldName extends State {
-    def handle(token: PositionedJsonToken) {
-      token.token match {
-        case TokenString(text) =>
-          stack.push(AwaitingKVSep)
-          available = p(token, FieldEvent(text))
-        case TokenIdentifier(text) =>
-          stack.push(AwaitingKVSep)
-          available = p(token, FieldEvent(text))
-        case _ =>
-          error(token, "field name")
-      }
+    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
+      case TokenString(text) =>
+        stack.push(AwaitingKVSep)
+        p(token, FieldEvent(text))
+      case TokenIdentifier(text) =>
+        stack.push(AwaitingKVSep)
+        p(token, FieldEvent(text))
+      case _ =>
+        error(token, "field name")
     }
   }
-
+  
   case object AwaitingKVSep extends State {
-    def handle(token: PositionedJsonToken) {
-      token.token match {
-        case TokenColon =>
-          stack.push(AwaitingCommaOrEndOfObject)
-          stack.push(AwaitingDatum)
-        case _ =>
-          error(token, "colon")
-      }
+    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
+      case TokenColon =>
+        stack.push(AwaitingDatum)
+        null
+      case _ =>
+        error(token, "colon")
     }
   }
 
   case object AwaitingCommaOrEndOfObject extends State {
-    def handle(token: PositionedJsonToken) {
-      token.token match {
-        case TokenComma =>
-          stack.push(AwaitingFieldName)
-        case TokenCloseBrace =>
-          available = p(token, EndOfObjectEvent)
-        case _ =>
-          error(token, "comma or end of object")
-      }
+    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
+      case TokenComma =>
+        stack.push(AwaitingCommaOrEndOfObject)
+        stack.push(AwaitingFieldName)
+        null
+      case TokenCloseBrace =>
+        p(token, EndOfObjectEvent)
+      case _ =>
+        error(token, "comma or end of object")
     }
   }
 }

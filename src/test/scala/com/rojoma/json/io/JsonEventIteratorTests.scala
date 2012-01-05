@@ -24,17 +24,22 @@ class JsonEventIteratorTests extends FunSuite with MustMatchers {
     evaluating { e(",") } must produce [JsonUnexpectedToken]
   }
 
-  test("skipRestOfCompound'ing from next() before calling next() does nothing") {
+  test("skipRestOfCompound() before calling next() does nothing") {
     i("[1,2,3]").skipRestOfCompound().next().event must equal (StartOfArrayEvent)
   }
 
-  test("skipRestOfCompound'ing from head before calling next() skips first element") {
+  test("skipRestOfCompound() before next() but after hasNext does nothing") {
     val it = i("[1,2,3]")
-    it.skipRestOfCompound(fromHead = true).toSeq must be ('empty)
+    it.hasNext
+    it.skipRestOfCompound().next().event must equal (StartOfArrayEvent)
   }
 
-  test("skipRestOfCompound'ing after calling next() to enter skips rest of the datum") {
+  test("skipRestOfCompound() after calling next() to enter skips rest of the datum") {
     var it = i("[1,2,3]")
+    it.next()
+    it.skipRestOfCompound().toSeq must be ('empty)
+
+    it = i("[['a','b','c'],2,3]")
     it.next()
     it.skipRestOfCompound().toSeq must be ('empty)
 
@@ -43,69 +48,85 @@ class JsonEventIteratorTests extends FunSuite with MustMatchers {
     it.skipRestOfCompound().toSeq must be ('empty)
   }
 
-  test("skipRestOfCompound'ing from head after calling next() to enter skips rest of the datum, if the first item is an atom") {
-    var it = i("[1,2,3]")
-    it.next()
-    it.skipRestOfCompound(fromHead = true).toSeq must be ('empty)
-
-    it = i("{hello:'world',smiling:'gnus'}")
-    it.next()
-    it.next().event must equal (FieldEvent("hello")) // skip the field event
-    it.skipRestOfCompound(fromHead = true).toSeq must be ('empty)
+  test("skipRestOfCompound() within a nested object skips the rest of the inner datum") {
+    val it = i("[['a','b','c'],2,3]")
+    it.next().event must equal (StartOfArrayEvent)
+    it.next().event must equal (StartOfArrayEvent)
+    it.skipRestOfCompound().next().event must equal (NumberEvent(BigDecimal(2)))
   }
 
-  test("skipRestOfCompound'ing from head after calling next() to enter skips the current datum, if the first item is compound") {
-    var it = i("[['a','b','c'],2,3]")
-    it.next()
-    it.skipRestOfCompound(fromHead = true).next().event must equal (NumberEvent(BigDecimal(2)))
-
-    it = i("{hello:['a','b','c'],smiling:'gnus'}")
-    it.next()
-    it.next().event must equal (FieldEvent("hello")) // skip the field event
-    it.skipRestOfCompound(fromHead = true).next().event must equal (FieldEvent("smiling"))
+  test("skipNextDatum() in a multi-object stream leaves it positioned at the start of next object") {
+    var it = i("[1,2,3] 'gnu'")
+    it.skipNextDatum()
+    it.next().event must equal (StringEvent("gnu"))
   }
 
-  test("skipRestOfCompound'ing at the end raises NoSuchElementException") {
+  test("skipRestOfCompound() between top-level objects does nothing") {
+    var it = i("[1,2,3] 'gnu'")
+    it.skipNextDatum()
+    it.skipRestOfCompound().next().event must equal (StringEvent("gnu"))
+  }
+
+  test("skipRestOfCompound() at the end does not raise NoSuchElementException") {
     var it = i("5")
     it.next()
-    evaluating { it.skipRestOfCompound() } must produce [NoSuchElementException]
+    it.skipRestOfCompound()
+    it.hasNext must be (false)
   }
 
-  test("skipNextDatum at the top level reads a whole object") {
+  test("skipRestOfCompound() in an incomplete object raises JsonEOF") {
+    var it = i("[1,2,3")
+    it.next()
+    evaluating(it.skipRestOfCompound()) must produce[JsonEOF]
+  }
+
+  test("skipNextDatum() at EOF produces NoSuchElementException") {
+    var it = i("")
+    evaluating(it.skipNextDatum()) must produce[NoSuchElementException]
+  }
+
+  test("skipNextDatum() at the top level reads a whole object") {
     i("5").skipNextDatum().toSeq must be ('empty)
     i("[1,2,3]").skipNextDatum().toSeq must be ('empty)
   }
 
-  test("skipNextDatum within an array skips one item") {
+  test("skipNextDatum() of an incomplete object raises JsonEOF") {
+    var it = i("[1,2,3")
+    evaluating(it.skipNextDatum()) must produce[JsonEOF]
+  }
+
+  test("skipNextDatum() within an array skips one item") {
     var it = i("[1,2,3]")
     it.next()
     it.skipNextDatum().next().event must equal (NumberEvent(BigDecimal(2)))
   }
 
-  test("skipNextDatum at the end of an array does not move") {
+  test("skipNextDatum() at the end of an array does not move") {
     var it = i("[1]")
     it.next()
     it.next()
     it.skipNextDatum().next().event must equal (EndOfArrayEvent)
   }
 
-  test("skipNextDatum within an object skips both field and datum") {
+  test("skipNextDatum() within an object skips both field and datum") {
     var it = i("{'hello':'world','smiling','gnus'}")
     it.next()
-    it.skipNextDatum().next().event must equal (FieldEvent("smiling"))
+    it.skipNextDatum()
+    it.next().event must equal (FieldEvent("smiling"))
 
     it = i("{'hello':'world','smiling','gnus'}")
     it.next()
     it.next() // position before "world"
-    it.skipNextDatum().next().event must equal (FieldEvent("smiling"))
+    it.skipNextDatum()
+    it.next().event must equal (FieldEvent("smiling"))
   }
 
 
-  test("skipNextDatum at the end of object does not move") {
+  test("skipNextDatum() at the end of object does not move") {
     var it = i("{'hello':'world'}")
     it.next()
     it.next()
-    it.next()
+    it.next().event must equal (StringEvent("world"))
     it.skipNextDatum().next().event must equal (EndOfObjectEvent)
   }
 }
