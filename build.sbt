@@ -19,3 +19,15 @@ libraryDependencies <++= scalaVersion { sv =>
     case _ => error("Dependencies not set for scala version " + sv)
   }
 }
+
+// Include generated sources in source jar
+mappings in (Compile, packageSrc) <++= (sourceManaged in Compile, managedSources in Compile) map { (base, srcs) =>
+  import Path.{flat, relativeTo}
+  srcs x (relativeTo(base) | flat)
+}
+
+sourceGenerators in Compile <+= (sourceManaged in Compile) map SimpleJsonCodecBuilderBuilder
+
+// Bit of a hack; regenerate README.markdown when version is changed
+// to a non-SNAPSHOT value.
+sourceGenerators in Compile <+= (baseDirectory, version) map READMEBuilder
