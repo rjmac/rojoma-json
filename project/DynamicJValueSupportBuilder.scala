@@ -11,11 +11,20 @@ object DynamicJValueSupportBuilder extends ((File, String) => Seq[File]) {
 package dynamic
 """)
 
-      // In the future, if SIP-15 comes to pass, DynamicJValue may
-      // inherit from Any instead.
+      // In the future, if SIP-15 comes to pass, SuperClass may become
+      // a type alias for AnyVal.  equals and hashCode are automatically
+      // provided and cannot be overriden on value classes as of this
+      // writing, which is why they're here in the pre-SIP-15 shim.
       f.write("""
-object BaseClassHolder {
-  type BaseClass = AnyRef
+object SuperClassHolder {
+  import com.rojoma.json.dynamic.DynamicJValue
+  abstract class SuperClass { this: DynamicJValue =>
+    override def hashCode = static.hashCode
+    override def equals(x: Any) = x match {
+      case that: DynamicJValue => this.static == that.static
+      case _ => false
+    }
+  }
 }
 """)
 

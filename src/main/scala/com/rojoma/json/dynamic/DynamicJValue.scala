@@ -5,7 +5,7 @@ import ast._
 
 import com.rojoma.`json-impl`.dynamic._
 
-class DynamicJValue(val static: JValue) extends BaseClassHolder.BaseClass with Dynamic {
+class DynamicJValue(val static: JValue) extends SuperClassHolder.SuperClass with Dynamic {
   def applyDynamic(field: String)(arg: DynamicDisambiguate = NotProvided): DynamicJValue = {
     val a = apply(field)
     arg match {
@@ -28,6 +28,8 @@ class DynamicJValue(val static: JValue) extends BaseClassHolder.BaseClass with D
       case JArray(elements) => elements(idx).dynamic
       case _ => throw new InvalidDynamicJValueTypeException("Not an array")
     }
+
+  override def toString = static.toString
 }
 
 object DynamicJValue {
