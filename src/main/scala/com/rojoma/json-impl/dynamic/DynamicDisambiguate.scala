@@ -1,4 +1,4 @@
-package com.rojoma.`json-impl`.ast
+package com.rojoma.`json-impl`.dynamic
 
 sealed abstract class DynamicDisambiguate
 case object NotProvided extends DynamicDisambiguate

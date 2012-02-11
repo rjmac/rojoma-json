@@ -10,7 +10,7 @@ import org.scalacheck.Gen
 
 import org.scalacheck.Prop._
 
-import ast.ArbitraryJValue.ArbitraryJValue
+import testsupport.ArbitraryJValue.ArbitraryJValue
 import ast.{JValue, JString}
 
 class JsonIoTests extends FunSuite with Checkers with MustMatchers {

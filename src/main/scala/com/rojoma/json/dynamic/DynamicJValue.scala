@@ -1,7 +1,9 @@
 package com.rojoma.json
-package ast
+package dynamic
 
-import com.rojoma.`json-impl`.ast._
+import ast._
+
+import com.rojoma.`json-impl`.dynamic._
 
 class DynamicJValue(val static: JValue) extends BaseClassHolder.BaseClass with Dynamic {
   def applyDynamic(field: String)(arg: DynamicDisambiguate = NotProvided): DynamicJValue = {

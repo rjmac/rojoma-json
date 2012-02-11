@@ -9,7 +9,7 @@ import org.scalacheck.Prop._
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
 
-import ast.ArbitraryJValue._
+import testsupport.ArbitraryJValue._
 
 import ast._
 

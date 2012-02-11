@@ -1,4 +1,4 @@
 package com.rojoma.json
-package ast
+package dynamic
 
 class InvalidDynamicJValueTypeException(message: String) extends RuntimeException(message)

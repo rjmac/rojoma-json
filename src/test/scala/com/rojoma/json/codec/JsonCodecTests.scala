@@ -59,7 +59,7 @@ class JsonCodecTests extends FunSuite with Checkers {
   // }
 
   locally {
-    import ast.ArbitraryJValue._
+    import testsupport.ArbitraryJValue._
     import ast._
     test("jvalue roundtrips") { doCheck[JValue] }
     locally {

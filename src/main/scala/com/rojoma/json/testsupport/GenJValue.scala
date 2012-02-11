@@ -1,5 +1,7 @@
 package com.rojoma.json
-package ast
+package testsupport
+
+import ast._
 
 import org.scalacheck.Arbitrary
 import org.scalacheck.Gen

@@ -1,4 +1,5 @@
-package com.rojoma.json
+package com.rojoma
+package json
 package ast
 
 import scala.{collection => sc}
@@ -37,7 +38,7 @@ sealed trait JValue {
     * Note that certain field-names (the names common to all objects plus `static`,
     * `apply`, and `applyDynamic` cannot be accessed with simple field-notation.
     * Instead, pass them as strings to the `apply` method. */
-  def dynamic = DynamicJValue(this)
+  def dynamic = json.dynamic.DynamicJValue(this)
 }
 
 object JValue {
