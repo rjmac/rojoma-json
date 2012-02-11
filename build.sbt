@@ -28,6 +28,8 @@ mappings in (Compile, packageSrc) <++= (sourceManaged in Compile, managedSources
 
 sourceGenerators in Compile <+= (sourceManaged in Compile) map SimpleJsonCodecBuilderBuilder
 
+sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion in Compile) map DynamicJValueSupportBuilder
+
 // Bit of a hack; regenerate README.markdown when version is changed
 // to a non-SNAPSHOT value.
 sourceGenerators in Compile <+= (baseDirectory, version) map READMEBuilder

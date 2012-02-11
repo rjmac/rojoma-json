@@ -27,6 +27,17 @@ sealed trait JValue {
     * 
     * @return An equal [[com.rojoma.json.ast.JValue]] with strict values. */
   def forced: JValue
+
+  /** On scala 2.9 with -Xexperimental enabled, produces a dynamically
+    * typed view of this `JValue` which can be descended using dot-notation
+    * for field names or apply-type syntax for arrays.  It can be turned back
+    * into a `JValue` with the `static` method.  On scala 2.8, calling this is
+    * not an error but using it to descend into fields is a compile-time error.
+    *
+    * Note that certain field-names (the names common to all objects plus `static`,
+    * `apply`, and `applyDynamic` cannot be accessed with simple field-notation.
+    * Instead, pass them as strings to the `apply` method. */
+  def dynamic = DynamicJValue(this)
 }
 
 object JValue {
