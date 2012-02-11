@@ -95,12 +95,27 @@ following:
  * unquoted object keys
  * Javascript-style comments
 
-The only limits on the sizes of strings and depth of nesting are
-those of the JVM.  Parsing is done recursively, and so stack space
-is the limiting factor in nesting.  Numbers are restricted to
-those which can fit in a Java `BigDecimal`.  The reader does validate
-surrogate pairs and will replace stray halves with the Unicode
-`REPLACEMENT_CHARACTER` character.
+The only limits on the sizes of strings and depth of nesting are those
+of the JVM.  Parsing is done recursively, and so stack space is the
+limiting factor in nesting.  Numbers are restricted to those which can
+fit in a Java `BigDecimal`.  The reader does validate surrogate pairs
+and will replace stray halves with the Unicode `REPLACEMENT_CHARACTER`
+character.  `JsonReader` also guarantees to read exactly as much as
+necessary as to read a single `JValue` -- i.e., only to the closing
+delimiter for objects, arrays, and strings, and one character past for
+all other types of JSON datum.
+
+There is also semi-experimental support for operating on JSON input as
+token or event streams.  `TokenIterator` is an iterator class which
+takes a `Reader` and produces positioned `JsonToken` objects, or a
+`JsonLexException` if the input contains invalid tokens.
+`JsonEventIterator` takes the output of `TokenIterator` and produces
+positioned `JsonEvent`s.  `JsonEventIterator` will only produce events
+for syntatically valid JSON input; if the input is malformed, some
+subclass of `JsonParseException` is thrown.
+
+`JsonReader` is implemented in terms of the two iterator classes and
+so they share the same minimal-read contract that is has.
 
 ### package com.rojoma.json.matcher
 
@@ -196,9 +211,11 @@ A zipper for navigating JSON.  There are six interfaces:
  * `NothingZipper`
 
 Each one is parameterized with the type of its "parent" zipper in the
-path from the root of the JSON object being traversed.  An array
-or object zipper may be acquired by calling `asArray` or `asObject`
-on a generic zipper.
+path from the root of the JSON object being traversed, though this
+will probably change in the future as experience has shown that this
+is more trouble than it's worth, at least without dependent types.  An
+array or object zipper may be acquired by calling `asArray` or
+`asObject` on a generic zipper.
 
 Each of the first five allows you to move `up`, to the `top` of the
 object, or find the object `here` or `replace` it.  In addition, the
@@ -217,6 +234,14 @@ root object is what was removed.
 The `JPath` class is a simple wrapper over `JsonZipper`s for doing
 "xpath-style" queries on a `JValue`.  This is currently somewhat
 experimental, but is so far promising.
+
+```scala
+// Find the first name of all users that live in Tucson
+new JPath(myObject).down("users").*.having(_.down("city").where(_.here == JString("Tucson"))).down("firstName").finish
+```
+
+The result is a `Stream[JValue]`.  Currently `JPath` is a read-only
+interface.
 
 ### package com.rojoma.json.util
 
@@ -247,3 +272,11 @@ accessors just happen to line up with the types of the constructor
 parameters).  The types of the values to be serialized must either
 have `JsonCodec`s themselves, or be `Option`s wrappring around such
 types.  `gen` comes in variants that will handle up to 22 fields.
+
+## Future paths
+
+I'm looking forward to [string
+interpolation](rojoma-json/blob/master/future/StringInterpolation.scala).
+Also [macros](http://www.scalamacros.org), which will hopefully be
+able to be used to automatically create codecs in a non-reflective
+manner at compile time.
