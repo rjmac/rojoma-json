@@ -6,15 +6,15 @@ version := "1.4.2-SNAPSHOT"
 
 crossScalaVersions := Seq("2.8.1", "2.8.2", "2.9.0", "2.9.0-1", "2.9.1")
 
+libraryDependencies += "org.scalatest" %% "scalatest" % "1.7.1" % "test"
+
 libraryDependencies <++= scalaVersion { sv =>
   sv match {
     case "2.8.1" | "2.8.2" => Seq(
-      "org.scala-tools.testing" % "scalacheck_2.8.1" % "1.8" % "optional",
-      "org.scalatest" % "scalatest_2.8.1" % "1.5.1" % "test"
+      "org.scala-tools.testing" % "scalacheck_2.8.1" % "1.8" % "optional"
     )
     case "2.9.0" | "2.9.0-1" | "2.9.1" => Seq(
-      "org.scala-tools.testing" % "scalacheck_2.9.0" % "1.9" % "optional",
-      "org.scalatest" % "scalatest_2.9.0" % "1.6.1" % "test"
+      "org.scala-tools.testing" %% "scalacheck" % "1.9" % "optional"
     )
     case _ => error("Dependencies not set for scala version " + sv)
   }
