@@ -8,7 +8,7 @@ setting up SBT is as simple as
 ```scala
 resolvers += "rojoma.com" at "http://rjmac.github.com/maven/releases/"
 
-libraryDependencies += "com.rojoma" %% "rojoma-json" % "1.4.1"
+libraryDependencies += "com.rojoma" %% "rojoma-json" % "1.4.2"
 ```
 
 While for Maven, the pom snippets are:
@@ -25,7 +25,7 @@ While for Maven, the pom snippets are:
   <dependency>
     <groupId>com.rojoma</groupId>
     <artifactId>rojoma-json_${scala.version}</artifactId>
-    <version>1.4.1</version>
+    <version>1.4.2</version>
   </dependency>
 </dependencies>
 ```
@@ -73,6 +73,12 @@ Numeric codecs are "lenient" -- that is, if a number is out of range
 of the requested type, it undergoes the normal truncation
 `BigDecimal.toXXX` does.  If this is not desired, request a
 `BigDecimal` or a `JValue` and use the `.toXXXExact` alternatives.
+
+`JsonCodec` itself can be used as a value that represents the result
+of an implicit search for a codec.  That is:
+```scala
+JsonCodec[T] === implicitly[JsonCodec[T]]
+```
 
 ### package com.rojoma.json.io
 
