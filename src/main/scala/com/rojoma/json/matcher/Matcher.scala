@@ -10,8 +10,8 @@ sealed trait OptPattern
 
 object OptPattern {
   implicit def litifyJValue(x: JValue): Pattern = Literal(x)
-  implicit def litifyCodec[T : JsonCodec](x: T): Pattern = new FLiteral(j => implicitly[JsonCodec[T]].decode(j) == Some(x)) {
-    override def generate(env: Pattern.Results) = Some(implicitly[JsonCodec[T]].encode(x))
+  implicit def litifyCodec[T : JsonCodec](x: T): Pattern = new FLiteral(j => JsonCodec[T].decode(j) == Some(x)) {
+    override def generate(env: Pattern.Results) = Some(JsonCodec[T].encode(x))
   }
 }
 
@@ -84,7 +84,7 @@ abstract class Variable[T] extends Pattern with PartialFunction[Pattern.Results,
 object Variable {
   def apply[T : JsonCodec](): Variable[T] = new Variable[T] {
     def evaluate(x: JValue, environment: Pattern.Results): Option[Pattern.Results] = {
-      implicitly[JsonCodec[T]].decode(x) flatMap { r1 =>
+      JsonCodec[T].decode(x) flatMap { r1 =>
         environment.get(this) match {
           case None =>
             Some(environment + (this -> r1))
@@ -96,7 +96,7 @@ object Variable {
       }
     }
 
-    def generate(environment: Pattern.Results) = get(environment).map(implicitly[JsonCodec[T]].encode)
+    def generate(environment: Pattern.Results) = get(environment).map(JsonCodec[T].encode)
   }
 }
 case class PArray(subPatterns: Pattern*) extends Pattern {

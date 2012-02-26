@@ -74,6 +74,12 @@ of the requested type, it undergoes the normal truncation
 `BigDecimal.toXXX` does.  If this is not desired, request a
 `BigDecimal` or a `JValue` and use the `.toXXXExact` alternatives.
 
+`JsonCodec` itself can be used as a value that represents the result
+of an implicit search for a codec.  That is:
+```scala
+JsonCodec[T] === implicitly[JsonCodec[T]]
+```
+
 ### package com.rojoma.json.io
 
  * `JsonReader`: Convert character data to `JValues`

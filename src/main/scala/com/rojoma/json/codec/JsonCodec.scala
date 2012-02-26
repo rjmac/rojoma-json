@@ -21,8 +21,9 @@ private[codec] object CBHolder {
 object JsonCodec {
   import CBHolder._
 
-  def toJValue[T : JsonCodec](x: T) = implicitly[JsonCodec[T]].encode(x)
-  def fromJValue[T : JsonCodec](x: JValue) = implicitly[JsonCodec[T]].decode(x)
+  def apply[T](implicit a: JsonCodec[T]) = a
+  def toJValue[T : JsonCodec](x: T) = JsonCodec[T].encode(x)
+  def fromJValue[T : JsonCodec](x: JValue) = JsonCodec[T].decode(x)
 
   // I would like all of these codecs' encode methods to use view, but unfortunately in scala 2.8.1,
   // empty views and non-views are not symmetrically comparable (Nil.view == Nil, but Nil != Nil.view).  This
@@ -31,7 +32,7 @@ object JsonCodec {
   implicit def seqCodec[T, S[X] <: sc.Seq[X]](implicit tCodec: JsonCodec[T], buildFactory: CB[T, S[T]]) = new JsonCodec[S[T]] {
     def encode(x: S[T]): JValue = {
       if(x.nonEmpty)
-        JArray(x.view.map(implicitly[JsonCodec[T]].encode))
+        JArray(x.view.map(tCodec.encode))
       else
         JArray(Nil)
     }
@@ -39,9 +40,8 @@ object JsonCodec {
     def decode(xs: JValue): Option[S[T]] = xs match {
       case JArray(jElems) =>
         val builder = buildFactory()
-        val subCodec = implicitly[JsonCodec[T]]
         for (jElem <- jElems) {
-          subCodec.decode(jElem) match {
+          tCodec.decode(jElem) match {
             case Some(elem) =>
               builder += elem
             case None =>
@@ -57,14 +57,14 @@ object JsonCodec {
   implicit def arrayCodec[T: JsonCodec: ClassManifest] = new JsonCodec[Array[T]] {
     def encode(x: Array[T]): JValue =
       if(x.length > 0)
-        JArray(x.view.map(implicitly[JsonCodec[T]].encode))
+        JArray(x.view.map(JsonCodec[T].encode))
       else
         JArray(Nil)
 
     def decode(xs: JValue): Option[Array[T]] = xs match {
       case JArray(jElems) =>
         val builder = scm.ArrayBuilder.make[T]()
-        val subCodec = implicitly[JsonCodec[T]]
+        val subCodec = JsonCodec[T]
         for(jElem <- jElems) {
           subCodec.decode(jElem) match {
             case Some(elem) =>
@@ -82,7 +82,7 @@ object JsonCodec {
   implicit def juListCodec[T: JsonCodec] = new JsonCodec[ju.List[T]] {
     def encode(x: ju.List[T]): JValue = {
       if(!x.isEmpty)
-        JArray(x.view.map(implicitly[JsonCodec[T]].encode))
+        JArray(x.view.map(JsonCodec[T].encode))
       else
         JArray(Nil)
     }
@@ -90,7 +90,7 @@ object JsonCodec {
     def decode(xs: JValue): Option[ju.List[T]] = xs match {
       case JArray(jElems) =>
         val result = new ju.ArrayList[T]
-        val subCodec = implicitly[JsonCodec[T]]
+        val subCodec = JsonCodec[T]
         for(jElem <- jElems) {
           subCodec.decode(jElem) match {
             case Some(elem) =>
@@ -208,14 +208,13 @@ object JsonCodec {
 
   implicit def mapCodec[T, M[U, V] <: sc.Map[U, V]](implicit tCodec: JsonCodec[T], buildFactory: CB[(String, T), M[String, T]]) = new JsonCodec[M[String, T]] {
     def encode(x: M[String, T]) =
-      JObject(x.mapValues(implicitly[JsonCodec[T]].encode))
+      JObject(x.mapValues(tCodec.encode))
 
     def decode(x: JValue): Option[M[String, T]] = x match {
       case JObject(fields) =>
         val builder = buildFactory()
-        val subCodec = implicitly[JsonCodec[T]]
         for((k, jv) <- fields) {
-          subCodec.decode(jv) match {
+          tCodec.decode(jv) match {
             case Some(v) => builder += (k -> v)
             case None => return None
           }
@@ -228,13 +227,12 @@ object JsonCodec {
 
   implicit def juMapCodec[T: JsonCodec] = new JsonCodec[ju.Map[String, T]] {
     def encode(x: ju.Map[String, T]) =
-      JObject(x.mapValues(implicitly[JsonCodec[T]].encode))
-
+      JObject(x.mapValues(JsonCodec[T].encode))
 
     def decode(x: JValue): Option[ju.Map[String, T]] = x match {
       case JObject(fields) =>
         val result = new ju.LinkedHashMap[String, T]
-        val subCodec = implicitly[JsonCodec[T]]
+        val subCodec = JsonCodec[T]
         for((k, jv) <- fields) {
           subCodec.decode(jv) match {
             case Some(v) => result.put(k, v)
@@ -251,15 +249,15 @@ object JsonCodec {
   // if Left fails the whole thing fails.
   implicit def eitherCodec[L: JsonCodec, R: JsonCodec] = new JsonCodec[Either[L, R]] {
     def encode(x: Either[L,R]) = x match {
-      case Left(left) => implicitly[JsonCodec[L]].encode(left)
-      case Right(right) => implicitly[JsonCodec[R]].encode(right)
+      case Left(left) => JsonCodec[L].encode(left)
+      case Right(right) => JsonCodec[R].encode(right)
     }
 
     def decode(x: JValue) = 
-      implicitly[JsonCodec[R]].decode(x) match {
+      JsonCodec[R].decode(x) match {
         case Some(right) => Some(Right(right))
         case None =>
-          implicitly[JsonCodec[L]].decode(x) match {
+          JsonCodec[L].decode(x) match {
             case Some(left) => Some(Left(left))
             case None => None
           }
