@@ -76,6 +76,7 @@ of the requested type, it undergoes the normal truncation
 
 `JsonCodec` itself can be used as a value that represents the result
 of an implicit search for a codec.  That is:
+
 ```scala
 JsonCodec[T] === implicitly[JsonCodec[T]]
 ```
