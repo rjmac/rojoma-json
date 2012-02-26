@@ -2,4 +2,4 @@
 /lib_managed/
 /project/project/target/
 /project/target/
-/publish.sbt
+/credentials.sbt
