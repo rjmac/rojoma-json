@@ -13,7 +13,7 @@ case class StringEvent(string: String) extends JsonEvent
 
 case class PositionedJsonEvent(event: JsonEvent, row: Int, column: Int)
 
-class JsonEventIterator(input: Iterator[PositionedJsonToken]) extends BufferedIterator[PositionedJsonEvent] {
+class JsonEventIterator(input: Iterator[JsonToken]) extends BufferedIterator[PositionedJsonEvent] {
   import JsonEventIterator._
 
   private val underlying = input.buffered
@@ -114,21 +114,21 @@ object JsonEventIterator {
   private type StateStack = scala.collection.mutable.ArrayStack[State]
 
   private abstract class State {
-    protected def error(got: PositionedJsonToken, expected: String): Nothing =
-      throw JsonUnexpectedToken(got.token, expected, got.row, got.column)
+    protected def error(got: JsonToken, expected: String): Nothing =
+      throw JsonUnexpectedToken(got, expected)
 
-    protected def p(token: PositionedJsonToken, ev: JsonEvent) =
+    protected def p(token: JsonToken, ev: JsonEvent) =
       PositionedJsonEvent(ev, token.row, token.column)
 
-    def handle(token: PositionedJsonToken, stack: StateStack): PositionedJsonEvent
+    def handle(token: JsonToken, stack: StateStack): PositionedJsonEvent
   }
 
   private val AwaitingDatum: State = new State {
-    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
-      case TokenOpenBrace =>
+    def handle(token: JsonToken, stack: StateStack) = token match {
+      case TokenOpenBrace() =>
         stack.push(AwaitingFieldNameOrEndOfObject)
         p(token, StartOfObjectEvent)
-      case TokenOpenBracket =>
+      case TokenOpenBracket() =>
         stack.push(AwaitingEntryOrEndOfArray)
         p(token, StartOfArrayEvent)
       case TokenIdentifier(text) =>
@@ -143,12 +143,12 @@ object JsonEventIterator {
   }
 
   private val AwaitingEntryOrEndOfArray: State = new State {
-    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
-      case TokenOpenBrace =>
+    def handle(token: JsonToken, stack: StateStack) = token match {
+      case TokenOpenBrace() =>
         stack.push(AwaitingCommaOrEndOfArray)
         stack.push(AwaitingFieldNameOrEndOfObject)
         p(token, StartOfObjectEvent)
-      case TokenOpenBracket =>
+      case TokenOpenBracket() =>
         stack.push(AwaitingCommaOrEndOfArray)
         stack.push(AwaitingEntryOrEndOfArray)
         p(token, StartOfArrayEvent)
@@ -161,7 +161,7 @@ object JsonEventIterator {
       case TokenString(string) =>
         stack.push(AwaitingCommaOrEndOfArray)
         p(token, StringEvent(string))
-      case TokenCloseBracket =>
+      case TokenCloseBracket() =>
         p(token, EndOfArrayEvent)
       case _ =>
         error(token, "datum or end of list")
@@ -169,12 +169,12 @@ object JsonEventIterator {
   }
 
   private val AwaitingCommaOrEndOfArray: State = new State {
-    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
-      case TokenComma =>
+    def handle(token: JsonToken, stack: StateStack) = token match {
+      case TokenComma() =>
         stack.push(AwaitingCommaOrEndOfArray)
         stack.push(AwaitingDatum)
         null
-      case TokenCloseBracket =>
+      case TokenCloseBracket() =>
         p(token, EndOfArrayEvent)
       case _ =>
         error(token, "comma or end of list")
@@ -182,8 +182,8 @@ object JsonEventIterator {
   }
 
   private val AwaitingFieldNameOrEndOfObject: State = new State {
-    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
-      case TokenCloseBrace =>
+    def handle(token: JsonToken, stack: StateStack) = token match {
+      case TokenCloseBrace() =>
         p(token, EndOfObjectEvent)
       case TokenString(text) =>
         stack.push(AwaitingCommaOrEndOfObject)
@@ -199,7 +199,7 @@ object JsonEventIterator {
   }
 
   private val AwaitingFieldName: State = new State {
-    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
+    def handle(token: JsonToken, stack: StateStack) = token match {
       case TokenString(text) =>
         stack.push(AwaitingKVSep)
         p(token, FieldEvent(text))
@@ -212,8 +212,8 @@ object JsonEventIterator {
   }
 
   private val AwaitingKVSep: State = new State {
-    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
-      case TokenColon =>
+    def handle(token: JsonToken, stack: StateStack) = token match {
+      case TokenColon() =>
         stack.push(AwaitingDatum)
         null
       case _ =>
@@ -222,12 +222,12 @@ object JsonEventIterator {
   }
 
   private val AwaitingCommaOrEndOfObject: State = new State {
-    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
-      case TokenComma =>
+    def handle(token: JsonToken, stack: StateStack) = token match {
+      case TokenComma() =>
         stack.push(AwaitingCommaOrEndOfObject)
         stack.push(AwaitingFieldName)
         null
-      case TokenCloseBrace =>
+      case TokenCloseBrace() =>
         p(token, EndOfObjectEvent)
       case _ =>
         error(token, "comma or end of object")

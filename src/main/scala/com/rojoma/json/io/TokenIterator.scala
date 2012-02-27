@@ -19,11 +19,11 @@ import scala.annotation.switch
   * As extensions, this reader supports single-quoted strings and
   * Javascript-style comments.
   */
-class TokenIterator(reader: Reader) extends BufferedIterator[PositionedJsonToken] {
+class TokenIterator(reader: Reader) extends BufferedIterator[JsonToken] {
   private var isPeeked: Boolean = false
   private var peeked: Char = _
 
-  private var nextToken: PositionedJsonToken = null
+  private var nextToken: JsonToken = null
 
   private var nextCharRow = 1 // This is the position of the next char returned from "nextChar()" or "peekChar()"
   private var nextCharCol = 1
@@ -89,12 +89,12 @@ class TokenIterator(reader: Reader) extends BufferedIterator[PositionedJsonToken
     nextToken != null
   }
 
-  def head: PositionedJsonToken = {
+  def head: JsonToken = {
     if(!hasNext) throw NoSuchTokenException(nextCharRow, nextCharCol)
     nextToken
   }
 
-  def next(): PositionedJsonToken = {
+  def next(): JsonToken = {
     val result = head
     nextToken = null
     result
@@ -103,27 +103,27 @@ class TokenIterator(reader: Reader) extends BufferedIterator[PositionedJsonToken
   private def advance() {
     skipWhitespace()
     if(atEOF()) { nextToken = null; return }
-    val nextTokenStartRow = nextCharRow
-    val nextTokenStartCol = nextCharCol
-    val rawNextToken = (peekChar(): @switch) match {
+    val tokenStartRow = nextCharRow
+    val tokenStartCol = nextCharCol
+    val token = (peekChar(): @switch) match {
       case '{' =>
         nextChar()
-        TokenOpenBrace
+        TokenOpenBrace()
       case '}' =>
         nextChar()
-        TokenCloseBrace
+        TokenCloseBrace()
       case '[' =>
         nextChar()
-        TokenOpenBracket
+        TokenOpenBracket()
       case ']' =>
         nextChar()
-        TokenCloseBracket
+        TokenCloseBracket()
       case ':' =>
         nextChar()
-        TokenColon
+        TokenColon()
       case ',' =>
         nextChar()
-        TokenComma
+        TokenComma()
       case '"' | '\'' => readString()
       case '-' => readNumber()
       case c =>
@@ -131,7 +131,9 @@ class TokenIterator(reader: Reader) extends BufferedIterator[PositionedJsonToken
         else if(Character.isUnicodeIdentifierStart(c)) readIdentifier()
         else lexerError(c, "start of datum", nextCharRow, nextCharCol)
     }
-    nextToken = PositionedJsonToken(rawNextToken, nextTokenStartRow, nextTokenStartCol)
+    token.row = tokenStartRow
+    token.column = tokenStartCol
+    nextToken = token
   }
 
   private def isDigit(c: Char) = '0' <= c && c <= '9'

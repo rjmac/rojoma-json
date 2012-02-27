@@ -75,7 +75,7 @@ class JsonIoTests extends FunSuite with Checkers with MustMatchers {
     def tokenAfterDatum(s: String) = {
       val it = new TokenIterator(new java.io.StringReader(s))
       new JsonReader(it).read()
-      it.next().token
+      it.next()
     }
     tokenAfterDatum("1 2") must equal (TokenNumber(BigDecimal(2)))
     tokenAfterDatum("[1,2,3] 4") must equal (TokenNumber(BigDecimal(4)))

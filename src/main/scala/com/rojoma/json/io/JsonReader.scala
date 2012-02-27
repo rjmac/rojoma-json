@@ -8,7 +8,7 @@ import ast._
 /** Parses a token-stream into a [[com.rojoma.json.ast.JValue]].  As an extension,
   * this parser accepts unquoted strings (i.e., identifiers) as field-names. */
 class JsonReader(input: Iterator[PositionedJsonEvent]) {
-  def this(tokens: Iterator[PositionedJsonToken])(implicit dummy: com.rojoma.`json-impl`.StupidErasure = null) = this(new JsonEventIterator(tokens))
+  def this(tokens: Iterator[JsonToken])(implicit dummy: com.rojoma.`json-impl`.StupidErasure = null) = this(new JsonEventIterator(tokens))
   def this(text: String) = this(new TokenIterator(new StringReader(text)))
 
   val lexer = input.buffered
