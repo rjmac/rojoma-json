@@ -5,7 +5,7 @@ import ast._
 
 import com.rojoma.`json-impl`.dynamic._
 
-class DynamicJValue(val static: JValue) extends SuperClassHolder.SuperClass with Dynamic {
+class DynamicJValue(val static: JValue) extends DynamicJValueSuperClassHolder.SuperClass with Dynamic {
   def applyDynamic(field: String)(arg: DynamicDisambiguate = NotProvided): DynamicJValue = {
     val a = apply(field)
     arg match {
