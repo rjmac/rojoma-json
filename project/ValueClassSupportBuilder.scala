@@ -3,7 +3,8 @@ import sbt._
 object ValueClassSupportBuilder extends ((File, String) => Seq[File]) {
   def apply(root: File, scalaVersion: String): Seq[File] =
     go(root, scalaVersion)(
-      ("dynamic", "DynamicJValue", "static")
+      ("dynamic", "DynamicJValue", "static"),
+      ("io", "Position", "__rowCol")
     )
 
   def go(root: File, scalaVersion: String)(classes: (String, String, String)*): Seq[File] =
