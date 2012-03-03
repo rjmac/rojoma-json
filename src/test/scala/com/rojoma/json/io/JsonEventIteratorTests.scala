@@ -6,7 +6,7 @@ import org.scalatest.matchers.MustMatchers
 
 class JsonEventIteratorTests extends FunSuite with MustMatchers {
   def r(s: String) = new java.io.StringReader(s)
-  def i(s: String) = new JsonEventIterator(new TokenIterator(r(s)))
+  def i(s: String) = new JsonEventIterator(new JsonTokenIterator(r(s)))
   def e(s: String) = i(s).next()
 
   test("reading single tokens that are legitimate start-of-datum tokens") {

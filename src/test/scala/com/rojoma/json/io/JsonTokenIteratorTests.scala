@@ -4,10 +4,10 @@ package io
 import org.scalatest.FunSuite
 import org.scalatest.matchers.MustMatchers
 
-class TokenIteratorTests extends FunSuite with MustMatchers {
+class JsonTokenIteratorTests extends FunSuite with MustMatchers {
   def r(s: String) = new java.io.StringReader(s)
   
-  def t(s: String) = new TokenIterator(r(s)).next()
+  def t(s: String) = new JsonTokenIterator(r(s)).next()
 
   test("reading single tokens succeeds") {
     t("\"hello\"") must equal (TokenString("hello"))
@@ -24,7 +24,7 @@ class TokenIteratorTests extends FunSuite with MustMatchers {
   test("reading a token leaves the reader positioned at the first unambiguously-not-part-of-the-token character") {
     def tc(s: String) = {
       val reader = r(s)
-      val tok = new TokenIterator(reader).next()
+      val tok = new JsonTokenIterator(reader).next()
       (tok, reader.read().toChar)
     }
 
@@ -54,7 +54,7 @@ class TokenIteratorTests extends FunSuite with MustMatchers {
   }
 
   test("multiple tokens can be read without any intervening space") {
-    def l(s: String) = new TokenIterator(r(s)).toList
+    def l(s: String) = new JsonTokenIterator(r(s)).toList
     l("\"hello\":") must equal (List(TokenString("hello"), TokenColon()))
     l("hello:") must equal (List(TokenIdentifier("hello"), TokenColon()))
     l("123:") must equal (List(TokenNumber(BigDecimal(123)), TokenColon()))
@@ -67,7 +67,7 @@ class TokenIteratorTests extends FunSuite with MustMatchers {
   }
 
   test("multiple tokens can be read with one intervening space") {
-    def l(s: String) = new TokenIterator(r(s)).toList
+    def l(s: String) = new JsonTokenIterator(r(s)).toList
     l("\"hello\" :") must equal (List(TokenString("hello"), TokenColon()))
     l("hello :") must equal (List(TokenIdentifier("hello"), TokenColon()))
     l("123 :") must equal (List(TokenNumber(BigDecimal(123)), TokenColon()))
@@ -80,7 +80,7 @@ class TokenIteratorTests extends FunSuite with MustMatchers {
   }
 
   test("multiple tokens can be read with multiple intervening space") {
-    def l(s: String) = new TokenIterator(r(s)).toList
+    def l(s: String) = new JsonTokenIterator(r(s)).toList
     l("\"hello\"  :") must equal (List(TokenString("hello"), TokenColon()))
     l("hello \n:") must equal (List(TokenIdentifier("hello"), TokenColon()))
     l("123 /*hello*/:") must equal (List(TokenNumber(BigDecimal(123)), TokenColon()))

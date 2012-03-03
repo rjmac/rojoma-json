@@ -65,7 +65,7 @@ class JsonIoTests extends FunSuite with Checkers with MustMatchers {
 
   test("reading leaves the event iterator empty") {
     check(forAll { x: JValue =>
-      val reader = new JsonReader(new TokenIterator(new java.io.StringReader(x.toString)))
+      val reader = new JsonReader(new JsonTokenIterator(new java.io.StringReader(x.toString)))
       reader.read()
       !reader.lexer.hasNext
     })
@@ -73,7 +73,7 @@ class JsonIoTests extends FunSuite with Checkers with MustMatchers {
 
   test("reading leaves the input iterator positioned on the next token") {
     def tokenAfterDatum(s: String) = {
-      val it = new TokenIterator(new java.io.StringReader(s))
+      val it = new JsonTokenIterator(new java.io.StringReader(s))
       new JsonReader(it).read()
       it.next()
     }
@@ -84,7 +84,7 @@ class JsonIoTests extends FunSuite with Checkers with MustMatchers {
 
   test("Can read more than one thing from a single reader") {
     check(forAll { (x: JValue, y: JValue) =>
-      val r = new JsonReader(new TokenIterator(new java.io.StringReader(x.toString + " " + y.toString)))
+      val r = new JsonReader(new JsonTokenIterator(new java.io.StringReader(x.toString + " " + y.toString)))
       val newX = r.read()
       val newY = r.read()
       evaluating(r.read()) must produce[JsonEOF]

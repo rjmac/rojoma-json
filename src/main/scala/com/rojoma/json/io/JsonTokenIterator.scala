@@ -19,7 +19,7 @@ import scala.annotation.switch
   * As extensions, this reader supports single-quoted strings and
   * Javascript-style comments.
   */
-class TokenIterator(reader: Reader) extends BufferedIterator[JsonToken] {
+class JsonTokenIterator(reader: Reader) extends BufferedIterator[JsonToken] {
   private var isPeeked: Boolean = false
   private var peeked: Char = _
 
