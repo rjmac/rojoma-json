@@ -13,4 +13,6 @@ class Position(val __rowCol: Long) extends com.rojoma.`json-impl`.io.PositionSup
 object Position {
   def apply(row: Int, column: Int) = new Position(row.toLong << 32 | (column.toLong & 0xffffffffL))
   def unapply(p: Position) = Some((p.row, p.column))
+
+  val Invalid = Position(-1, -1)
 }

@@ -33,17 +33,17 @@ sealed abstract class JsonEOF(val position: Position) extends JsonReaderExceptio
 private[io] class JsonLexerEOF(position: Position) extends JsonEOF(position) with JsonLexException
 private[io] class JsonParserEOF(position: Position) extends JsonEOF(position) with JsonParseException
 
-class JsonUnexpectedToken(val token: JsonToken, val expected: String) extends JsonReaderException(pos(Position(token.row, token.column), "Expected %s; got token %s", expected, token.asFragment)) with JsonParseException {
-  val position = Position(token.row, token.column)
+class JsonUnexpectedToken(val token: JsonToken, val expected: String) extends JsonReaderException(pos(token.position, "Expected %s; got token %s", expected, token.asFragment)) with JsonParseException {
+  def position = token.position
 }
 class JsonUnknownIdentifier(val identifier: String, val position: Position) extends JsonReaderException(pos(position, "Unknown identifier %s", JString(identifier))) with JsonParseException {
-  def this(i: IdentifierEvent) = this(i.text, Position(i.row, i.column))
+  def this(i: IdentifierEvent) = this(i.text, i.position)
 }
 
 /** This exception should never be thrown if using the standard
  * `JsonEventIterator`.  It means that either there were mismatched
  * start/end array or object events or that an an object did not
  * follow the pattern of FieldObject-followed-by-field-data. */
-class JsonBadParse(val event: JsonEvent) extends JsonReaderException(pos(Position(event.row, event.column), "Received unexpected event %s", event)) with JsonReadException {
-  val position = Position(event.row, event.column)
+class JsonBadParse(val event: JsonEvent) extends JsonReaderException(pos(event.position, "Received unexpected event %s", event)) with JsonReadException {
+  def position = event.position
 }

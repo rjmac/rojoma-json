@@ -2,8 +2,16 @@ package com.rojoma.json
 package io
 
 sealed abstract class JsonEvent {
-  var row: Int = -1
-  var column: Int = -1
+  // Since we don't actually have value classes yet, we'll inline this
+  // thing manually so they're only actually created if an exception
+  // is thrown.  Once we have true value classes, "row" and "column"
+  // will go away and these four lines will become just
+  //   "var position = Position.Invalid"
+  // See also JsonToken.
+  def position = Position(row, column)
+  def position_=(position: Position) { row = position.row; column = position.column }
+  private[io] var row = Position.Invalid.row
+  private[io] var column = Position.Invalid.column
 }
 case class StartOfObjectEvent() extends JsonEvent
 case class EndOfObjectEvent() extends JsonEvent
