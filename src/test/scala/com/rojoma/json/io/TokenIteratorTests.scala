@@ -45,6 +45,12 @@ class TokenIteratorTests extends FunSuite with MustMatchers {
 
   test("EOF is not allowed inside a block comment") {
     evaluating { t("/* eof here --->") } must produce [JsonEOF]
+    evaluating { t("/* eof here --->") } must produce [JsonLexException]
+  }
+
+  test("EOF is not allowed inside a string") {
+    evaluating { t("'eof here --->") } must produce [JsonEOF]
+    evaluating { t("'eof here --->") } must produce [JsonLexException]
   }
 
   test("multiple tokens can be read without any intervening space") {

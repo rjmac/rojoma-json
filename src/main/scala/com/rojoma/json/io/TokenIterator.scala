@@ -29,7 +29,7 @@ class TokenIterator(reader: Reader) extends BufferedIterator[JsonToken] {
   private var nextCharCol = 1
 
   private def lexerError(receivedChar: Char, expected: String, row: Int, col: Int): Nothing = {
-    throw JsonUnexpectedCharacter(receivedChar, expected, row, col)
+    throw new JsonUnexpectedCharacter(receivedChar, expected, Position(row, col))
   }
 
   private def nextChar() = {
@@ -43,7 +43,7 @@ class TokenIterator(reader: Reader) extends BufferedIterator[JsonToken] {
   private def peekChar() = {
     if(!isPeeked) {
       val newChar = reader.read()
-      if(newChar == -1) throw JsonEOF(nextCharRow, nextCharCol)
+      if(newChar == -1) throw new JsonLexerEOF(Position(nextCharRow, nextCharCol))
       peeked = newChar.toChar
       isPeeked = true
     }
@@ -90,7 +90,7 @@ class TokenIterator(reader: Reader) extends BufferedIterator[JsonToken] {
   }
 
   def head: JsonToken = {
-    if(!hasNext) throw NoSuchTokenException(nextCharRow, nextCharCol)
+    if(!hasNext) throw new NoSuchTokenException(Position(nextCharRow, nextCharCol))
     nextToken
   }
 
@@ -180,7 +180,7 @@ class TokenIterator(reader: Reader) extends BufferedIterator[JsonToken] {
       TokenNumber(BigDecimal(n, java.math.MathContext.UNLIMITED))
     } catch {
       case _: NumberFormatException =>
-        throw JsonNumberOutOfRange(n, startRow, startCol)
+        throw new JsonNumberOutOfRange(n, Position(startRow, startCol))
     }
   }
 

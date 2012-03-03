@@ -30,15 +30,15 @@ class JsonReader(input: Iterator[JsonEvent]) {
       case IdentifierEvent("true") => JsonReader.jtrue
       case IdentifierEvent("false") => JsonReader.jfalse
       case IdentifierEvent("null") => JNull
-      case e@IdentifierEvent(other) => throw JsonUnknownIdentifier(other, e.row, e.column)
+      case i@IdentifierEvent(_) => throw new JsonUnknownIdentifier(i)
       case e@(EndOfObjectEvent() | EndOfArrayEvent() | FieldEvent(_)) =>
-        throw JsonBadParse(e, e.row, e.column)
+        throw new JsonBadParse(e)
     }
   } catch {
-    case NoSuchTokenException(r, c) =>
-      throw JsonEOF(r, c)
+    case e: NoSuchTokenException =>
+      throw new JsonParserEOF(e.position)
     case _: NoSuchElementException =>
-      throw JsonEOF(-1, -1) // this won't happen with the standard tokenizer and eventer
+      throw new JsonParserEOF(Position(-1, -1)) // this won't happen with the standard tokenizer and eventer
   }
 
   private def hopeFor(event: JsonEvent): Boolean = {
@@ -62,7 +62,7 @@ class JsonReader(input: Iterator[JsonEvent]) {
           val value = read()
           result += field -> value
         case event =>
-          throw JsonBadParse(event, event.row, event.column)
+          throw new JsonBadParse(event)
       }
     }
 

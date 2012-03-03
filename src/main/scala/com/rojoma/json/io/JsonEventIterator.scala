@@ -60,8 +60,8 @@ class JsonEventIterator(input: Iterator[JsonToken]) extends BufferedIterator[Jso
           }
         } while(count >= 0)
       } catch {
-        case NoSuchTokenException(r,c) => throw JsonEOF(r,c)
-        case _: NoSuchElementException => throw JsonEOF(-1, -1)
+        case e: NoSuchTokenException => throw new JsonParserEOF(e.position)
+        case _: NoSuchElementException => throw new JsonParserEOF(Position(-1, -1))
       }
     }
     this
@@ -103,7 +103,7 @@ object JsonEventIterator {
 
   private abstract class State {
     protected def error(got: JsonToken, expected: String): Nothing =
-      throw JsonUnexpectedToken(got, expected)
+      throw new JsonUnexpectedToken(got, expected)
 
     protected def p(token: JsonToken, ev: JsonEvent) = {
       ev.row = token.row

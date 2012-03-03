@@ -80,6 +80,12 @@ class JsonEventIteratorTests extends FunSuite with MustMatchers {
     evaluating(it.skipRestOfCompound()) must produce[JsonEOF]
   }
 
+  test("skipRestOfCompound() in an incomplete object raises a parse exception") {
+    var it = i("[1,2,3")
+    it.next()
+    evaluating(it.skipRestOfCompound()) must produce[JsonParseException]
+  }
+
   test("skipNextDatum() at EOF produces NoSuchElementException") {
     var it = i("")
     evaluating(it.skipNextDatum()) must produce[NoSuchElementException]
@@ -93,6 +99,11 @@ class JsonEventIteratorTests extends FunSuite with MustMatchers {
   test("skipNextDatum() of an incomplete object raises JsonEOF") {
     var it = i("[1,2,3")
     evaluating(it.skipNextDatum()) must produce[JsonEOF]
+  }
+
+  test("skipNextDatum() of an incomplete object raises a parse eception") {
+    var it = i("[1,2,3")
+    evaluating(it.skipNextDatum()) must produce[JsonParseException]
   }
 
   test("skipNextDatum() within an array skips one item") {
