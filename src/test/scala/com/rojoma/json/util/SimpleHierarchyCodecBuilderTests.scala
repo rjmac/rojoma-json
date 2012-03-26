@@ -77,4 +77,26 @@ class SimpleHierarchyCodecBuilderTests extends FunSuite with MustMatchers {
     val baseCodec = internalBaseCodec
     baseCodec.decode(j("{type : 'a'}")) must equal (None)
   }
+
+  test("Trying to give the same name to two branches fails") {
+    evaluating {
+      SimpleHierarchyCodecBuilder[Base](SimpleHierarchyCodecBuilder.External).
+        branch[A]("a").
+        branch[B]("a")
+    } must produce [IllegalArgumentException]
+  }
+
+  test("Trying to give the same type two different names fails") {
+    evaluating {
+      SimpleHierarchyCodecBuilder[Base](SimpleHierarchyCodecBuilder.External).
+        branch[A]("a").
+        branch[A]("b")
+    } must produce [IllegalArgumentException]
+  }
+
+  test("Defining no branches fails") {
+    evaluating {
+      SimpleHierarchyCodecBuilder[Base](SimpleHierarchyCodecBuilder.External).gen
+    } must produce [IllegalStateException]
+  }
 }
