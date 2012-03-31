@@ -3,9 +3,8 @@ package util
 
 import ast._
 import codec._
-import SimpleHierarchyCodecBuilder._
 
-class SimpleHierarchyCodecBuilder[Root] private (tagType: TagType, subcodecs: Map[String, JsonCodec[_ <: Root]], classes: Map[Class[_], String]) {
+class SimpleHierarchyCodecBuilder[Root] private[util] (tagType: TagType, subcodecs: Map[String, JsonCodec[_ <: Root]], classes: Map[Class[_], String]) {
   def branch[T <: Root](name: String)(implicit codec: JsonCodec[T], mfst: ClassManifest[T]) = {
     if(subcodecs contains name) throw new IllegalArgumentException("Already defined a codec for branch " + name)
     if(classes contains mfst.erasure) throw new IllegalArgumentException("Already defined a codec for class " + mfst.erasure)
@@ -21,7 +20,7 @@ class SimpleHierarchyCodecBuilder[Root] private (tagType: TagType, subcodecs: Ma
   def gen: JsonCodec[Root] = {
     if(subcodecs.isEmpty) throw new IllegalStateException("No branches defined")
     tagType match {
-      case External =>
+      case TagToValue =>
         new JsonCodec[Root] {
           def encode(x: Root): JValue = {
             val (name, subcodec) = codecFor(x)
@@ -39,7 +38,26 @@ class SimpleHierarchyCodecBuilder[Root] private (tagType: TagType, subcodecs: Ma
               None
           }
         }
-      case Internal(typeField) =>
+      case TagAndValue(typeField, valueField) =>
+        new JsonCodec[Root] {
+          def encode(x: Root): JValue = {
+            val (name, subcodec) = codecFor(x)
+            JObject(Map(typeField -> JString(name),
+                        valueField -> subcodec.asInstanceOf[JsonCodec[Root]].encode(x)))
+          }
+          def decode(x: JValue): Option[Root] = x match {
+            case JObject(fields) =>
+              for {
+                jname <- fields.get(typeField).flatMap(_.cast[JString])
+                subcodec <- subcodecs.get(jname.string)
+                jvalue <- fields.get(valueField)
+                value <- subcodec.decode(jvalue)
+              } yield value
+            case _ =>
+              None
+          }
+        }
+      case InternalTag(typeField) =>
         new JsonCodec[Root] {
           def encode(x: Root): JValue = {
             val (name, subcodec) = codecFor(x)
@@ -67,11 +85,48 @@ class SimpleHierarchyCodecBuilder[Root] private (tagType: TagType, subcodecs: Ma
   }
 }
 
+class NoTagSimpleHierarchyCodecBuilder[Root] private[util] (subcodecs: Seq[(Class[_], JsonCodec[_ <: Root])]) {
+  def branch[T <: Root](implicit codec: JsonCodec[T], mfst: ClassManifest[T]) = {
+    if(subcodecs.find(_._1 == mfst.erasure).isDefined) throw new IllegalArgumentException("Already defined a codec for class " + mfst.erasure)
+    new NoTagSimpleHierarchyCodecBuilder[Root](subcodecs :+ (mfst.erasure -> codec))
+  }
+
+  def gen: JsonCodec[Root] = {
+    if(subcodecs.isEmpty) throw new IllegalStateException("No branches defined")
+    new JsonCodec[Root] {
+      val codecsMap = subcodecs.toMap
+
+      private def codecFor(x: Root) =
+        codecsMap.get(x.getClass) match {
+          case Some(subcodec) => subcodec
+          case None => throw new IllegalArgumentException("No codec defined for " + x.getClass)
+        }
+
+      def encode(x: Root): JValue = {
+        codecFor(x).asInstanceOf[JsonCodec[Root]].encode(x)
+      }
+
+      def decode(x: JValue): Option[Root] ={
+        for {
+          (_, subcodec) <- subcodecs
+          value <- subcodec.decode(x)
+        } return Some(value)
+        None
+      }
+    }
+  }
+}
+
+sealed abstract class TagType
+case class InternalTag(fieldName: String) extends TagType
+case object TagToValue extends TagType
+case class TagAndValue(typeField: String, valueField: String) extends TagType {
+  if(typeField == valueField) throw new IllegalArgumentException("type field and value field must be different")
+}
+sealed abstract class NoTag
+case object NoTag extends NoTag
 
 object SimpleHierarchyCodecBuilder {
-  sealed abstract class TagType
-  case class Internal(fieldName: String) extends TagType
-  case object External extends TagType
-
   def apply[Root](tagType: TagType) = new SimpleHierarchyCodecBuilder[Root](tagType, Map.empty, Map.empty)
+  def apply[Root](tagType: NoTag) = new NoTagSimpleHierarchyCodecBuilder[Root](Vector.empty)
 }
