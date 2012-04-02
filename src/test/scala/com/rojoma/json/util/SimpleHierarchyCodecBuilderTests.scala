@@ -82,6 +82,12 @@ class SimpleHierarchyCodecBuilderTests extends FunSuite with MustMatchers {
     bc.decode(j("{type : 'b', x : 5}")) must equal (Some(B(5)))
   }
 
+  test("Can decode a simple hierarchy with the internal-tag type, without removing the tag") {
+    val bc = baseCodec(InternalTag("type", removeTagForSubcodec = false))
+    bc.decode(j("{type : 'a', x : 'hello'}")) must equal (Some(A("hello")))
+    bc.decode(j("{type : 'b', x : 5}")) must equal (Some(B(5)))
+  }
+
   test("Can decode a simple hierarchy with the no-tag type") {
     val bc = baseCodec(NoTag)
     bc.decode(j("{x : 'hello'}")) must equal (Some(A("hello")))

@@ -66,7 +66,7 @@ class SimpleHierarchyCodecBuilder[Root] private[util] (tagType: TagType, subcode
               None
           }
         }
-      case InternalTag(typeField) =>
+      case InternalTag(typeField, removeForSubcodec) =>
         new JsonCodec[Root] {
           def encode(x: Root): JValue = {
             val (name, subcodec) = codecFor(x)
@@ -84,7 +84,7 @@ class SimpleHierarchyCodecBuilder[Root] private[util] (tagType: TagType, subcode
                 jname <- fields.get(typeField).flatMap(_.cast[JString])
                 name = jname.string
                 codec <- subcodecs.get(name)
-                result <- codec.decode(JObject(fields - name))
+                result <- codec.decode(if(removeForSubcodec) JObject(fields - name) else x)
               } yield result
             case _ =>
               None
@@ -127,7 +127,7 @@ class NoTagSimpleHierarchyCodecBuilder[Root] private[util] (subcodecs: Seq[(Clas
 }
 
 sealed abstract class TagType
-case class InternalTag(fieldName: String) extends TagType
+case class InternalTag(fieldName: String, removeTagForSubcodec: Boolean = true) extends TagType
 case object TagToValue extends TagType
 case class TagAndValue(typeField: String, valueField: String) extends TagType {
   if(typeField == valueField) throw new IllegalArgumentException("type field and value field must be different")
