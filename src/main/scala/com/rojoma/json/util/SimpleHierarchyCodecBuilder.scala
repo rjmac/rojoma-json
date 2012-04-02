@@ -28,11 +28,20 @@ class SimpleHierarchyCodecBuilder[Root] private[util] (tagType: TagType, subcode
           }
           def decode(x: JValue): Option[Root] = x match {
             case JObject(fields) =>
-              for {
-                (name, subcodec) <- subcodecs
-                field <- fields.get(name)
-                value <- subcodec.decode(field)
-              } return Some(value)
+              // this should almost always pick the first branch
+              if(fields.size <= subcodecs.size) {
+                for {
+                  (possibleTag, possibleObject) <- fields
+                  subcodec <- subcodecs.get(possibleTag)
+                  value <- subcodec.decode(possibleObject)
+                } return Some(value)
+              } else {
+                for {
+                  (name, subcodec) <- subcodecs
+                  field <- fields.get(name)
+                  value <- subcodec.decode(field)
+                } return Some(value)
+              }
               None
             case _ =>
               None
