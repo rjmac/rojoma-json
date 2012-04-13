@@ -4,7 +4,7 @@ package util
 import ast._
 import codec._
 
-class SimpleHierarchyCodecBuilder[Root] private[util] (tagType: TagType, subcodecs: Map[String, JsonCodec[_ <: Root]], classes: Map[Class[_], String]) {
+class SimpleHierarchyCodecBuilder[Root <: AnyRef] private[util] (tagType: TagType, subcodecs: Map[String, JsonCodec[_ <: Root]], classes: Map[Class[_], String]) {
   def branch[T <: Root](name: String)(implicit codec: JsonCodec[T], mfst: ClassManifest[T]) = {
     if(subcodecs contains name) throw new IllegalArgumentException("Already defined a codec for branch " + name)
     if(classes contains mfst.erasure) throw new IllegalArgumentException("Already defined a codec for class " + mfst.erasure)
@@ -94,7 +94,7 @@ class SimpleHierarchyCodecBuilder[Root] private[util] (tagType: TagType, subcode
   }
 }
 
-class NoTagSimpleHierarchyCodecBuilder[Root] private[util] (subcodecs: Seq[(Class[_], JsonCodec[_ <: Root])]) {
+class NoTagSimpleHierarchyCodecBuilder[Root <: AnyRef] private[util] (subcodecs: Seq[(Class[_], JsonCodec[_ <: Root])]) {
   def branch[T <: Root](implicit codec: JsonCodec[T], mfst: ClassManifest[T]) = {
     if(subcodecs.find(_._1 == mfst.erasure).isDefined) throw new IllegalArgumentException("Already defined a codec for class " + mfst.erasure)
     new NoTagSimpleHierarchyCodecBuilder[Root](subcodecs :+ (mfst.erasure -> codec))
@@ -136,6 +136,6 @@ sealed abstract class NoTag
 case object NoTag extends NoTag
 
 object SimpleHierarchyCodecBuilder {
-  def apply[Root](tagType: TagType) = new SimpleHierarchyCodecBuilder[Root](tagType, Map.empty, Map.empty)
-  def apply[Root](tagType: NoTag) = new NoTagSimpleHierarchyCodecBuilder[Root](Vector.empty)
+  def apply[Root <: AnyRef](tagType: TagType) = new SimpleHierarchyCodecBuilder[Root](tagType, Map.empty, Map.empty)
+  def apply[Root <: AnyRef](tagType: NoTag) = new NoTagSimpleHierarchyCodecBuilder[Root](Vector.empty)
 }
