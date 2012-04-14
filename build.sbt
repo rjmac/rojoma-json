@@ -8,12 +8,7 @@ scalaVersion := "2.9.2"
 
 crossScalaVersions := Seq("2.8.1", "2.8.2", "2.9.0", "2.9.0-1", "2.9.1", "2.9.1-1", "2.9.2")
 
-libraryDependencies <+= scalaVersion { sv =>
-  sv match {
-    case "2.9.2" => "org.scalatest" % "scalatest_2.9.1-1" % "1.7.1" % "test"
-    case _ => "org.scalatest" %% "scalatest" % "1.7.1" % "test"
-  }
-}
+libraryDependencies += "org.scalatest" %% "scalatest" % "1.7.1" % "test"
 
 libraryDependencies <++= scalaVersion { sv =>
   sv match {
