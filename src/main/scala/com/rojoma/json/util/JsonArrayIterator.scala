@@ -8,7 +8,9 @@ import io._
  * `JsonEvent`s representing a JSON array.  Calling `hasNext` can throw
  * any `JsonLexException`.  Calling `next()` can throw any JSON lex or parse
  * exception, or `ElementDecodeException` if the data in the array cannot be
- * decoded as a `T` at that point.
+ * decoded as a `T` at that point.  In the latter case, the iterator is still
+ * valid and positioned as if the decode had succeeded so it can continue to
+ * be used.
  *
  * @param input A source of JSON events
  * @param alreadyInArray A flag to indicate the start-of-array event has already been consumed (default false)

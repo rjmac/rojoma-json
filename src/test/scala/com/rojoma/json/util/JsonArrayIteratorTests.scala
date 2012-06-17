@@ -46,6 +46,16 @@ class JsonArrayIteratorTests extends FunSuite with MustMatchers with PropertyChe
     evaluating { it.next() } must produce[JsonArrayIterator.ElementDecodeException]
   }
 
+  test("After throwing an ElementDecodeException, the iterator is positioned after the bad element") {
+    val it = JsonArrayIterator[String](Iterator[JsonEvent](StartOfArrayEvent, StringEvent("hello"), StringEvent("world"), IdentifierEvent("true"), StringEvent("gnu"), EndOfArrayEvent))
+    it.next() must equal ("hello")
+    it.next() must equal ("world")
+    it.hasNext must be (true)
+    evaluating { it.next() } must produce[JsonArrayIterator.ElementDecodeException]
+    it.next() must equal ("gnu")
+    it.hasNext must be (false)
+  }
+
   test("setting alreadyInArray works") {
     forAll() { xs: JArray =>
       JsonArrayIterator[JValue](JValueEventIterator(xs).drop(1), alreadyInArray = true).toList must equal (xs.toSeq)
