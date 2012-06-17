@@ -30,8 +30,8 @@ class JsonUnexpectedCharacter(val character: Char, val expected: String, val pos
 class JsonNumberOutOfRange(val number: String, val position: Position) extends JsonReaderException(pos(position, "Cannot store in BigDecimal: %s", number)) with JsonLexException
 
 sealed abstract class JsonEOF(val position: Position) extends JsonReaderException(pos(position, "Unexpected end of input"))
-private[io] class JsonLexerEOF(position: Position) extends JsonEOF(position) with JsonLexException
-private[io] class JsonParserEOF(position: Position) extends JsonEOF(position) with JsonParseException
+class JsonLexerEOF(position: Position) extends JsonEOF(position) with JsonLexException
+class JsonParserEOF(position: Position) extends JsonEOF(position) with JsonParseException
 
 class JsonUnexpectedToken(val token: JsonToken, val expected: String) extends JsonReaderException(pos(token.position, "Expected %s; got token %s", expected, token.asFragment)) with JsonParseException {
   def position = token.position

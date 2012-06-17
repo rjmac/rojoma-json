@@ -7,6 +7,8 @@ class Position(val __rowCol: Long) extends com.rojoma.`json-impl`.io.PositionSup
 
   def copy(row: Int = row, column: Int = column) = Position(row, column)
 
+  def isValid = row != -1 || column != -1
+
   override def toString = row + ":" + column
 }
 

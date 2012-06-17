@@ -103,6 +103,24 @@ object JsonReader {
   @throws(classOf[JsonReaderException])
   def fromString(s: String) = apply(s).read()
 
+  /** Reads a single datum out of an iterator of tokens.
+    * @param it The source of tokens.  After this call succeeds, the
+    * iterator is positioned at the next token after the read datum.
+    * @return A [[com.rojoma.json.ast.JValue]]
+    * @throws [[com.rojoma.json.io.JsonReaderException]] if a complete object cannot be read.
+    * @see [[com.rojoma.json.io.JsonReader]] */
+  @throws(classOf[JsonReaderException])
+  def fromTokens(it: Iterator[JsonToken]) = new JsonReader(it).read()
+
+  /** Reads a single datum out of an iterator of events.
+    * @param it The source of tokens.  After this call succeeds, the
+    * iterator is positioned at the next event after the read datum.
+    * @return A [[com.rojoma.json.ast.JValue]]
+    * @throws [[com.rojoma.json.io.JsonReaderException]] if a complete object cannot be read.
+    * @see [[com.rojoma.json.io.JsonReader]] */
+  @throws(classOf[JsonReaderException])
+  def fromEvents(it: Iterator[JsonEvent]) = new JsonReader(it).read()
+
   private val jtrue = JBoolean(true)
   private val jfalse = JBoolean(false)
   private val EoAEvent = EndOfArrayEvent()

@@ -10,9 +10,10 @@ sealed abstract class JsonEvent {
   // See also JsonToken.
   def position = Position(row, column)
   def position_=(position: Position) { row = position.row; column = position.column }
-  private[io] var row = Position.Invalid.row
-  private[io] var column = Position.Invalid.column
+  private[json] var row = Position.Invalid.row
+  private[json] var column = Position.Invalid.column
 }
+
 case class StartOfObjectEvent() extends JsonEvent
 case class EndOfObjectEvent() extends JsonEvent
 case class StartOfArrayEvent() extends JsonEvent

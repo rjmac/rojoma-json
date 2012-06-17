@@ -4,29 +4,23 @@ name := "rojoma-json"
 
 version := "2.0.0-SNAPSHOT"
 
-crossScalaVersions := Seq("2.8.1", "2.8.2", "2.9.0", "2.9.0-1", "2.9.1", "2.9.1-1")
+scalaVersion := "2.9.2"
 
-libraryDependencies <+= scalaVersion { sv =>
-  sv match {
-    case "2.9.1-1" =>
-      "org.scalatest" % "scalatest_2.9.1" % "1.7.1" % "test"
-    case _ =>
-      "org.scalatest" %% "scalatest" % "1.7.1" % "test"
-  }
-}
+crossScalaVersions := Seq("2.8.1", "2.8.2", "2.9.0", "2.9.0-1", "2.9.1", "2.9.1-1", "2.9.2")
+
+libraryDependencies += "org.scalatest" %% "scalatest" % "1.8" % "test"
 
 libraryDependencies <++= scalaVersion { sv =>
   sv match {
     case "2.8.1" | "2.8.2" => Seq(
-      "org.scala-tools.testing" % "scalacheck_2.8.1" % "1.8" % "optional"
-    )
-    case "2.9.0" | "2.9.0-1" | "2.9.1" => Seq(
-      "org.scala-tools.testing" %% "scalacheck" % "1.9" % "optional"
+      "org.scalacheck" % "scalacheck_2.8.1" % "1.8" % "optional"
     )
     case "2.9.1-1" => Seq(
-      "org.scala-tools.testing" % "scalacheck_2.9.1" % "1.9" % "optional"
+      "org.scalacheck" % "scalacheck_2.9.1" % "1.9" % "optional"
     )
-    case _ => error("Dependencies not set for scala version " + sv)
+    case _ => Seq(
+      "org.scalacheck" %% "scalacheck" % "1.9" % "optional"
+      )
   }
 }
 
