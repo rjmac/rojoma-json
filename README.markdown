@@ -8,7 +8,7 @@ setting up SBT is as simple as
 ```scala
 resolvers += "rojoma.com" at "http://rjmac.github.com/maven/releases/"
 
-libraryDependencies += "com.rojoma" %% "rojoma-json" % "1.4.4"
+libraryDependencies += "com.rojoma" %% "rojoma-json" % "1.4.5"
 ```
 
 While for Maven, the pom snippets are:
@@ -25,7 +25,7 @@ While for Maven, the pom snippets are:
   <dependency>
     <groupId>com.rojoma</groupId>
     <artifactId>rojoma-json_${scala.version}</artifactId>
-    <version>1.4.4</version>
+    <version>1.4.5</version>
   </dependency>
 </dependencies>
 ```
