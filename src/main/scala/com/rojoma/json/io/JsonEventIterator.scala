@@ -27,10 +27,10 @@ class JsonEventIterator(input: Iterator[PositionedJsonToken]) extends BufferedIt
       while(underlying.hasNext && available == null) {
         val token = underlying.next()
         parser.parse(token) match {
-          case Event(ev, newParser) =>
+          case JsonParser.Event(ev, newParser) =>
             available = ev
             parser = newParser
-          case More(newParser) =>
+          case JsonParser.More(newParser) =>
             parser = newParser
         }
       }

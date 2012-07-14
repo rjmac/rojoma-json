@@ -16,8 +16,8 @@ class JsonParserTests extends FunSuite with MustMatchers with PropertyChecks {
     val (acc, finalParser) = it.foldLeft((List.empty[JsonEvent], JsonParser.newParser)) { (accParser, token) =>
       val (acc, parser) = accParser
       parser.parse(token) match {
-        case Event(ev, newParser) => (ev.event :: acc, newParser)
-        case More(newParser) => (acc, newParser)
+        case JsonParser.Event(ev, newParser) => (ev.event :: acc, newParser)
+        case JsonParser.More(newParser) => (acc, newParser)
       }
     }
     (acc.reverse, finalParser)

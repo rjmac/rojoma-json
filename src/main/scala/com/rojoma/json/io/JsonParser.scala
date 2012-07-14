@@ -8,12 +8,12 @@ class JsonParser private (val stack: ::[State]) /* extends AnyVal in 2.10? */ {
   // since "x :: xs" infers to List, not ::.  So in order to get the types done right,
   // it has to be written as "new ::(x, xs)" which has exactly the same meaning but
   // the right type.
-  def apply(token: PositionedJsonToken): ParseResult =
+  def apply(token: PositionedJsonToken): Result =
     stack.head.handle(token, stack.tail)
 
-  def parse(token: PositionedJsonToken): SuccessfulParseResult = apply(token) match {
-    case r: SuccessfulParseResult => r
-    case ParseError(token, expected, row, col) => throw new JsonUnexpectedToken(token, expected, row, col)
+  def parse(token: PositionedJsonToken): SuccessfulResult = apply(token) match {
+    case r: SuccessfulResult => r
+    case Error(token, expected, row, col) => throw new JsonUnexpectedToken(token, expected, row, col)
   }
 
   def atTopLevel: Boolean = stack eq newParser.stack
@@ -29,8 +29,14 @@ class JsonParser private (val stack: ::[State]) /* extends AnyVal in 2.10? */ {
 }
 
 object JsonParser {
+  sealed abstract class Result
+  case class Error(token: JsonToken, expected: String, row: Int, col: Int) extends Result
+  sealed abstract class SuccessfulResult extends Result
+  case class More(newState: JsonParser) extends SuccessfulResult
+  case class Event(event: PositionedJsonEvent, newState: JsonParser) extends SuccessfulResult
+
   sealed abstract class State {
-    protected def event(token: PositionedJsonToken, ev: JsonEvent, stack: List[State]): ParseResult = {
+    protected def event(token: PositionedJsonToken, ev: JsonEvent, stack: List[State]): Result = {
       val pEv = PositionedJsonEvent(ev, token.row, token.column)
       stack match {
         case cons@(_ :: _) => Event(pEv, new JsonParser(cons))
@@ -38,13 +44,17 @@ object JsonParser {
       }
     }
 
-    protected def more(stack: ::[State]): ParseResult =
+    protected def more(stack: ::[State]): Result =
       More(new JsonParser(stack))
 
-    protected def error(got: PositionedJsonToken, expected: String): ParseResult =
-      ParseError(got.token, expected, got.row, got.column)
+    protected def error(got: PositionedJsonToken, expected: String): Result =
+      Error(got.token, expected, got.row, got.column)
 
-    def handle(token: PositionedJsonToken, stack: List[State]): ParseResult
+    protected def name: String
+
+    override def toString = name
+
+    def handle(token: PositionedJsonToken, stack: List[State]): Result
   }
 
   private val AwaitingDatum: State = new State {
@@ -63,7 +73,7 @@ object JsonParser {
         error(token, "datum")
     }
 
-    override def toString = "AwaitingDatum"
+    def name = "AwaitingDatum"
   }
 
   private val AwaitingEntryOrEndOfArray: State = new State {
@@ -84,7 +94,7 @@ object JsonParser {
         error(token, "datum or end of list")
     }
 
-    override def toString = "AwaitingEntryOrEndOfArray"
+    def name = "AwaitingEntryOrEndOfArray"
   }
 
   private val AwaitingCommaOrEndOfArray: State = new State {
@@ -97,7 +107,7 @@ object JsonParser {
         error(token, "comma or end of list")
     }
 
-    override def toString = "AwaitingCommaOrEndOfArray"
+    def name = "AwaitingCommaOrEndOfArray"
   }
 
   private val AwaitingFieldNameOrEndOfObject: State = new State {
@@ -112,7 +122,7 @@ object JsonParser {
         error(token, "field name or end of object")
     }
 
-    override def toString = "AwaitingFieldNameOrEndOfObject"
+    def name = "AwaitingFieldNameOrEndOfObject"
   }
 
   private val AwaitingFieldName: State = new State {
@@ -125,7 +135,7 @@ object JsonParser {
         error(token, "field name")
     }
 
-    override def toString = "AwaitingFieldName"
+    def name = "AwaitingFieldName"
   }
 
   private val AwaitingKVSep: State = new State {
@@ -136,7 +146,7 @@ object JsonParser {
         error(token, "colon")
     }
 
-    override def toString = "AwaitingKVSep"
+    def name = "AwaitingKVSep"
   }
 
   private val AwaitingCommaOrEndOfObject: State = new State {
@@ -149,14 +159,8 @@ object JsonParser {
         error(token, "comma or end of object")
     }
 
-    override def toString = "AwaitingCommaOrEndOfObject"
+    def name = "AwaitingCommaOrEndOfObject"
   }
 
   val newParser = new JsonParser(new ::(AwaitingDatum, Nil))
 }
-
-sealed abstract class ParseResult
-case class ParseError(token: JsonToken, expected: String, row: Int, col: Int) extends ParseResult
-sealed abstract class SuccessfulParseResult extends ParseResult
-case class More(newState: JsonParser) extends SuccessfulParseResult
-case class Event(event: PositionedJsonEvent, newState: JsonParser) extends SuccessfulParseResult
