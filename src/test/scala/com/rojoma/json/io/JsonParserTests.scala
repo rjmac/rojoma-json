@@ -3,6 +3,7 @@ package io
 
 import ast.JValue
 import testsupport.ArbitraryJValue._
+import testsupport.ArbitraryValidString._
 
 import org.scalatest.FunSuite
 import org.scalatest.matchers.MustMatchers
