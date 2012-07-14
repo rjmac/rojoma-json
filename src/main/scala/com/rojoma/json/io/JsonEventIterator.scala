@@ -14,24 +14,25 @@ case class StringEvent(string: String) extends JsonEvent
 case class PositionedJsonEvent(event: JsonEvent, row: Int, column: Int)
 
 class JsonEventIterator(input: Iterator[PositionedJsonToken]) extends BufferedIterator[PositionedJsonEvent] {
-  import JsonEventIterator._
-
+  private var parser = JsonParser.newParser
   private val underlying = input.buffered
-  private var stack = new StateStack
   private var available: PositionedJsonEvent = null
-  private var atTop = true
+  private var atTop = true // this reflects the state *before* the feed that resulted in "available" being set.
 
   def hasNext: Boolean = {
     if(available != null) {
       true
     } else {
-      atTop = stack.isEmpty
-      if(underlying.hasNext) {
-        if(atTop) stack.push(AwaitingDatum) // start of new top-level object
-        do {
-          val token = underlying.next()
-          available = stack.pop.handle(token, stack)
-        } while(available == null && !stack.isEmpty)
+      atTop = parser.atTopLevel
+      while(underlying.hasNext && available == null) {
+        val token = underlying.next()
+        parser.parse(token) match {
+          case Event(ev, newParser) =>
+            available = ev
+            parser = newParser
+          case More(newParser) =>
+            parser = newParser
+        }
       }
       available != null
     }
@@ -58,7 +59,7 @@ class JsonEventIterator(input: Iterator[PositionedJsonToken]) extends BufferedIt
    * Throws `JsonEOF` if the end-of-input occurs before finishing
    * this object.
    */
-  def skipRestOfCompound(): this.type= {
+  def skipRestOfCompound(): this.type = {
     hasNext // hasNext to make sure atTop is in an accurate state
     if(!atTop) {
       try {
@@ -108,129 +109,4 @@ class JsonEventIterator(input: Iterator[PositionedJsonToken]) extends BufferedIt
 
   @inline
   final def dropNextDatum() = skipNextDatum()
-}
-
-object JsonEventIterator {
-  private type StateStack = scala.collection.mutable.ArrayStack[State]
-
-  private abstract class State {
-    protected def error(got: PositionedJsonToken, expected: String): Nothing =
-      throw JsonUnexpectedToken(got.token, expected, got.row, got.column)
-
-    protected def p(token: PositionedJsonToken, ev: JsonEvent) =
-      PositionedJsonEvent(ev, token.row, token.column)
-
-    def handle(token: PositionedJsonToken, stack: StateStack): PositionedJsonEvent
-  }
-
-  private val AwaitingDatum: State = new State {
-    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
-      case TokenOpenBrace =>
-        stack.push(AwaitingFieldNameOrEndOfObject)
-        p(token, StartOfObjectEvent)
-      case TokenOpenBracket =>
-        stack.push(AwaitingEntryOrEndOfArray)
-        p(token, StartOfArrayEvent)
-      case TokenIdentifier(text) =>
-        p(token, IdentifierEvent(text))
-      case TokenNumber(number) =>
-        p(token, NumberEvent(number))
-      case TokenString(string) =>
-        p(token, StringEvent(string))
-      case _ =>
-        error(token, "datum")
-    }
-  }
-
-  private val AwaitingEntryOrEndOfArray: State = new State {
-    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
-      case TokenOpenBrace =>
-        stack.push(AwaitingCommaOrEndOfArray)
-        stack.push(AwaitingFieldNameOrEndOfObject)
-        p(token, StartOfObjectEvent)
-      case TokenOpenBracket =>
-        stack.push(AwaitingCommaOrEndOfArray)
-        stack.push(AwaitingEntryOrEndOfArray)
-        p(token, StartOfArrayEvent)
-      case TokenIdentifier(text) =>
-        stack.push(AwaitingCommaOrEndOfArray)
-        p(token, IdentifierEvent(text))
-      case TokenNumber(number) =>
-        stack.push(AwaitingCommaOrEndOfArray)
-        p(token, NumberEvent(number))
-      case TokenString(string) =>
-        stack.push(AwaitingCommaOrEndOfArray)
-        p(token, StringEvent(string))
-      case TokenCloseBracket =>
-        p(token, EndOfArrayEvent)
-      case _ =>
-        error(token, "datum or end of list")
-    }
-  }
-
-  private val AwaitingCommaOrEndOfArray: State = new State {
-    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
-      case TokenComma =>
-        stack.push(AwaitingCommaOrEndOfArray)
-        stack.push(AwaitingDatum)
-        null
-      case TokenCloseBracket =>
-        p(token, EndOfArrayEvent)
-      case _ =>
-        error(token, "comma or end of list")
-    }
-  }
-
-  private val AwaitingFieldNameOrEndOfObject: State = new State {
-    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
-      case TokenCloseBrace =>
-        p(token, EndOfObjectEvent)
-      case TokenString(text) =>
-        stack.push(AwaitingCommaOrEndOfObject)
-        stack.push(AwaitingKVSep)
-        p(token, FieldEvent(text))
-      case TokenIdentifier(text) =>
-        stack.push(AwaitingCommaOrEndOfObject)
-        stack.push(AwaitingKVSep)
-        p(token, FieldEvent(text))
-      case _ =>
-        error(token, "field name or end of object")
-    }
-  }
-
-  private val AwaitingFieldName: State = new State {
-    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
-      case TokenString(text) =>
-        stack.push(AwaitingKVSep)
-        p(token, FieldEvent(text))
-      case TokenIdentifier(text) =>
-        stack.push(AwaitingKVSep)
-        p(token, FieldEvent(text))
-      case _ =>
-        error(token, "field name")
-    }
-  }
-
-  private val AwaitingKVSep: State = new State {
-    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
-      case TokenColon =>
-        stack.push(AwaitingDatum)
-        null
-      case _ =>
-        error(token, "colon")
-    }
-  }
-
-  private val AwaitingCommaOrEndOfObject: State = new State {
-    def handle(token: PositionedJsonToken, stack: StateStack) = token.token match {
-      case TokenComma =>
-        stack.push(AwaitingCommaOrEndOfObject)
-        stack.push(AwaitingFieldName)
-        null
-      case TokenCloseBrace =>
-        p(token, EndOfObjectEvent)
-      case _ =>
-        error(token, "comma or end of object")
-    }
-  }
 }
