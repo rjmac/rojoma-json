@@ -15,7 +15,78 @@ import org.scalacheck.{Gen, Arbitrary}
 
 import scala.collection.mutable.ListBuffer
 
+import JsonLexerTests._
+
 class JsonLexerTests extends FunSuite with MustMatchers with PropertyChecks {
+  def arbTest[T <: JValue : Arbitrary : JsonCodec] {
+    // FIXME: Remember that in the 2.0 branch, tokens ignore their
+    // positions for the purposes of considering equality.
+    forAll(splittableJson[T]) { case (x, whitespace, positions) =>
+      val asString = renderJson(x, pretty = whitespace)
+      whenever(positions.forall { i => 0 <= i && i <= asString.length }) {
+        try {
+          toTokenList(splitAt(asString, positions)) must equal (new TokenIterator(new java.io.StringReader(asString)).toList)
+        } catch {
+          case e => println(e); throw e
+        }
+      }
+    }
+  }
+
+  def withSplitString(s: String)(f: Seq[String] => Unit) {
+    forAll(splitPoints(s)) { positions =>
+      whenever(positions.forall { i => 0 <= i && i <= s.length }) {
+        f(splitAt(s, positions))
+      }
+    }
+  }
+
+  test("JsonLexer gives the same result as TokenIterator for valid inputs") {
+    // This is a good random test, but the space is large enough that
+    // it's not really sufficient.  And of course it only checks
+    // positive cases.  Thus all the other tests below.  We want this
+    // one mainly for checking the output positions.
+    arbTest[JValue]
+  }
+
+  test("JsonLexer gives the same result as TokenIterator for atoms") {
+    // this also checks identifiers, albeit not super well since it's
+    // limited to true, false, and null.
+    arbTest[JAtom]
+  }
+
+  test("reading a token leaves the first not-part-of-the-token unconsumed") {
+    def tc(jsonFragment: String, expected: JsonToken, remaining: String) {
+      withSplitString(jsonFragment) { fragments =>
+        firstToken(fragments) must be ((expected, remaining))
+      }
+    }
+
+    tc("\"hello\" gnu", TokenString("hello"), " gnu")
+    tc("true gnu", TokenIdentifier("true"), " gnu")
+    tc("1.432 gnu", TokenNumber(BigDecimal("1.432")), " gnu")
+    tc("[ gnu", TokenOpenBracket, " gnu")
+    tc("] gnu", TokenCloseBracket, " gnu")
+    tc("{ gnu", TokenOpenBrace, " gnu")
+    tc("} gnu", TokenCloseBrace, " gnu")
+    tc(": gnu", TokenColon, " gnu")
+    tc(", gnu", TokenComma, " gnu")
+  }
+
+  test("EOF is allowed inside a line comment") {
+    withSplitString("// eof here --->") { fragments =>
+      evaluating { firstToken(fragments) } must produce [NoSuchTokenException]
+    }
+  }
+
+  test("EOF is not allowed inside a block comment") {
+    withSplitString("/* eof here --->") { fragments =>
+      evaluating { firstToken(fragments) } must produce [JsonEOF]
+    }
+  }
+}
+
+object JsonLexerTests {
   def toTokenList(in: Seq[String]): Seq[PositionedJsonToken] = {
     val b = new ListBuffer[PositionedJsonToken]
     def loop(lexer: JsonLexer, chunk: String): JsonLexer = {
@@ -40,39 +111,33 @@ class JsonLexerTests extends FunSuite with MustMatchers with PropertyChecks {
       text.substring(a, b)
     }.toList
 
-  def splitString[T <: JValue : Arbitrary : JsonCodec] = for {
+  def splittableJson[T <: JValue : Arbitrary : JsonCodec] = for {
     pretty <- Arbitrary.arbitrary[Boolean]
     jvalue <- Arbitrary.arbitrary[T]
     splitCount <- Gen.choose(0, 10)
     splits <- Gen.listOfN(splitCount, Gen.choose(0, renderJson(jvalue, pretty).length))
   } yield (jvalue, pretty, splits)
 
-  def arbTest[T <: JValue : Arbitrary : JsonCodec] {
-    // FIXME: Remember that in the 2.0 branch, tokens ignore their
-    // positions for the purposes of considering equality.
-    forAll(splitString[T]) { case (x, whitespace, positions) =>
-      val asString = renderJson(x, pretty = whitespace)
-      whenever(positions.forall { i => 0 <= i && i <= asString.length }) {
-        try {
-          toTokenList(splitAt(asString, positions)) must equal (new TokenIterator(new java.io.StringReader(asString)).toList)
-        } catch {
-          case e => println(e); throw e
-        }
+  def splitPoints(s: String) = for {
+    splitCount <- Gen.choose(0, 10)
+    splits <- Gen.listOfN(splitCount, Gen.choose(0, s.length))
+  } yield splits
+
+  def firstToken(s: Seq[String]) = {
+    def loop(lexer: JsonLexer, strings: List[String]): (JsonToken, String) = {
+      strings match {
+        case hd :: tl =>
+          lexer.lex(hd) match {
+            case JsonLexer.Token(t, _, remaining) => (t.token, (remaining :: tl).mkString)
+            case JsonLexer.More(l) => loop(l, tl)
+          }
+        case Nil =>
+          lexer.finish() match {
+            case JsonLexer.FinalToken(t, _, _) => (t.token, "")
+            case JsonLexer.EndOfInput(r, c) => throw new NoSuchTokenException(r, c)
+          }
       }
     }
-  }
-
-  test("JsonLexer gives the same result as TokenIterator for valid inputs") {
-    // This is a good random test, but the space is large enough that
-    // it's not really sufficient.  And of course it only checks
-    // positive cases.  Thus all the other tests below.  We want this
-    // one mainly for checking the output positions.
-    arbTest[JValue]
-  }
-
-  test("JsonLexer gives the same result as TokenIterator for atoms") {
-    // this also checks identifiers, albeit not super well since it's
-    // limited to true, false, and null.
-    arbTest[JAtom]
+    loop(JsonLexer.newLexer, s.toList)
   }
 }

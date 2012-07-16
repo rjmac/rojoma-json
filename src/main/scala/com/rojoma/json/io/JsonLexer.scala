@@ -119,6 +119,8 @@ private[io] object JsonLexerStates {
     def col = slashCol + 1
 
     def apply(chunk: String): Result = {
+      if(chunk.isEmpty) return More(this)
+
       val input = new CharExtractor(chunk, row, col)
       val newState = try {
         WhitespaceSkipper.readSecondCommentCharacter(input, slashRow, slashCol)
