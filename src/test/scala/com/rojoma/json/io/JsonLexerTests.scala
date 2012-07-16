@@ -84,6 +84,67 @@ class JsonLexerTests extends FunSuite with MustMatchers with PropertyChecks {
       evaluating { firstToken(fragments) } must produce [JsonEOF]
     }
   }
+
+  def t(jsonFragment: String, expected: JsonToken*) {
+    withSplitString(jsonFragment) { fragments =>
+      toTokenList(fragments).map(_.token) must equal (expected)
+    }
+  }
+
+  test("multiple tokens can be read without any intervening space") {
+    t("\"hello\":", TokenString("hello"), TokenColon)
+    t("hello:", TokenIdentifier("hello"), TokenColon)
+    t("123:", TokenNumber(BigDecimal(123)), TokenColon)
+    t("[:", TokenOpenBracket, TokenColon)
+    t("]:", TokenCloseBracket, TokenColon)
+    t("{:", TokenOpenBrace, TokenColon)
+    t("}:", TokenCloseBrace, TokenColon)
+    t("::", TokenColon, TokenColon)
+    t(",:", TokenComma, TokenColon)
+  }
+
+  test("multiple tokens can be read with one intervening space") {
+    t("\"hello\" :", TokenString("hello"), TokenColon)
+    t("hello :", TokenIdentifier("hello"), TokenColon)
+    t("123 :", TokenNumber(BigDecimal(123)), TokenColon)
+    t("[ :", TokenOpenBracket, TokenColon)
+    t("] :", TokenCloseBracket, TokenColon)
+    t("{ :", TokenOpenBrace, TokenColon)
+    t("} :", TokenCloseBrace, TokenColon)
+    t(": :", TokenColon, TokenColon)
+    t(", :", TokenComma, TokenColon)
+  }
+
+  test("multiple tokens can be read with multiple intervening space") {
+    t("\"hello\"  :", TokenString("hello"), TokenColon)
+    t("hello \n:", TokenIdentifier("hello"), TokenColon)
+    t("123 /*hello*/:", TokenNumber(BigDecimal(123)), TokenColon)
+    t("[ //gnu\n:", TokenOpenBracket, TokenColon)
+    t("] /*hello*/ :", TokenCloseBracket, TokenColon)
+    t("{ //gnu\n   :", TokenOpenBrace, TokenColon)
+    t("} \t\t\t:", TokenCloseBrace, TokenColon)
+    t(":/*bleh*/ :", TokenColon, TokenColon)
+    t(",// gnu\n  :", TokenComma, TokenColon)
+  }
+
+  test("reading replaces broken surrogate pairs") {
+    t("'\ud800'", TokenString("\ufffd"))
+    t("'\ud800x'", TokenString("\ufffdx"))
+    t("'\udc00'", TokenString("\ufffd"))
+    t("'\udc00x'", TokenString("\ufffdx"))
+    t("'\udc00\ud800\udc00'", TokenString("\ufffd\ud800\udc00"))
+
+    t("'\\ud800'", TokenString("\ufffd"))
+    t("'\\ud800x'", TokenString("\ufffdx"))
+    t("'\\udc00'", TokenString("\ufffd"))
+    t("'\\udc00x'", TokenString("\ufffdx"))
+    t("'\\udc00\\ud800\\udc00'", TokenString("\ufffd\ud800\udc00"))
+  }
+
+  test("reading handles mixed escaped/unescaped surrogate pairs") {
+    t("'\\ud800\udc00'", TokenString("\ud800\udc00"))
+    t("'\ud800\\udc00'", TokenString("\ud800\udc00"))
+  }
 }
 
 object JsonLexerTests {
