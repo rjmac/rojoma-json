@@ -13,9 +13,14 @@ object GenJValue {
     x <- arbitrary[Boolean]
   } yield JBoolean(x)
 
+  private val safeFloat = for {
+    i <- arbitrary[BigInt]
+    s <- Gen.choose(Int.MinValue + 1, Int.MaxValue)
+  } yield BigDecimal(i, s, java.math.MathContext.UNLIMITED)
+
   val genJNumber: Gen[JNumber] = {
     val genJInteger = arbitrary[BigInt].map(JNumber.apply)
-    val genJFloatingPoint = arbitrary[Double].map(JNumber.apply) // When ScalaCheck's BigDecimal generator is fixed, replace this
+    val genJFloatingPoint = safeFloat.map(JNumber.apply)
     Gen.oneOf(genJInteger, genJFloatingPoint)
   }
 
