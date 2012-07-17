@@ -150,7 +150,7 @@ class JsonLexerTests extends FunSuite with MustMatchers with PropertyChecks {
 object JsonLexerTests {
   def toTokenList(in: Seq[String]): Seq[PositionedJsonToken] = {
     val b = new ListBuffer[PositionedJsonToken]
-    def loop(lexer: JsonLexer, chunk: String): JsonLexer = {
+    def loop(lexer: JsonLexer, chunk: JsonLexer.WrappedCharArray): JsonLexer = {
       lexer.lex(chunk) match {
         case JsonLexer.Token(token, newLexer, remaining) =>
           b += token
@@ -159,7 +159,7 @@ object JsonLexerTests {
           newLexer
       }
     }
-    val finalLexer = in.foldLeft(JsonLexer.newLexer)(loop)
+    val finalLexer = in.map(JsonLexer.WrappedCharArray(_)).foldLeft(JsonLexer.newLexer)(loop)
     finalLexer.finish() match {
       case JsonLexer.FinalToken(token, _, _) => b += token
       case JsonLexer.EndOfInput(_, _) => /* pass */
@@ -185,7 +185,7 @@ object JsonLexerTests {
   } yield splits
 
   def firstToken(s: Seq[String]) = {
-    def loop(lexer: JsonLexer, strings: List[String]): (JsonToken, String) = {
+    def loop(lexer: JsonLexer, strings: List[JsonLexer.WrappedCharArray]): (JsonToken, String) = {
       strings match {
         case hd :: tl =>
           lexer.lex(hd) match {
@@ -199,6 +199,6 @@ object JsonLexerTests {
           }
       }
     }
-    loop(JsonLexer.newLexer, s.toList)
+    loop(JsonLexer.newLexer, s.map(JsonLexer.WrappedCharArray(_)).toList)
   }
 }

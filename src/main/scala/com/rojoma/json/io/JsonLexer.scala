@@ -7,10 +7,22 @@ import scala.util.control.ControlThrowable
 import JsonLexer._
 
 sealed abstract class JsonLexer {
-  def apply(chunk: String): Result
+  def apply(chunk: WrappedCharArray): Result
+  def apply(chunk: String): Result = apply(WrappedCharArray(chunk))
+  def apply(chunk: Array[Char], offset: Int, length: Int): Result = apply(WrappedCharArray(chunk, offset, length))
+  def apply(chunk: Array[Char]): Result = apply(WrappedCharArray(chunk))
   def endOfInput(): EndResult
 
-  def lex(chunk: String): SuccessfulResult = apply(chunk) match {
+  def lex(chunk: WrappedCharArray): SuccessfulResult = check(apply(chunk))
+  def lex(chunk: String): SuccessfulResult = check(apply(chunk))
+  def lex(chunk: Array[Char], offset: Int, length: Int): SuccessfulResult = check(apply(chunk, offset, length))
+  def lex(chunk: Array[Char]): SuccessfulResult = check(apply(chunk))
+  def finish(): SuccessfulEndResult = endOfInput() match {
+    case r: SuccessfulEndResult => r
+    case error: Error => throwIt(error)
+  }
+
+  private def check(result: Result) = result match {
     case r: SuccessfulResult => r
     case error: Error => throwIt(error)
   }
@@ -19,11 +31,6 @@ sealed abstract class JsonLexer {
     case UnexpectedCharacter(c, e, row, col) => throw JsonUnexpectedCharacter(c,e,row,col)
     case NumberOutOfRange(n,r,c) => throw JsonNumberOutOfRange(n,r,c)
     case UnexpectedEndOfInput(_, r,c) => throw JsonEOF(r,c)
-  }
-
-  def finish(): SuccessfulEndResult = endOfInput() match {
-    case r: SuccessfulEndResult => r
-    case error: Error => throwIt(error)
   }
 }
 
@@ -41,55 +48,80 @@ object JsonLexer {
   case class NumberOutOfRange(number: String, row: Int, col: Int) extends Error
   case class UnexpectedEndOfInput(processing: String, row: Int, col: Int) extends Error
 
-  case class Token(token: PositionedJsonToken, newState: JsonLexer, remainingInput: String) extends SuccessfulResult
+  case class Token(token: PositionedJsonToken, newState: JsonLexer, remainingInput: WrappedCharArray) extends SuccessfulResult
   case class More(newState: JsonLexer) extends SuccessfulResult
   case class EndOfInput(row: Int, col: Int) extends SuccessfulEndResult
   case class FinalToken(token: PositionedJsonToken, row: Int, col: Int) extends SuccessfulEndResult
 
-  val newLexer: JsonLexer = new JsonLexerStates.WaitingForToken(1, 1)
+  val newLexer: JsonLexer = new JsonLexerImpl.WaitingForToken(1, 1)
+
+  final class WrappedCharArray private (chars: Array[Char], offset: Int, count: Int) {
+    def isEmpty = count == 0
+    def toCharArray = java.util.Arrays.copyOfRange(chars, offset, count)
+    override def toString = new String(chars, offset, count)
+
+    private[io] def unfreeze(row: Int, col: Int) = new JsonLexerImpl.CharExtractor(chars, offset, offset + count, row, col)
+  }
+
+  object WrappedCharArray {
+    def apply(chars: Array[Char], offset: Int, count: Int): WrappedCharArray = {
+      if(offset < 0) throw new IndexOutOfBoundsException("offset < 0")
+      if(count < 0) throw new IndexOutOfBoundsException("count < 0")
+      if(offset > chars.length - count) throw new IndexOutOfBoundsException("offset + count > length")
+      new WrappedCharArray(chars, offset, count)
+    }
+
+    def apply(chars: Array[Char]): WrappedCharArray = new WrappedCharArray(chars, 0, chars.length)
+
+    def apply(chars: String): WrappedCharArray = unsafeRewrapString(chars)
+
+    val unsafeRewrapString = try {
+      val strCls = classOf[String]
+      val valueField = strCls.getDeclaredField("value")
+      val offsetField = strCls.getDeclaredField("offset")
+      val countField = strCls.getDeclaredField("count")
+      valueField.setAccessible(true)
+      offsetField.setAccessible(true)
+      countField.setAccessible(true)
+      (s: String) => new WrappedCharArray(valueField.get(s).asInstanceOf[Array[Char]], offsetField.getInt(s), countField.getInt(s))
+    } catch {
+      case _: NoSuchFieldException | _: SecurityException =>
+        (s: String) => apply(s.toCharArray)
+    }
+  }
 }
 
-private[io] object JsonLexerStates {
+private[io] object JsonLexerImpl {
   import JsonLexer._
 
-  class CharExtractor(input: String, var nextCharRow: Int, var nextCharCol: Int) {
-    private var isPeeked: Boolean = false
-    private var peeked: Char = _
-
-    private val count = input.length
-    private var nextIdx = 0
+  class CharExtractor(chars: Array[Char], private[this] var offset: Int, limit: Int, var nextCharRow: Int, var nextCharCol: Int) {
+    def atEnd = offset == limit
 
     def next() = {
-      peek()
-      isPeeked = false
-      if(peeked == '\n') { nextCharRow += 1; nextCharCol = 1 }
+      if(offset >= limit) throw new NoSuchElementException("Read past end of data")
+      val result = chars(offset)
+      offset += 1
+      if(result == '\n') { nextCharRow += 1; nextCharCol = 1 }
       else nextCharCol += 1
-      peeked
+      result
     }
-
-    def atEnd = !isPeeked && nextIdx == count
 
     def peek() = {
-      if(!isPeeked) {
-        peeked = input.charAt(nextIdx)
-        nextIdx += 1
-        isPeeked = true
-      }
-      peeked
+      if(offset >= limit) throw new NoSuchElementException("Read past end of data")
+      chars(offset)
     }
 
-    def has(n: Int) = input.length - (if(isPeeked) nextIdx - 1 else nextIdx) >= n
+    def has(n: Int) = limit - offset >= n
 
-    def remaining = // this is O(1) on the JVM
-      input.substring(if(isPeeked) nextIdx - 1 else nextIdx)
+    def remaining = WrappedCharArray(chars, offset, limit - offset)
   }
 
   def token(token: PositionedJsonToken, input: CharExtractor) =
     Token(token, new WaitingForToken(input.nextCharRow, input.nextCharCol), input.remaining)
 
   class WaitingForToken(startingRow: Int, startingCol: Int) extends JsonLexer {
-    def apply(chunk: String): Result = {
-      val input = new CharExtractor(chunk, startingRow, startingCol)
+    def apply(chunk: WrappedCharArray): Result = {
+      val input = chunk.unfreeze(startingRow, startingCol)
 
       val skippingWhitespace = WhitespaceSkipper.skipWhitespace(input)
       if(skippingWhitespace != null) return skippingWhitespace
@@ -103,8 +135,8 @@ private[io] object JsonLexerStates {
   }
 
   class SkippingWhitespace(state: WhitespaceSkipper.State, row: Int, col: Int) extends JsonLexer {
-    def apply(chunk: String): Result = {
-      val input = new CharExtractor(chunk, row, col)
+    def apply(chunk: WrappedCharArray): Result = {
+      val input = chunk.unfreeze(row, col)
       val result = WhitespaceSkipper.continueSkippingWhitespace(state, input)
       if(result == null) readToken(input)
       else result
@@ -118,10 +150,10 @@ private[io] object JsonLexerStates {
     def row = slashRow
     def col = slashCol + 1
 
-    def apply(chunk: String): Result = {
+    def apply(chunk: WrappedCharArray): Result = {
       if(chunk.isEmpty) return More(this)
 
-      val input = new CharExtractor(chunk, row, col)
+      val input = chunk.unfreeze(row, col)
       val newState = try {
         WhitespaceSkipper.readSecondCommentCharacter(input, slashRow, slashCol)
       } catch {
@@ -166,16 +198,16 @@ private[io] object JsonLexerStates {
   }
 
   class ReadingString(state: StringReader.CompoundState, chunks: List[String], boundary: Char, stringStartRow: Int, stringStartCol: Int, row: Int, col: Int) extends JsonLexer {
-    def apply(chunk: String): Result =
-      StringReader.continueReadingString(state, chunks, boundary, stringStartRow, stringStartCol, new CharExtractor(chunk, row, col))
+    def apply(chunk: WrappedCharArray): Result =
+      StringReader.continueReadingString(state, chunks, boundary, stringStartRow, stringStartCol, chunk.unfreeze(row, col))
 
     def endOfInput() =
       UnexpectedEndOfInput("string", row, col)
   }
 
   class ReadingIdentifier(chunks: List[String], startRow: Int, startCol: Int, row: Int, col: Int) extends JsonLexer {
-    def apply(chunk: String): Result = {
-      val input = new CharExtractor(chunk, row, col)
+    def apply(chunk: WrappedCharArray): Result = {
+      val input = chunk.unfreeze(row, col)
       IdentifierReader.continueReadingIdentifier(chunks, startRow, startCol, input)
     }
 
@@ -186,8 +218,8 @@ private[io] object JsonLexerStates {
   }
 
   class ReadingNumber(state: Int, chunks: List[String], startRow: Int, startCol: Int, row: Int, col: Int) extends JsonLexer {
-    def apply(chunk: String): Result = {
-      val input = new CharExtractor(chunk, row, col)
+    def apply(chunk: WrappedCharArray): Result = {
+      val input = chunk.unfreeze(row, col)
       NumberReader.continueReadingNumber(state, chunks, startRow, startCol, input)
     }
 
