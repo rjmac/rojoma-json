@@ -55,12 +55,23 @@ object JsonLexer {
 
   val newLexer: JsonLexer = new JsonLexerImpl.WaitingForToken(1, 1)
 
-  final class WrappedCharArray private (chars: Array[Char], offset: Int, count: Int) {
+  /** A container for a slice of an `Array[Char]` which promises to allow only read-only
+   * access to that array.  Note it does not itself copy the array, so if there is another
+   * reference the data can be mutated by other operations.  This is used for copyless
+   * lexing of data contained in Strings. */
+  final class WrappedCharArray private[io] (chars: Array[Char], offset: Int, count: Int, fromString: Boolean) {
     def isEmpty = count == 0
-    def toCharArray = java.util.Arrays.copyOfRange(chars, offset, count)
-    override def toString = new String(chars, offset, count)
 
-    private[io] def unfreeze(row: Int, col: Int) = new JsonLexerImpl.CharExtractor(chars, offset, offset + count, row, col)
+    /** @return a copy of the slice of the underlying array. */
+    def toCharArray = java.util.Arrays.copyOfRange(chars, offset, count)
+
+    /** @return The underlying array-slice as a String.  If the data
+    * was originally from a String, this tries not to make a copy. */
+    override def toString =
+      if(fromString) WrappedCharArray.unsafeConstructString(chars, offset, count)
+      else new String(chars, offset, count)
+
+    private[io] def unfreeze(row: Int, col: Int) = new JsonLexerImpl.CharExtractor(chars, offset, offset + count, fromString, row, col)
   }
 
   object WrappedCharArray {
@@ -68,10 +79,10 @@ object JsonLexer {
       if(offset < 0) throw new IndexOutOfBoundsException("offset < 0")
       if(count < 0) throw new IndexOutOfBoundsException("count < 0")
       if(offset > chars.length - count) throw new IndexOutOfBoundsException("offset + count > length")
-      new WrappedCharArray(chars, offset, count)
+      new WrappedCharArray(chars, offset, count, false)
     }
 
-    def apply(chars: Array[Char]): WrappedCharArray = new WrappedCharArray(chars, 0, chars.length)
+    def apply(chars: Array[Char]): WrappedCharArray = new WrappedCharArray(chars, 0, chars.length, false)
 
     def apply(chars: String): WrappedCharArray = unsafeRewrapString(chars)
 
@@ -83,10 +94,22 @@ object JsonLexer {
       valueField.setAccessible(true)
       offsetField.setAccessible(true)
       countField.setAccessible(true)
-      (s: String) => new WrappedCharArray(valueField.get(s).asInstanceOf[Array[Char]], offsetField.getInt(s), countField.getInt(s))
+      (s: String) => new WrappedCharArray(valueField.get(s).asInstanceOf[Array[Char]], offsetField.getInt(s), countField.getInt(s), true)
     } catch {
       case _: NoSuchFieldException | _: SecurityException =>
-        (s: String) => apply(s.toCharArray)
+        { (s: String) =>
+          val arr = s.toCharArray
+          new WrappedCharArray(arr, 0, arr.length, true)
+        }
+    }
+
+    private val unsafeConstructString = try {
+      val ctor = classOf[String].getDeclaredConstructor(classOf[Int], classOf[Int], classOf[Array[Char]])
+      ctor.setAccessible(true)
+      (c: Array[Char], offset: Int, length: Int) => ctor.newInstance(offset : java.lang.Integer, length : java.lang.Integer, c)
+    } catch {
+      case _: NoSuchMethodException | _: SecurityException =>
+        (c: Array[Char], offset: Int, length: Int) => new String(c, offset, length)
     }
   }
 }
@@ -94,7 +117,7 @@ object JsonLexer {
 private[io] object JsonLexerImpl {
   import JsonLexer._
 
-  class CharExtractor(chars: Array[Char], private[this] var offset: Int, limit: Int, var nextCharRow: Int, var nextCharCol: Int) {
+  class CharExtractor(chars: Array[Char], private[this] var offset: Int, limit: Int, fromString: Boolean, var nextCharRow: Int, var nextCharCol: Int) {
     def atEnd = offset == limit
 
     def next() = {
@@ -113,7 +136,7 @@ private[io] object JsonLexerImpl {
 
     def has(n: Int) = limit - offset >= n
 
-    def remaining = WrappedCharArray(chars, offset, limit - offset)
+    def remaining = new WrappedCharArray(chars, offset, limit - offset, fromString)
   }
 
   def token(token: PositionedJsonToken, input: CharExtractor) =
