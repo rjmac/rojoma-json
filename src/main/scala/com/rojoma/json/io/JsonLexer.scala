@@ -75,7 +75,7 @@ object JsonLexer {
 
     def apply(chars: String): WrappedCharArray = unsafeRewrapString(chars)
 
-    val unsafeRewrapString = try {
+    private val unsafeRewrapString = try {
       val strCls = classOf[String]
       val valueField = strCls.getDeclaredField("value")
       val offsetField = strCls.getDeclaredField("offset")
