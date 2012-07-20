@@ -4,29 +4,52 @@ package io
 import JsonEventGenerator._
 import JsonEventGeneratorImpl._
 
-class JsonEventGenerator private[io] (val stack: ::[State]) /* extends AnyVal in 2.10? */ {
+sealed abstract class JsonEventGenerator private[io] (protected val stack: Stack) {
   // That type for "stack" makes the state-transition code down below a little awkward
   // since "x :: xs" infers to List, not ::.  So in order to get the types done right,
   // it has to be written as "new ::(x, xs)" which has exactly the same meaning but
   // the right type.
-  def apply(token: PositionedJsonToken): Result =
-    stack.head.handle(token, stack.tail)
+  def apply(token: PositionedJsonToken): Result
+  protected def name: String
 
   def parse(token: PositionedJsonToken): SuccessfulResult = apply(token) match {
     case r: SuccessfulResult => r
     case Error(token, expected, row, col) => throw new JsonUnexpectedToken(token, expected, row, col)
   }
 
-  def atTopLevel: Boolean = stack eq newGenerator.stack
+  def atTopLevel: Boolean = (stack eq null) && this.isInstanceOf[AwaitingDatum]
 
   override def equals(o: Any): Boolean = o match {
-    case that: JsonEventGenerator => this.stack == that.stack
+    case that: JsonEventGenerator => locallySame(that) && this.stack == that.stack
     case _ => false
   }
 
-  override def hashCode: Int = stack.hashCode
+  override def hashCode: Int = localHashCode ^ stack.hashCode
 
-  override def toString = stack.mkString("JsonEventGenerator(", ",", ")")
+  override def toString = {
+    val sb = new StringBuilder("JsonEventGenerator(").append(name)
+    var it = stack
+    while(it ne null) {
+      sb.append(',').append(it.name)
+      it = it.stack
+    }
+    sb.append(')').mkString
+  }
+
+  protected def localHashCode: Int = getClass.hashCode
+  protected def locallySame(that: JsonEventGenerator): Boolean = this.getClass == that.getClass
+
+  protected def event(token: PositionedJsonToken, ev: JsonEvent, newState: JsonEventGenerator): Result = {
+    val pEv = PositionedJsonEvent(ev, token.row, token.column)
+    val trueNewState = if(newState eq null) newGenerator else newState
+    Event(pEv, trueNewState)
+  }
+
+  protected def more(newState: JsonEventGenerator): Result =
+    More(newState)
+
+  protected def error(got: PositionedJsonToken, expected: String): Result =
+    Error(got.token, expected, got.row, got.column)
 }
 
 object JsonEventGenerator {
@@ -36,38 +59,18 @@ object JsonEventGenerator {
   case class More(newState: JsonEventGenerator) extends SuccessfulResult
   case class Event(event: PositionedJsonEvent, newState: JsonEventGenerator) extends SuccessfulResult
 
-  val newGenerator = new JsonEventGenerator(new ::(JsonEventGeneratorImpl.AwaitingDatum, Nil))
+  val newGenerator: JsonEventGenerator = new AwaitingDatum(null)
 }
 
 private[io] object JsonEventGeneratorImpl {
-  sealed abstract class State {
-    protected def event(token: PositionedJsonToken, ev: JsonEvent, stack: List[State]): Result = {
-      val pEv = PositionedJsonEvent(ev, token.row, token.column)
-      stack match {
-        case cons@(_ :: _) => Event(pEv, new JsonEventGenerator(cons))
-        case _ => Event(pEv, newGenerator)
-      }
-    }
+  type Stack = JsonEventGenerator
 
-    protected def more(stack: ::[State]): Result =
-      More(new JsonEventGenerator(stack))
-
-    protected def error(got: PositionedJsonToken, expected: String): Result =
-      Error(got.token, expected, got.row, got.column)
-
-    protected def name: String
-
-    override def toString = name
-
-    def handle(token: PositionedJsonToken, stack: List[State]): Result
-  }
-
-  val AwaitingDatum: State = new State {
-    def handle(token: PositionedJsonToken, stack: List[State]) = token.token match {
+  class AwaitingDatum(s: Stack) extends JsonEventGenerator(s) {
+    def apply(token: PositionedJsonToken) = token.token match {
       case TokenOpenBrace =>
-        event(token, StartOfObjectEvent, new ::(AwaitingFieldNameOrEndOfObject, stack))
+        event(token, StartOfObjectEvent, new AwaitingFieldNameOrEndOfObject(stack))
       case TokenOpenBracket =>
-        event(token, StartOfArrayEvent, new ::(AwaitingEntryOrEndOfArray, stack))
+        event(token, StartOfArrayEvent, new AwaitingEntryOrEndOfArray(stack))
       case TokenIdentifier(text) =>
         event(token, IdentifierEvent(text), stack)
       case TokenNumber(number) =>
@@ -81,18 +84,18 @@ private[io] object JsonEventGeneratorImpl {
     def name = "AwaitingDatum"
   }
 
-  val AwaitingEntryOrEndOfArray: State = new State {
-    def handle(token: PositionedJsonToken, stack: List[State]) = token.token match {
+  class AwaitingEntryOrEndOfArray(s: Stack) extends JsonEventGenerator(s) {
+    def apply(token: PositionedJsonToken) = token.token match {
       case TokenOpenBrace =>
-        event(token, StartOfObjectEvent, new ::(AwaitingFieldNameOrEndOfObject, AwaitingCommaOrEndOfArray :: stack))
+        event(token, StartOfObjectEvent, new AwaitingFieldNameOrEndOfObject(new AwaitingCommaOrEndOfArray(stack)))
       case TokenOpenBracket =>
-        event(token, StartOfArrayEvent, new ::(AwaitingEntryOrEndOfArray, AwaitingCommaOrEndOfArray :: stack))
+        event(token, StartOfArrayEvent, new AwaitingEntryOrEndOfArray(new AwaitingCommaOrEndOfArray(stack)))
       case TokenIdentifier(text) =>
-        event(token, IdentifierEvent(text), new ::(AwaitingCommaOrEndOfArray, stack))
+        event(token, IdentifierEvent(text), new AwaitingCommaOrEndOfArray(stack))
       case TokenNumber(number) =>
-        event(token, NumberEvent(number), new ::(AwaitingCommaOrEndOfArray, stack))
+        event(token, NumberEvent(number), new AwaitingCommaOrEndOfArray(stack))
       case TokenString(string) =>
-        event(token, StringEvent(string), new ::(AwaitingCommaOrEndOfArray, stack))
+        event(token, StringEvent(string), new AwaitingCommaOrEndOfArray(stack))
       case TokenCloseBracket =>
         event(token, EndOfArrayEvent, stack)
       case _ =>
@@ -102,10 +105,10 @@ private[io] object JsonEventGeneratorImpl {
     def name = "AwaitingEntryOrEndOfArray"
   }
 
-  val AwaitingCommaOrEndOfArray: State = new State {
-    def handle(token: PositionedJsonToken, stack: List[State]) = token.token match {
+  class AwaitingCommaOrEndOfArray(s: Stack) extends JsonEventGenerator(s) {
+    def apply(token: PositionedJsonToken) = token.token match {
       case TokenComma =>
-        more(new ::(AwaitingDatum, AwaitingCommaOrEndOfArray :: stack))
+        more(new AwaitingDatum(new AwaitingCommaOrEndOfArray(stack)))
       case TokenCloseBracket =>
         event(token, EndOfArrayEvent, stack)
       case _ =>
@@ -115,14 +118,14 @@ private[io] object JsonEventGeneratorImpl {
     def name = "AwaitingCommaOrEndOfArray"
   }
 
-  val AwaitingFieldNameOrEndOfObject: State = new State {
-    def handle(token: PositionedJsonToken, stack: List[State]) = token.token match {
+  class AwaitingFieldNameOrEndOfObject(s: Stack) extends JsonEventGenerator(s) {
+    def apply(token: PositionedJsonToken) = token.token match {
       case TokenCloseBrace =>
         event(token, EndOfObjectEvent, stack)
       case TokenString(text) =>
-        event(token, FieldEvent(text), new ::(AwaitingKVSep, AwaitingCommaOrEndOfObject :: stack))
+        event(token, FieldEvent(text), new AwaitingKVSep(new AwaitingCommaOrEndOfObject(stack)))
       case TokenIdentifier(text) =>
-        event(token, FieldEvent(text), new ::(AwaitingKVSep, AwaitingCommaOrEndOfObject :: stack))
+        event(token, FieldEvent(text), new AwaitingKVSep(new AwaitingCommaOrEndOfObject(stack)))
       case _ =>
         error(token, "field name or end of object")
     }
@@ -130,12 +133,12 @@ private[io] object JsonEventGeneratorImpl {
     def name = "AwaitingFieldNameOrEndOfObject"
   }
 
-  val AwaitingFieldName: State = new State {
-    def handle(token: PositionedJsonToken, stack: List[State]) = token.token match {
+  class AwaitingFieldName(s: Stack) extends JsonEventGenerator(s) {
+    def apply(token: PositionedJsonToken) = token.token match {
       case TokenString(text) =>
-        event(token, FieldEvent(text), new ::(AwaitingKVSep, stack))
+        event(token, FieldEvent(text), new AwaitingKVSep(stack))
       case TokenIdentifier(text) =>
-        event(token, FieldEvent(text), new ::(AwaitingKVSep, stack))
+        event(token, FieldEvent(text), new AwaitingKVSep(stack))
       case _ =>
         error(token, "field name")
     }
@@ -143,10 +146,10 @@ private[io] object JsonEventGeneratorImpl {
     def name = "AwaitingFieldName"
   }
 
-  val AwaitingKVSep: State = new State {
-    def handle(token: PositionedJsonToken, stack: List[State]) = token.token match {
+  class AwaitingKVSep(s: Stack) extends JsonEventGenerator(s) {
+    def apply(token: PositionedJsonToken) = token.token match {
       case TokenColon =>
-        more(new ::(AwaitingDatum, stack))
+        more(new AwaitingDatum(stack))
       case _ =>
         error(token, "colon")
     }
@@ -154,10 +157,10 @@ private[io] object JsonEventGeneratorImpl {
     def name = "AwaitingKVSep"
   }
 
-  val AwaitingCommaOrEndOfObject: State = new State {
-    def handle(token: PositionedJsonToken, stack: List[State]) = token.token match {
+  class AwaitingCommaOrEndOfObject(s: Stack) extends JsonEventGenerator(s) {
+    def apply(token: PositionedJsonToken) = token.token match {
       case TokenComma =>
-        more(new ::(AwaitingFieldName, AwaitingCommaOrEndOfObject :: stack))
+        more(new AwaitingFieldName(new AwaitingCommaOrEndOfObject(stack)))
       case TokenCloseBrace =>
         event(token, EndOfObjectEvent, stack)
       case _ =>
