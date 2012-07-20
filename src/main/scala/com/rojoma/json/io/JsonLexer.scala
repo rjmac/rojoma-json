@@ -1,6 +1,8 @@
 package com.rojoma.json
 package io
 
+import util.{WrappedCharArray, WrappedCharArrayIterator}
+
 import scala.annotation.{tailrec, switch}
 import scala.util.control.ControlThrowable
 
@@ -54,97 +56,34 @@ object JsonLexer {
   case class FinalToken(token: PositionedJsonToken, row: Int, col: Int) extends SuccessfulEndResult
 
   val newLexer: JsonLexer = new JsonLexerImpl.WaitingForToken(1, 1)
-
-  /** A container for a slice of an `Array[Char]` which promises to allow only read-only
-   * access to that array.  Note it does not itself copy the array, so if there is another
-   * reference the data can be mutated by other operations.  This is used for copyless
-   * lexing of data contained in Strings. */
-  final class WrappedCharArray private[io] (chars: Array[Char], offset: Int, count: Int, fromString: Boolean) {
-    def isEmpty = count == 0
-
-    /** @return a copy of the slice of the underlying array. */
-    def toCharArray = java.util.Arrays.copyOfRange(chars, offset, count)
-
-    /** @return The underlying array-slice as a String.  If the data
-    * was originally from a String, this tries not to make a copy. */
-    override def toString =
-      if(fromString) WrappedCharArray.unsafeConstructString(chars, offset, count)
-      else new String(chars, offset, count)
-
-    private[io] def unfreeze(row: Int, col: Int) = new JsonLexerImpl.CharExtractor(chars, offset, offset + count, fromString, row, col)
-  }
-
-  object WrappedCharArray {
-    def apply(chars: Array[Char], offset: Int, count: Int): WrappedCharArray = {
-      if(offset < 0) throw new IndexOutOfBoundsException("offset < 0")
-      if(count < 0) throw new IndexOutOfBoundsException("count < 0")
-      if(offset > chars.length - count) throw new IndexOutOfBoundsException("offset + count > length")
-      new WrappedCharArray(chars, offset, count, false)
-    }
-
-    def apply(chars: Array[Char]): WrappedCharArray = new WrappedCharArray(chars, 0, chars.length, false)
-
-    def apply(chars: String): WrappedCharArray = unsafeRewrapString(chars)
-
-    private val unsafeRewrapString = try {
-      val strCls = classOf[String]
-      val valueField = strCls.getDeclaredField("value")
-      val offsetField = strCls.getDeclaredField("offset")
-      val countField = strCls.getDeclaredField("count")
-      valueField.setAccessible(true)
-      offsetField.setAccessible(true)
-      countField.setAccessible(true)
-      (s: String) => new WrappedCharArray(valueField.get(s).asInstanceOf[Array[Char]], offsetField.getInt(s), countField.getInt(s), true)
-    } catch {
-      case _: NoSuchFieldException | _: SecurityException =>
-        { (s: String) =>
-          val arr = s.toCharArray
-          new WrappedCharArray(arr, 0, arr.length, true)
-        }
-    }
-
-    private val unsafeConstructString = try {
-      val ctor = classOf[String].getDeclaredConstructor(classOf[Int], classOf[Int], classOf[Array[Char]])
-      ctor.setAccessible(true)
-      (c: Array[Char], offset: Int, length: Int) => ctor.newInstance(offset : java.lang.Integer, length : java.lang.Integer, c)
-    } catch {
-      case _: NoSuchMethodException | _: SecurityException =>
-        (c: Array[Char], offset: Int, length: Int) => new String(c, offset, length)
-    }
-  }
 }
 
 private[io] object JsonLexerImpl {
   import JsonLexer._
 
-  class CharExtractor(chars: Array[Char], private[this] var offset: Int, limit: Int, fromString: Boolean, var nextCharRow: Int, var nextCharCol: Int) {
-    def atEnd = offset == limit
+  class PositionedCharExtractor(underlying: WrappedCharArrayIterator, var nextCharRow: Int, var nextCharCol: Int) {
+    def atEnd = !underlying.hasNext
 
     def next() = {
-      if(offset >= limit) throw new NoSuchElementException("Read past end of data")
-      val result = chars(offset)
-      offset += 1
+      val result = underlying.next()
       if(result == '\n') { nextCharRow += 1; nextCharCol = 1 }
       else nextCharCol += 1
       result
     }
 
-    def peek() = {
-      if(offset >= limit) throw new NoSuchElementException("Read past end of data")
-      chars(offset)
-    }
+    def peek() = underlying.head
 
-    def has(n: Int) = limit - offset >= n
+    def has(n: Int) = underlying.remaining >= n
 
-    def remaining = new WrappedCharArray(chars, offset, limit - offset, fromString)
+    def freeze = underlying.freeze
   }
 
-  def token(token: PositionedJsonToken, input: CharExtractor) =
-    Token(token, new WaitingForToken(input.nextCharRow, input.nextCharCol), input.remaining)
+  def token(token: PositionedJsonToken, input: PositionedCharExtractor) =
+    Token(token, new WaitingForToken(input.nextCharRow, input.nextCharCol), input.freeze)
 
   class WaitingForToken(startingRow: Int, startingCol: Int) extends JsonLexer {
     def apply(chunk: WrappedCharArray): Result = {
-      val input = chunk.unfreeze(startingRow, startingCol)
+      val input = new PositionedCharExtractor(chunk.iterator, startingRow, startingCol)
 
       val skippingWhitespace = WhitespaceSkipper.skipWhitespace(input)
       if(skippingWhitespace != null) return skippingWhitespace
@@ -159,7 +98,7 @@ private[io] object JsonLexerImpl {
 
   class SkippingWhitespace(state: WhitespaceSkipper.State, row: Int, col: Int) extends JsonLexer {
     def apply(chunk: WrappedCharArray): Result = {
-      val input = chunk.unfreeze(row, col)
+      val input = new PositionedCharExtractor(chunk.iterator, row, col)
       val result = WhitespaceSkipper.continueSkippingWhitespace(state, input)
       if(result == null) readToken(input)
       else result
@@ -176,7 +115,7 @@ private[io] object JsonLexerImpl {
     def apply(chunk: WrappedCharArray): Result = {
       if(chunk.isEmpty) return More(this)
 
-      val input = chunk.unfreeze(row, col)
+      val input = new PositionedCharExtractor(chunk.iterator, row, col)
       val newState = try {
         WhitespaceSkipper.readSecondCommentCharacter(input, slashRow, slashCol)
       } catch {
@@ -192,7 +131,7 @@ private[io] object JsonLexerImpl {
       WhitespaceSkipper.eofWhileWantingSecondCommentCharacter(slashRow, slashCol, row, col)
   }
 
-  def readToken(input: CharExtractor): Result =
+  def readToken(input: PositionedCharExtractor): Result =
     (input.peek(): @switch) match {
       case '{' | '}' | '[' | ']' | ':' | ',' =>
         readSingleCharToken(input)
@@ -206,7 +145,7 @@ private[io] object JsonLexerImpl {
         else UnexpectedCharacter(c, "start of datum", input.nextCharRow, input.nextCharCol)
     }
 
-  def readSingleCharToken(input: CharExtractor) = {
+  def readSingleCharToken(input: PositionedCharExtractor) = {
     val tokenRow = input.nextCharRow
     val tokenCol = input.nextCharCol
     val unpositionedToken = (input.next(): @switch) match {
@@ -222,7 +161,7 @@ private[io] object JsonLexerImpl {
 
   class ReadingString(state: StringReader.CompoundState, chunks: List[String], boundary: Char, stringStartRow: Int, stringStartCol: Int, row: Int, col: Int) extends JsonLexer {
     def apply(chunk: WrappedCharArray): Result =
-      StringReader.continueReadingString(state, chunks, boundary, stringStartRow, stringStartCol, chunk.unfreeze(row, col))
+      StringReader.continueReadingString(state, chunks, boundary, stringStartRow, stringStartCol, new PositionedCharExtractor(chunk.iterator, row, col))
 
     def endOfInput() =
       UnexpectedEndOfInput("string", row, col)
@@ -230,7 +169,7 @@ private[io] object JsonLexerImpl {
 
   class ReadingIdentifier(chunks: List[String], startRow: Int, startCol: Int, row: Int, col: Int) extends JsonLexer {
     def apply(chunk: WrappedCharArray): Result = {
-      val input = chunk.unfreeze(row, col)
+      val input = new PositionedCharExtractor(chunk.iterator, row, col)
       IdentifierReader.continueReadingIdentifier(chunks, startRow, startCol, input)
     }
 
@@ -242,7 +181,7 @@ private[io] object JsonLexerImpl {
 
   class ReadingNumber(state: Int, chunks: List[String], startRow: Int, startCol: Int, row: Int, col: Int) extends JsonLexer {
     def apply(chunk: WrappedCharArray): Result = {
-      val input = chunk.unfreeze(row, col)
+      val input = new PositionedCharExtractor(chunk.iterator, row, col)
       NumberReader.continueReadingNumber(state, chunks, startRow, startCol, input)
     }
 
@@ -273,7 +212,7 @@ private[io] object JsonLexerImpl {
     final val LookingFor_/ = 3
     final val Done = 4
 
-    def skipWhitespace(input: CharExtractor): Result = {
+    def skipWhitespace(input: PositionedCharExtractor): Result = {
       // this will produce a More if it encounters the end of input,
       // so the caller does not need to check for that afterward.
       continueSkippingWhitespace(ReadingOrdinaryWhitespace, input)
@@ -296,7 +235,7 @@ private[io] object JsonLexerImpl {
 
     case class EndOfInputPreparingToReadSecondCommentCharacter(row: Int, col: Int) extends ControlThrowable
 
-    def continueSkippingWhitespace(initialState: State, input: CharExtractor): Result = {
+    def continueSkippingWhitespace(initialState: State, input: PositionedCharExtractor): Result = {
       try {
         var state = initialState
         while(!input.atEnd) {
@@ -319,7 +258,7 @@ private[io] object JsonLexerImpl {
       }
     }
 
-    def readOrdinaryWhitespace(input: CharExtractor): State = {
+    def readOrdinaryWhitespace(input: PositionedCharExtractor): State = {
       do {
         val c = input.peek()
         if(Character.isWhitespace(c)) input.next()
@@ -334,7 +273,7 @@ private[io] object JsonLexerImpl {
       ReadingOrdinaryWhitespace
     }
 
-    def readSecondCommentCharacter(input: CharExtractor, slashRow: Int, slashCol: Int): State = {
+    def readSecondCommentCharacter(input: PositionedCharExtractor, slashRow: Int, slashCol: Int): State = {
       input.next() match {
         case '*' =>
           if(input.atEnd) LookingFor_*
@@ -347,7 +286,7 @@ private[io] object JsonLexerImpl {
       }
     }
 
-    def readToEOL(input: CharExtractor): State = {
+    def readToEOL(input: PositionedCharExtractor): State = {
       do {
         val c = input.next()
         if(c == '\n') return ReadingOrdinaryWhitespace
@@ -355,7 +294,7 @@ private[io] object JsonLexerImpl {
       ReadingToEOL
     }
 
-    def read_*(input: CharExtractor): State = {
+    def read_*(input: PositionedCharExtractor): State = {
       do {
         val c = input.next()
         if(c == '*') {
@@ -367,7 +306,7 @@ private[io] object JsonLexerImpl {
       LookingFor_*
     }
 
-    def read_/(input: CharExtractor): State = {
+    def read_/(input: PositionedCharExtractor): State = {
       if(input.next() == '/') ReadingOrdinaryWhitespace
       else if(input.atEnd) LookingFor_/
       else read_*(input)
@@ -403,14 +342,14 @@ private[io] object JsonLexerImpl {
     @inline final def isHighSurrogate(c: Char) = Character.isHighSurrogate(c)
     @inline final def isLowSurrogate(c: Char) = Character.isLowSurrogate(c)
 
-    def readString(input: CharExtractor): Result = {
+    def readString(input: PositionedCharExtractor): Result = {
       val startRow = input.nextCharRow
       val startCol = input.nextCharCol
       val boundary = input.next()
       continueReadingString(constructCompoundState(ReadingOrdinaryCharacter), Nil, boundary, startRow, startCol, input)
     }
 
-    def continueReadingString(initialState: CompoundState, chunks: List[String], boundary: Char, startRow: Int, startCol: Int, input: CharExtractor): Result = {
+    def continueReadingString(initialState: CompoundState, chunks: List[String], boundary: Char, startRow: Int, startCol: Int, input: PositionedCharExtractor): Result = {
       try {
         val sb = new StringBuilder
         var state = initialState
@@ -442,7 +381,7 @@ private[io] object JsonLexerImpl {
       }
     }
 
-    def readOrdinaryCharacters(initialState: CompoundState, sb: StringBuilder, input: CharExtractor, boundary: Char): CompoundState = {
+    def readOrdinaryCharacters(initialState: CompoundState, sb: StringBuilder, input: PositionedCharExtractor, boundary: Char): CompoundState = {
       // precondition: there is data available and it is not the boundary-char
       var state = initialState
       do { // we'll eat as much as we can without running into a non-ordinary character
@@ -486,7 +425,7 @@ private[io] object JsonLexerImpl {
       }
     }
 
-    def readEscapeChar(state: CompoundState, sb: StringBuilder, input: CharExtractor): CompoundState = {
+    def readEscapeChar(state: CompoundState, sb: StringBuilder, input: PositionedCharExtractor): CompoundState = {
       val row = input.nextCharRow
       val col = input.nextCharCol
       val probableEndState = updateState(state, ReadingOrdinaryCharacter)
@@ -504,7 +443,7 @@ private[io] object JsonLexerImpl {
       }
     }
 
-    def readUnicode0(state: CompoundState, sb: StringBuilder, input: CharExtractor): CompoundState = {
+    def readUnicode0(state: CompoundState, sb: StringBuilder, input: PositionedCharExtractor): CompoundState = {
       if(input.has(4)) { // common case; all four chars are available.
         val h1, h2, h3, h4 = readHexDigit(input)
         addChar(updateState(state, ReadingOrdinaryCharacter), sb, ((h1 << 12) | (h2 << 8) | (h3 << 4) | h4).toChar)
@@ -513,20 +452,20 @@ private[io] object JsonLexerImpl {
       }
     }
 
-    def readUnicode1(state: CompoundState, input: CharExtractor): CompoundState = {
+    def readUnicode1(state: CompoundState, input: PositionedCharExtractor): CompoundState = {
       updateState(updatePendingUnicode(state, (extractPendingUnicode(state) << 4) | readHexDigit(input)), ReadingUnicode2)
     }
 
-    def readUnicode2(state: CompoundState, input: CharExtractor): CompoundState = {
+    def readUnicode2(state: CompoundState, input: PositionedCharExtractor): CompoundState = {
       updateState(updatePendingUnicode(state, (extractPendingUnicode(state) << 4) | readHexDigit(input)), ReadingUnicode3)
     }
 
-    def readUnicode3(state: CompoundState, sb: StringBuilder, input: CharExtractor): CompoundState = {
+    def readUnicode3(state: CompoundState, sb: StringBuilder, input: PositionedCharExtractor): CompoundState = {
       val c = ((extractPendingUnicode(state) << 4) | readHexDigit(input)).toChar
       addChar(updateState(state, ReadingOrdinaryCharacter), sb, c)
     }
 
-    def readHexDigit(input: CharExtractor): Int = {
+    def readHexDigit(input: PositionedCharExtractor): Int = {
       val row = input.nextCharRow
       val col = input.nextCharCol
       input.next() match {
@@ -539,7 +478,7 @@ private[io] object JsonLexerImpl {
   }
 
   object IdentifierReader extends ReaderBase {
-    def readIdentifier(input: CharExtractor): Result = {
+    def readIdentifier(input: PositionedCharExtractor): Result = {
       val startRow = input.nextCharRow
       val startCol = input.nextCharCol
       val sb = new StringBuilder
@@ -547,10 +486,10 @@ private[io] object JsonLexerImpl {
       continueReadingIdentifier2(sb, Nil, startRow, startCol, input)
     }
 
-    def continueReadingIdentifier(chunks: List[String], startRow: Int, startCol: Int, input: CharExtractor): Result =
+    def continueReadingIdentifier(chunks: List[String], startRow: Int, startCol: Int, input: PositionedCharExtractor): Result =
       continueReadingIdentifier2(new StringBuilder, chunks, startRow, startCol, input)
 
-    def continueReadingIdentifier2(sb: StringBuilder, chunks: List[String], startRow: Int, startCol: Int, input: CharExtractor): Result = {
+    def continueReadingIdentifier2(sb: StringBuilder, chunks: List[String], startRow: Int, startCol: Int, input: PositionedCharExtractor): Result = {
       while(!input.atEnd && Character.isUnicodeIdentifierPart(input.peek())) {
         sb.append(input.next())
       }
@@ -573,7 +512,7 @@ private[io] object JsonLexerImpl {
 
     case class NumberOutOfRangeException(number: String, row: Int, col: Int) extends ControlThrowable
 
-    def readNumber(input: CharExtractor): Result =
+    def readNumber(input: PositionedCharExtractor): Result =
       continueReadingNumber(ReadingSign, Nil, input.nextCharRow, input.nextCharCol, input)
 
     def eofInNumber(state: State, chunks: List[String], startRow: Int, startCol: Int, row: Int, col: Int): EndResult = {
@@ -586,7 +525,7 @@ private[io] object JsonLexerImpl {
       }
     }
 
-    def continueReadingNumber(initialState: State, chunks: List[String], startRow: Int, startCol: Int, input: CharExtractor): Result = {
+    def continueReadingNumber(initialState: State, chunks: List[String], startRow: Int, startCol: Int, input: PositionedCharExtractor): Result = {
       try {
         var state = initialState
         val sb = new StringBuilder
@@ -620,13 +559,13 @@ private[io] object JsonLexerImpl {
         case _: NumberFormatException => throw NumberOutOfRangeException(text, startRow, startCol)
       }
 
-    def readSign(sb: StringBuilder, input: CharExtractor): State = {
+    def readSign(sb: StringBuilder, input: PositionedCharExtractor): State = {
       if(input.peek() == '-') sb.append(input.next())
       if(input.atEnd) ReadingFirstWholePartDigit
       else readWholePart(sb, input, true)
     }
 
-    def readWholePart(sb: StringBuilder, input: CharExtractor, firstDigit: Boolean): State = {
+    def readWholePart(sb: StringBuilder, input: PositionedCharExtractor, firstDigit: Boolean): State = {
       readDigits(sb, input, firstDigit)
       if(input.atEnd) ReadingWholePart
       else {
@@ -643,14 +582,14 @@ private[io] object JsonLexerImpl {
       }
     }
 
-    def readDigits(sb: StringBuilder, input: CharExtractor, atLeastOne: Boolean) {
+    def readDigits(sb: StringBuilder, input: PositionedCharExtractor, atLeastOne: Boolean) {
       if(atLeastOne) readDigit(sb, input)
       while(!input.atEnd && isDigit(input.peek())) {
         readDigit(sb, input)
       }
     }
 
-    def readDigit(sb: StringBuilder, input: CharExtractor) {
+    def readDigit(sb: StringBuilder, input: PositionedCharExtractor) {
       val row = input.nextCharRow
       val col = input.nextCharRow
       val c = input.next()
@@ -658,7 +597,7 @@ private[io] object JsonLexerImpl {
       else throw UnexpectedCharacterException(c, "digit", row, col)
     }
 
-    def readFracPart(sb: StringBuilder, input: CharExtractor, firstDigit: Boolean): State = {
+    def readFracPart(sb: StringBuilder, input: PositionedCharExtractor, firstDigit: Boolean): State = {
       readDigits(sb, input, firstDigit)
       if(input.atEnd) ReadingFracPart
       else {
@@ -671,19 +610,19 @@ private[io] object JsonLexerImpl {
       }
     }
 
-    def readE(sb: StringBuilder, input: CharExtractor): State = {
+    def readE(sb: StringBuilder, input: PositionedCharExtractor): State = {
       sb.append(input.next())
       if(input.atEnd) ReadingExponentSign
       else readExponentSign(sb, input)
     }
 
-    def readExponentSign(sb: StringBuilder, input: CharExtractor): State = {
+    def readExponentSign(sb: StringBuilder, input: PositionedCharExtractor): State = {
       if(input.peek() == '+' || input.peek() == '-') sb.append(input.next())
       if(input.atEnd) ReadingFirstExponentDigit
       else readExponent(sb, input, true)
     }
 
-    def readExponent(sb: StringBuilder, input: CharExtractor, firstDigit: Boolean): State = {
+    def readExponent(sb: StringBuilder, input: PositionedCharExtractor, firstDigit: Boolean): State = {
       readDigits(sb, input, firstDigit)
       if(input.atEnd) ReadingExponent
       else Done

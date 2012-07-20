@@ -1,17 +1,19 @@
 package com.rojoma.json
 package io
 
+import util.WrappedCharArray
+
 class BlockTokenIterator(reader: java.io.Reader, blockSize: Int = 1024) extends BufferedIterator[PositionedJsonToken] {
   private val buf = new Array[Char](blockSize)
   private var lexer = JsonLexer.newLexer
-  private var remaining: JsonLexer.WrappedCharArray = null
+  private var remaining: WrappedCharArray = null
   private var token: PositionedJsonToken = null
   private var lastRow, lastCol = -1
 
   private def fillRemaining() {
     reader.read(buf) match {
       case -1 => remaining = null
-      case n => remaining = JsonLexer.WrappedCharArray(buf, 0, n)
+      case n => remaining = WrappedCharArray(buf, 0, n)
     }
   }
 

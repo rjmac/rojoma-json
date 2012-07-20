@@ -6,6 +6,7 @@ import codec.JsonCodec
 import testsupport.ArbitraryJValue._
 import testsupport.ArbitraryValidString._
 import util.JsonUtil.renderJson
+import util.WrappedCharArray
 
 import org.scalatest.FunSuite
 import org.scalatest.matchers.MustMatchers
@@ -150,7 +151,7 @@ class JsonLexerTests extends FunSuite with MustMatchers with PropertyChecks {
 object JsonLexerTests {
   def toTokenList(in: Seq[String]): Seq[PositionedJsonToken] = {
     val b = new ListBuffer[PositionedJsonToken]
-    def loop(lexer: JsonLexer, chunk: JsonLexer.WrappedCharArray): JsonLexer = {
+    def loop(lexer: JsonLexer, chunk: WrappedCharArray): JsonLexer = {
       lexer.lex(chunk) match {
         case JsonLexer.Token(token, newLexer, remaining) =>
           b += token
@@ -159,7 +160,7 @@ object JsonLexerTests {
           newLexer
       }
     }
-    val finalLexer = in.map(JsonLexer.WrappedCharArray(_)).foldLeft(JsonLexer.newLexer)(loop)
+    val finalLexer = in.map(WrappedCharArray(_)).foldLeft(JsonLexer.newLexer)(loop)
     finalLexer.finish() match {
       case JsonLexer.FinalToken(token, _, _) => b += token
       case JsonLexer.EndOfInput(_, _) => /* pass */
@@ -185,7 +186,7 @@ object JsonLexerTests {
   } yield splits
 
   def firstToken(s: Seq[String]) = {
-    def loop(lexer: JsonLexer, strings: List[JsonLexer.WrappedCharArray]): (JsonToken, String) = {
+    def loop(lexer: JsonLexer, strings: List[WrappedCharArray]): (JsonToken, String) = {
       strings match {
         case hd :: tl =>
           lexer.lex(hd) match {
@@ -199,6 +200,6 @@ object JsonLexerTests {
           }
       }
     }
-    loop(JsonLexer.newLexer, s.map(JsonLexer.WrappedCharArray(_)).toList)
+    loop(JsonLexer.newLexer, s.map(WrappedCharArray(_)).toList)
   }
 }
