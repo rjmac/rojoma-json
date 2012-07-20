@@ -1,9 +1,10 @@
 package com.rojoma.json
 package io
 
-import JsonParser._
+import JsonEventGenerator._
+import JsonEventGeneratorImpl._
 
-class JsonParser private (val stack: ::[State]) /* extends AnyVal in 2.10? */ {
+class JsonEventGenerator private[io] (val stack: ::[State]) /* extends AnyVal in 2.10? */ {
   // That type for "stack" makes the state-transition code down below a little awkward
   // since "x :: xs" infers to List, not ::.  So in order to get the types done right,
   // it has to be written as "new ::(x, xs)" which has exactly the same meaning but
@@ -16,36 +17,40 @@ class JsonParser private (val stack: ::[State]) /* extends AnyVal in 2.10? */ {
     case Error(token, expected, row, col) => throw new JsonUnexpectedToken(token, expected, row, col)
   }
 
-  def atTopLevel: Boolean = stack eq newParser.stack
+  def atTopLevel: Boolean = stack eq newGenerator.stack
 
   override def equals(o: Any): Boolean = o match {
-    case that: JsonParser => this.stack == that.stack
+    case that: JsonEventGenerator => this.stack == that.stack
     case _ => false
   }
 
   override def hashCode: Int = stack.hashCode
 
-  override def toString = stack.mkString("JsonParser(", ",", ")")
+  override def toString = stack.mkString("JsonEventGenerator(", ",", ")")
 }
 
-object JsonParser {
+object JsonEventGenerator {
   sealed abstract class Result
   case class Error(token: JsonToken, expected: String, row: Int, col: Int) extends Result
   sealed abstract class SuccessfulResult extends Result
-  case class More(newState: JsonParser) extends SuccessfulResult
-  case class Event(event: PositionedJsonEvent, newState: JsonParser) extends SuccessfulResult
+  case class More(newState: JsonEventGenerator) extends SuccessfulResult
+  case class Event(event: PositionedJsonEvent, newState: JsonEventGenerator) extends SuccessfulResult
 
+  val newGenerator = new JsonEventGenerator(new ::(JsonEventGeneratorImpl.AwaitingDatum, Nil))
+}
+
+private[io] object JsonEventGeneratorImpl {
   sealed abstract class State {
     protected def event(token: PositionedJsonToken, ev: JsonEvent, stack: List[State]): Result = {
       val pEv = PositionedJsonEvent(ev, token.row, token.column)
       stack match {
-        case cons@(_ :: _) => Event(pEv, new JsonParser(cons))
-        case _ => Event(pEv, newParser)
+        case cons@(_ :: _) => Event(pEv, new JsonEventGenerator(cons))
+        case _ => Event(pEv, newGenerator)
       }
     }
 
     protected def more(stack: ::[State]): Result =
-      More(new JsonParser(stack))
+      More(new JsonEventGenerator(stack))
 
     protected def error(got: PositionedJsonToken, expected: String): Result =
       Error(got.token, expected, got.row, got.column)
@@ -57,7 +62,7 @@ object JsonParser {
     def handle(token: PositionedJsonToken, stack: List[State]): Result
   }
 
-  private val AwaitingDatum: State = new State {
+  val AwaitingDatum: State = new State {
     def handle(token: PositionedJsonToken, stack: List[State]) = token.token match {
       case TokenOpenBrace =>
         event(token, StartOfObjectEvent, new ::(AwaitingFieldNameOrEndOfObject, stack))
@@ -76,7 +81,7 @@ object JsonParser {
     def name = "AwaitingDatum"
   }
 
-  private val AwaitingEntryOrEndOfArray: State = new State {
+  val AwaitingEntryOrEndOfArray: State = new State {
     def handle(token: PositionedJsonToken, stack: List[State]) = token.token match {
       case TokenOpenBrace =>
         event(token, StartOfObjectEvent, new ::(AwaitingFieldNameOrEndOfObject, AwaitingCommaOrEndOfArray :: stack))
@@ -97,7 +102,7 @@ object JsonParser {
     def name = "AwaitingEntryOrEndOfArray"
   }
 
-  private val AwaitingCommaOrEndOfArray: State = new State {
+  val AwaitingCommaOrEndOfArray: State = new State {
     def handle(token: PositionedJsonToken, stack: List[State]) = token.token match {
       case TokenComma =>
         more(new ::(AwaitingDatum, AwaitingCommaOrEndOfArray :: stack))
@@ -110,7 +115,7 @@ object JsonParser {
     def name = "AwaitingCommaOrEndOfArray"
   }
 
-  private val AwaitingFieldNameOrEndOfObject: State = new State {
+  val AwaitingFieldNameOrEndOfObject: State = new State {
     def handle(token: PositionedJsonToken, stack: List[State]) = token.token match {
       case TokenCloseBrace =>
         event(token, EndOfObjectEvent, stack)
@@ -125,7 +130,7 @@ object JsonParser {
     def name = "AwaitingFieldNameOrEndOfObject"
   }
 
-  private val AwaitingFieldName: State = new State {
+  val AwaitingFieldName: State = new State {
     def handle(token: PositionedJsonToken, stack: List[State]) = token.token match {
       case TokenString(text) =>
         event(token, FieldEvent(text), new ::(AwaitingKVSep, stack))
@@ -138,7 +143,7 @@ object JsonParser {
     def name = "AwaitingFieldName"
   }
 
-  private val AwaitingKVSep: State = new State {
+  val AwaitingKVSep: State = new State {
     def handle(token: PositionedJsonToken, stack: List[State]) = token.token match {
       case TokenColon =>
         more(new ::(AwaitingDatum, stack))
@@ -149,7 +154,7 @@ object JsonParser {
     def name = "AwaitingKVSep"
   }
 
-  private val AwaitingCommaOrEndOfObject: State = new State {
+  val AwaitingCommaOrEndOfObject: State = new State {
     def handle(token: PositionedJsonToken, stack: List[State]) = token.token match {
       case TokenComma =>
         more(new ::(AwaitingFieldName, AwaitingCommaOrEndOfObject :: stack))
@@ -161,6 +166,4 @@ object JsonParser {
 
     def name = "AwaitingCommaOrEndOfObject"
   }
-
-  val newParser = new JsonParser(new ::(AwaitingDatum, Nil))
 }

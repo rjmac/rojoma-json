@@ -14,7 +14,7 @@ case class StringEvent(string: String) extends JsonEvent
 case class PositionedJsonEvent(event: JsonEvent, row: Int, column: Int)
 
 class JsonEventIterator(input: Iterator[PositionedJsonToken]) extends BufferedIterator[PositionedJsonEvent] {
-  private var parser = JsonParser.newParser
+  private var parser = JsonEventGenerator.newGenerator
   private val underlying = input.buffered
   private var available: PositionedJsonEvent = null
   private var atTop = true // this reflects the state *before* the feed that resulted in "available" being set.
@@ -27,10 +27,10 @@ class JsonEventIterator(input: Iterator[PositionedJsonToken]) extends BufferedIt
       while(underlying.hasNext && available == null) {
         val token = underlying.next()
         parser.parse(token) match {
-          case JsonParser.Event(ev, newParser) =>
+          case JsonEventGenerator.Event(ev, newParser) =>
             available = ev
             parser = newParser
-          case JsonParser.More(newParser) =>
+          case JsonEventGenerator.More(newParser) =>
             parser = newParser
         }
       }

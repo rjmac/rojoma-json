@@ -16,9 +16,9 @@ import org.scalacheck.{Gen, Arbitrary}
 
 import scala.collection.mutable.ListBuffer
 
-import JsonLexerTests._
+import JsonTokenGeneratorTests._
 
-class JsonLexerTests extends FunSuite with MustMatchers with PropertyChecks {
+class JsonTokenGeneratorTests extends FunSuite with MustMatchers with PropertyChecks {
   def arbTest[T <: JValue : Arbitrary : JsonCodec] {
     // FIXME: Remember that in the 2.0 branch, tokens ignore their
     // positions for the purposes of considering equality.
@@ -42,7 +42,7 @@ class JsonLexerTests extends FunSuite with MustMatchers with PropertyChecks {
     }
   }
 
-  test("JsonLexer gives the same result as TokenIterator for valid inputs") {
+  test("JsonTokenGenerator gives the same result as TokenIterator for valid inputs") {
     // This is a good random test, but the space is large enough that
     // it's not really sufficient.  And of course it only checks
     // positive cases.  Thus all the other tests below.  We want this
@@ -50,7 +50,7 @@ class JsonLexerTests extends FunSuite with MustMatchers with PropertyChecks {
     arbTest[JValue]
   }
 
-  test("JsonLexer gives the same result as TokenIterator for atoms") {
+  test("JsonTokenGenerator gives the same result as TokenIterator for atoms") {
     // this also checks identifiers, albeit not super well since it's
     // limited to true, false, and null.
     arbTest[JAtom]
@@ -148,22 +148,22 @@ class JsonLexerTests extends FunSuite with MustMatchers with PropertyChecks {
   }
 }
 
-object JsonLexerTests {
+object JsonTokenGeneratorTests {
   def toTokenList(in: Seq[String]): Seq[PositionedJsonToken] = {
     val b = new ListBuffer[PositionedJsonToken]
-    def loop(lexer: JsonLexer, chunk: WrappedCharArray): JsonLexer = {
+    def loop(lexer: JsonTokenGenerator, chunk: WrappedCharArray): JsonTokenGenerator = {
       lexer.lex(chunk) match {
-        case JsonLexer.Token(token, newLexer, remaining) =>
+        case JsonTokenGenerator.Token(token, newGenerator, remaining) =>
           b += token
-          loop(newLexer, remaining)
-        case JsonLexer.More(newLexer) =>
-          newLexer
+          loop(newGenerator, remaining)
+        case JsonTokenGenerator.More(newGenerator) =>
+          newGenerator
       }
     }
-    val finalLexer = in.map(WrappedCharArray(_)).foldLeft(JsonLexer.newLexer)(loop)
+    val finalLexer = in.map(WrappedCharArray(_)).foldLeft(JsonTokenGenerator.newGenerator)(loop)
     finalLexer.finish() match {
-      case JsonLexer.FinalToken(token, _, _) => b += token
-      case JsonLexer.EndOfInput(_, _) => /* pass */
+      case JsonTokenGenerator.FinalToken(token, _, _) => b += token
+      case JsonTokenGenerator.EndOfInput(_, _) => /* pass */
     }
     b.toList
   }
@@ -186,20 +186,20 @@ object JsonLexerTests {
   } yield splits
 
   def firstToken(s: Seq[String]) = {
-    def loop(lexer: JsonLexer, strings: List[WrappedCharArray]): (JsonToken, String) = {
+    def loop(lexer: JsonTokenGenerator, strings: List[WrappedCharArray]): (JsonToken, String) = {
       strings match {
         case hd :: tl =>
           lexer.lex(hd) match {
-            case JsonLexer.Token(t, _, remaining) => (t.token, (remaining :: tl).mkString)
-            case JsonLexer.More(l) => loop(l, tl)
+            case JsonTokenGenerator.Token(t, _, remaining) => (t.token, (remaining :: tl).mkString)
+            case JsonTokenGenerator.More(l) => loop(l, tl)
           }
         case Nil =>
           lexer.finish() match {
-            case JsonLexer.FinalToken(t, _, _) => (t.token, "")
-            case JsonLexer.EndOfInput(r, c) => throw new NoSuchTokenException(r, c)
+            case JsonTokenGenerator.FinalToken(t, _, _) => (t.token, "")
+            case JsonTokenGenerator.EndOfInput(r, c) => throw new NoSuchTokenException(r, c)
           }
       }
     }
-    loop(JsonLexer.newLexer, s.map(WrappedCharArray(_)).toList)
+    loop(JsonTokenGenerator.newGenerator, s.map(WrappedCharArray(_)).toList)
   }
 }

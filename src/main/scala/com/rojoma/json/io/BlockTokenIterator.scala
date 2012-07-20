@@ -5,7 +5,7 @@ import util.WrappedCharArray
 
 class BlockTokenIterator(reader: java.io.Reader, blockSize: Int = 1024) extends BufferedIterator[PositionedJsonToken] {
   private val buf = new Array[Char](blockSize)
-  private var lexer = JsonLexer.newLexer
+  private var lexer = JsonTokenGenerator.newGenerator
   private var remaining: WrappedCharArray = null
   private var token: PositionedJsonToken = null
   private var lastRow, lastCol = -1
@@ -35,11 +35,11 @@ class BlockTokenIterator(reader: java.io.Reader, blockSize: Int = 1024) extends 
         fillRemaining()
         if(remaining == null) {
           lexer.finish() match {
-            case JsonLexer.EndOfInput(r, c) =>
+            case JsonTokenGenerator.EndOfInput(r, c) =>
               lastRow = r
               lastCol = c
               return false
-            case JsonLexer.FinalToken(t, r, c) =>
+            case JsonTokenGenerator.FinalToken(t, r, c) =>
               token = t
               lastRow = r
               lastCol = c
@@ -49,13 +49,13 @@ class BlockTokenIterator(reader: java.io.Reader, blockSize: Int = 1024) extends 
       }
       // ok, remaining != null...
       lexer.lex(remaining) match {
-        case JsonLexer.Token(t, newLexer, newRemaining) =>
+        case JsonTokenGenerator.Token(t, newLexer, newRemaining) =>
           token = t
           lexer = newLexer
           if(newRemaining.isEmpty) remaining = null
           else remaining = newRemaining
           true
-        case JsonLexer.More(newLexer) =>
+        case JsonTokenGenerator.More(newLexer) =>
           lexer = newLexer
           remaining = null
           hasNext

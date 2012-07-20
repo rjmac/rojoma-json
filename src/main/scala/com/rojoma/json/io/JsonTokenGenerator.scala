@@ -6,9 +6,9 @@ import util.{WrappedCharArray, WrappedCharArrayIterator}
 import scala.annotation.{tailrec, switch}
 import scala.util.control.ControlThrowable
 
-import JsonLexer._
+import JsonTokenGenerator._
 
-sealed abstract class JsonLexer {
+sealed abstract class JsonTokenGenerator {
   def apply(chunk: WrappedCharArray): Result
   def apply(chunk: String): Result = apply(WrappedCharArray(chunk))
   def apply(chunk: Array[Char], offset: Int, length: Int): Result = apply(WrappedCharArray(chunk, offset, length))
@@ -36,7 +36,7 @@ sealed abstract class JsonLexer {
   }
 }
 
-object JsonLexer {
+object JsonTokenGenerator {
   sealed abstract class Result
   sealed trait EndResult
   sealed abstract class SuccessfulResult extends Result
@@ -50,16 +50,16 @@ object JsonLexer {
   case class NumberOutOfRange(number: String, row: Int, col: Int) extends Error
   case class UnexpectedEndOfInput(processing: String, row: Int, col: Int) extends Error
 
-  case class Token(token: PositionedJsonToken, newState: JsonLexer, remainingInput: WrappedCharArray) extends SuccessfulResult
-  case class More(newState: JsonLexer) extends SuccessfulResult
+  case class Token(token: PositionedJsonToken, newState: JsonTokenGenerator, remainingInput: WrappedCharArray) extends SuccessfulResult
+  case class More(newState: JsonTokenGenerator) extends SuccessfulResult
   case class EndOfInput(row: Int, col: Int) extends SuccessfulEndResult
   case class FinalToken(token: PositionedJsonToken, row: Int, col: Int) extends SuccessfulEndResult
 
-  val newLexer: JsonLexer = new JsonLexerImpl.WaitingForToken(1, 1)
+  val newGenerator: JsonTokenGenerator = new JsonTokenGeneratorImpl.WaitingForToken(1, 1)
 }
 
-private[io] object JsonLexerImpl {
-  import JsonLexer._
+private[io] object JsonTokenGeneratorImpl {
+  import JsonTokenGenerator._
 
   class PositionedCharExtractor(underlying: WrappedCharArrayIterator, var nextCharRow: Int, var nextCharCol: Int) {
     def atEnd = !underlying.hasNext
@@ -81,7 +81,7 @@ private[io] object JsonLexerImpl {
   def token(token: PositionedJsonToken, input: PositionedCharExtractor) =
     Token(token, new WaitingForToken(input.nextCharRow, input.nextCharCol), input.freeze)
 
-  class WaitingForToken(startingRow: Int, startingCol: Int) extends JsonLexer {
+  class WaitingForToken(startingRow: Int, startingCol: Int) extends JsonTokenGenerator {
     def apply(chunk: WrappedCharArray): Result = {
       val input = new PositionedCharExtractor(chunk.iterator, startingRow, startingCol)
 
@@ -96,7 +96,7 @@ private[io] object JsonLexerImpl {
       EndOfInput(startingRow, startingCol)
   }
 
-  class SkippingWhitespace(state: WhitespaceSkipper.State, row: Int, col: Int) extends JsonLexer {
+  class SkippingWhitespace(state: WhitespaceSkipper.State, row: Int, col: Int) extends JsonTokenGenerator {
     def apply(chunk: WrappedCharArray): Result = {
       val input = new PositionedCharExtractor(chunk.iterator, row, col)
       val result = WhitespaceSkipper.continueSkippingWhitespace(state, input)
@@ -108,7 +108,7 @@ private[io] object JsonLexerImpl {
       WhitespaceSkipper.eofInWhitespace(state, row, col)
   }
 
-  class WantingSecondCommentCharacter(slashRow: Int, slashCol: Int) extends JsonLexer {
+  class WantingSecondCommentCharacter(slashRow: Int, slashCol: Int) extends JsonTokenGenerator {
     def row = slashRow
     def col = slashCol + 1
 
@@ -159,7 +159,7 @@ private[io] object JsonLexerImpl {
     token(new PositionedJsonToken(unpositionedToken, tokenRow, tokenCol), input)
   }
 
-  class ReadingString(state: StringReader.CompoundState, chunks: List[String], boundary: Char, stringStartRow: Int, stringStartCol: Int, row: Int, col: Int) extends JsonLexer {
+  class ReadingString(state: StringReader.CompoundState, chunks: List[String], boundary: Char, stringStartRow: Int, stringStartCol: Int, row: Int, col: Int) extends JsonTokenGenerator {
     def apply(chunk: WrappedCharArray): Result =
       StringReader.continueReadingString(state, chunks, boundary, stringStartRow, stringStartCol, new PositionedCharExtractor(chunk.iterator, row, col))
 
@@ -167,7 +167,7 @@ private[io] object JsonLexerImpl {
       UnexpectedEndOfInput("string", row, col)
   }
 
-  class ReadingIdentifier(chunks: List[String], startRow: Int, startCol: Int, row: Int, col: Int) extends JsonLexer {
+  class ReadingIdentifier(chunks: List[String], startRow: Int, startCol: Int, row: Int, col: Int) extends JsonTokenGenerator {
     def apply(chunk: WrappedCharArray): Result = {
       val input = new PositionedCharExtractor(chunk.iterator, row, col)
       IdentifierReader.continueReadingIdentifier(chunks, startRow, startCol, input)
@@ -179,7 +179,7 @@ private[io] object JsonLexerImpl {
     }
   }
 
-  class ReadingNumber(state: Int, chunks: List[String], startRow: Int, startCol: Int, row: Int, col: Int) extends JsonLexer {
+  class ReadingNumber(state: Int, chunks: List[String], startRow: Int, startCol: Int, row: Int, col: Int) extends JsonTokenGenerator {
     def apply(chunk: WrappedCharArray): Result = {
       val input = new PositionedCharExtractor(chunk.iterator, row, col)
       NumberReader.continueReadingNumber(state, chunks, startRow, startCol, input)

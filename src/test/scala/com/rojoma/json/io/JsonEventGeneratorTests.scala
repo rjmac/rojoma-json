@@ -9,15 +9,15 @@ import org.scalatest.FunSuite
 import org.scalatest.matchers.MustMatchers
 import org.scalatest.prop.PropertyChecks
 
-class JsonParserTests extends FunSuite with MustMatchers with PropertyChecks {
+class JsonEventGeneratorTests extends FunSuite with MustMatchers with PropertyChecks {
   def r(s: String) = new java.io.StringReader(s)
   def doParse(s: String) = {
     val it = new TokenIterator(r(s))
-    val (acc, finalParser) = it.foldLeft((List.empty[JsonEvent], JsonParser.newParser)) { (accParser, token) =>
+    val (acc, finalParser) = it.foldLeft((List.empty[JsonEvent], JsonEventGenerator.newGenerator)) { (accParser, token) =>
       val (acc, parser) = accParser
       parser.parse(token) match {
-        case JsonParser.Event(ev, newParser) => (ev.event :: acc, newParser)
-        case JsonParser.More(newParser) => (acc, newParser)
+        case JsonEventGenerator.Event(ev, newGenerator) => (ev.event :: acc, newGenerator)
+        case JsonEventGenerator.More(newGenerator) => (acc, newGenerator)
       }
     }
     (acc.reverse, finalParser)
@@ -89,7 +89,7 @@ class JsonParserTests extends FunSuite with MustMatchers with PropertyChecks {
   }
 
   test("A brand-new parser must be at toplevel") {
-    JsonParser.newParser must be ('atTopLevel)
+    JsonEventGenerator.newGenerator must be ('atTopLevel)
   }
 
   test("Reading an atom leaves the parser at toplevel") {
