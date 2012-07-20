@@ -5,10 +5,6 @@ import JsonEventGenerator._
 import JsonEventGeneratorImpl._
 
 sealed abstract class JsonEventGenerator private[io] (protected val stack: Stack) {
-  // That type for "stack" makes the state-transition code down below a little awkward
-  // since "x :: xs" infers to List, not ::.  So in order to get the types done right,
-  // it has to be written as "new ::(x, xs)" which has exactly the same meaning but
-  // the right type.
   def apply(token: PositionedJsonToken): Result
   protected def name: String
 
