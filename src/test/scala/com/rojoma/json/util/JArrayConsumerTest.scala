@@ -5,11 +5,11 @@ import ast._
 import testsupport.ArbitraryJValue._
 import testsupport.ArbitraryValidString._
 
-import org.scalacheck.{Gen, Arbitrary}
-
 import org.scalatest.FunSuite
 import org.scalatest.matchers.MustMatchers
 import org.scalatest.prop.PropertyChecks
+
+import org.scalacheck.{Gen, Arbitrary}
 
 import io.JsonTokenGeneratorTests._
 
@@ -60,7 +60,7 @@ class JArrayConsumerTest extends FunSuite with MustMatchers with PropertyChecks 
   }
 
   test("Reading well-formed values") {
-    forAll(splittableJson[JArray], Arbitrary.arbitrary[String]) { (jps, suffix) =>
+    forAll(splittableJson[JArray], ArbitraryValidString.arbitrary) { (jps, suffix) =>
       val (jvalue, pretty, splits) = jps
       val trueSuffix = if(jvalue.isInstanceOf[JNull] || jvalue.isInstanceOf[JBoolean] || jvalue.isInstanceOf[JNumber]) " " + suffix
                        else suffix

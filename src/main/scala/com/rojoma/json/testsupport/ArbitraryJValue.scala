@@ -14,8 +14,8 @@ object ArbitraryJValue {
   implicit def ArbitraryJString(implicit arbString: Arbitrary[String]) = Arbitrary(genJString)
 
   implicit def ArbitraryJAtom(implicit arbString: Arbitrary[String]) = Arbitrary(genJAtom)
-  
-  implicit val ArbitraryJArray = Arbitrary(genJArray())
+
+  implicit def ArbitraryJArray(implicit arbString: Arbitrary[String]) = Arbitrary(genJArray())
   implicit def ArbitraryJObject(implicit arbString: Arbitrary[String]) = Arbitrary(genJObject())
 
   implicit def ArbitraryJCompound(implicit arbString: Arbitrary[String]) = Arbitrary(genJCompound())

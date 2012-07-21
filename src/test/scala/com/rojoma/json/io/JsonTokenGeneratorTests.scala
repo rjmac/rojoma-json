@@ -25,11 +25,7 @@ class JsonTokenGeneratorTests extends FunSuite with MustMatchers with PropertyCh
     forAll(splittableJson[T]) { case (x, whitespace, positions) =>
       val asString = renderJson(x, pretty = whitespace)
       whenever(positions.forall { i => 0 <= i && i <= asString.length }) {
-        try {
-          toTokenList(splitAt(asString, positions)) must equal (new TokenIterator(new java.io.StringReader(asString)).toList)
-        } catch {
-          case e => println(e); throw e
-        }
+        toTokenList(splitAt(asString, positions)) must equal (new TokenIterator(new java.io.StringReader(asString)).toList)
       }
     }
   }

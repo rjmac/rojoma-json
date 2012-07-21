@@ -52,7 +52,7 @@ class JValueConsumerTest extends FunSuite with MustMatchers with PropertyChecks 
   }
 
   test("Reading well-formed values") {
-    forAll(splittableJson[JValue], Arbitrary.arbitrary[String]) { (jps, suffix) =>
+    forAll(splittableJson[JValue], ArbitraryValidString.arbitrary) { (jps, suffix) =>
       val (jvalue, pretty, splits) = jps
       val trueSuffix = if(jvalue.isInstanceOf[JNull] || jvalue.isInstanceOf[JBoolean] || jvalue.isInstanceOf[JNumber]) " " + suffix
                        else suffix
