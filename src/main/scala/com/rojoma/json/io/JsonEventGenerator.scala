@@ -10,7 +10,19 @@ sealed abstract class JsonEventGenerator private[io] (protected val stack: Stack
 
   def parse(token: PositionedJsonToken): SuccessfulResult = apply(token) match {
     case r: SuccessfulResult => r
-    case Error(token, expected, row, col) => throw new JsonUnexpectedToken(token, expected, row, col)
+    case e: Error => throwError(e)
+  }
+
+  def endOfInput(row: Int, col: Int): EndResult = {
+    if(atTopLevel) Finished
+    else Unfinished(row, col)
+  }
+
+  def finish(row: Int, col: Int): SuccessfulEndResult = {
+    endOfInput(row, col) match {
+      case r: SuccessfulEndResult => r
+      case e: EndError => throwError(e)
+    }
   }
 
   def atTopLevel: Boolean = (stack eq null) && this.isInstanceOf[AwaitingDatum]
@@ -45,17 +57,34 @@ sealed abstract class JsonEventGenerator private[io] (protected val stack: Stack
     More(newState)
 
   protected def error(got: PositionedJsonToken, expected: String): Result =
-    Error(got.token, expected, got.row, got.column)
+    UnexpectedToken(got.token, expected, got.row, got.column)
 }
 
 object JsonEventGenerator {
+  sealed trait AnyError
+
   sealed abstract class Result
-  case class Error(token: JsonToken, expected: String, row: Int, col: Int) extends Result
   sealed abstract class SuccessfulResult extends Result
+  sealed abstract class Error extends Result with AnyError
+
+  sealed trait EndResult
+  sealed trait SuccessfulEndResult extends EndResult
+  sealed trait EndError extends EndResult with AnyError
+
   case class More(newState: JsonEventGenerator) extends SuccessfulResult
   case class Event(event: PositionedJsonEvent, newState: JsonEventGenerator) extends SuccessfulResult
 
+  case object Finished extends SuccessfulEndResult
+
+  case class UnexpectedToken(token: JsonToken, expected: String, row: Int, col: Int) extends Error with EndError
+  case class Unfinished(row: Int, col: Int) extends EndError
+
   val newGenerator: JsonEventGenerator = new AwaitingDatum(null)
+
+  def throwError(e: AnyError): Nothing = e match {
+    case UnexpectedToken(token, expected, row, col) => throw new JsonUnexpectedToken(token, expected, row, col)
+    case Unfinished(row, col) => throw new JsonEOF(row, col)
+  }
 }
 
 private[io] object JsonEventGeneratorImpl {

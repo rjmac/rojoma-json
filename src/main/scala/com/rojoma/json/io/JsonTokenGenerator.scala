@@ -7,6 +7,7 @@ import scala.annotation.{tailrec, switch}
 import scala.util.control.ControlThrowable
 
 import JsonTokenGenerator._
+import JsonTokenGeneratorImpl._
 
 sealed abstract class JsonTokenGenerator {
   def apply(chunk: WrappedCharArray): Result
@@ -21,46 +22,47 @@ sealed abstract class JsonTokenGenerator {
   def lex(chunk: Array[Char]): SuccessfulResult = check(apply(chunk))
   def finish(): SuccessfulEndResult = endOfInput() match {
     case r: SuccessfulEndResult => r
-    case error: Error => throwIt(error)
+    case error: EndError => throwError(error)
   }
 
   private def check(result: Result) = result match {
     case r: SuccessfulResult => r
-    case error: Error => throwIt(error)
+    case error: Error => throwError(error)
   }
+}
 
-  private def throwIt(error: Error): Nothing = error match {
+object JsonTokenGenerator {
+  sealed trait AnyError
+
+  sealed abstract class Result
+  sealed abstract class SuccessfulResult extends Result
+  sealed abstract class Error extends Result with AnyError
+
+  sealed trait EndResult
+  sealed trait SuccessfulEndResult extends EndResult
+  sealed trait EndError extends EndResult with AnyError
+
+  case class Token(token: PositionedJsonToken, newState: JsonTokenGenerator, remainingInput: WrappedCharArray) extends SuccessfulResult
+  case class More(newState: JsonTokenGenerator) extends SuccessfulResult
+
+  case class EndOfInput(row: Int, col: Int) extends SuccessfulEndResult
+  case class FinalToken(token: PositionedJsonToken, row: Int, col: Int) extends SuccessfulEndResult
+
+  case class UnexpectedCharacter(character: Char, expected: String, row: Int, col: Int) extends Error with EndError
+  case class NumberOutOfRange(number: String, row: Int, col: Int) extends Error with EndError
+  case class UnexpectedEndOfInput(processing: String, row: Int, col: Int) extends EndError
+
+  val newGenerator: JsonTokenGenerator = new WaitingForToken(1, 1)
+  def newPositionedGenerator(row: Int, column: Int): JsonTokenGenerator = new WaitingForToken(row, column)
+
+  def throwError(error: AnyError): Nothing = error match {
     case UnexpectedCharacter(c, e, row, col) => throw JsonUnexpectedCharacter(c,e,row,col)
     case NumberOutOfRange(n,r,c) => throw JsonNumberOutOfRange(n,r,c)
     case UnexpectedEndOfInput(_, r,c) => throw JsonEOF(r,c)
   }
 }
 
-object JsonTokenGenerator {
-  sealed abstract class Result
-  sealed trait EndResult
-  sealed abstract class SuccessfulResult extends Result
-  sealed trait SuccessfulEndResult extends EndResult
-
-  sealed abstract class Error extends Result with EndResult {
-    def row: Int
-    def col: Int
-  }
-  case class UnexpectedCharacter(character: Char, expected: String, row: Int, col: Int) extends Error
-  case class NumberOutOfRange(number: String, row: Int, col: Int) extends Error
-  case class UnexpectedEndOfInput(processing: String, row: Int, col: Int) extends Error
-
-  case class Token(token: PositionedJsonToken, newState: JsonTokenGenerator, remainingInput: WrappedCharArray) extends SuccessfulResult
-  case class More(newState: JsonTokenGenerator) extends SuccessfulResult
-  case class EndOfInput(row: Int, col: Int) extends SuccessfulEndResult
-  case class FinalToken(token: PositionedJsonToken, row: Int, col: Int) extends SuccessfulEndResult
-
-  val newGenerator: JsonTokenGenerator = new JsonTokenGeneratorImpl.WaitingForToken(1, 1)
-}
-
 private[io] object JsonTokenGeneratorImpl {
-  import JsonTokenGenerator._
-
   class PositionedCharExtractor(underlying: WrappedCharArrayIterator, var nextCharRow: Int, var nextCharCol: Int) {
     def atEnd = !underlying.hasNext
 

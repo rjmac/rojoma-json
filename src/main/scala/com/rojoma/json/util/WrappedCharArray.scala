@@ -85,6 +85,8 @@ object WrappedCharArray {
   }
 
   val canConvertBackToStringWithoutCopying = unsafeConstructString.isInstanceOf[ConstructStringFunc]
+
+  val empty = apply("")
 }
 
 class WrappedCharArrayIterator private[util] (chars: Array[Char], private[this] var offset: Int, limit: Int, fromString: Boolean) extends BufferedIterator[Char] {
