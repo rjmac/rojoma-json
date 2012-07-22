@@ -13,22 +13,22 @@ import org.scalatest.prop.PropertyChecks
 
 import io.JsonTokenGeneratorTests._
 
-class JValueConsumerTest extends FunSuite with MustMatchers with PropertyChecks {
+class JValueProducerTest extends FunSuite with MustMatchers with PropertyChecks {
   def r(s: List[String]) = {
-    def loop(state: JValueConsumer, inputs: List[WrappedCharArray]): (JValue, String) = {
+    def loop(state: JValueProducer, inputs: List[WrappedCharArray]): (JValue, String) = {
       inputs match {
         case hd :: tl =>
           state.consume(hd) match {
-            case JValueConsumer.More(newState) => loop(newState, tl)
-            case JValueConsumer.Value(value, _, remainingInput) => (value, remainingInput.toString ++ tl.mkString)
+            case JValueProducer.More(newState) => loop(newState, tl)
+            case JValueProducer.Value(value, _, remainingInput) => (value, remainingInput.toString ++ tl.mkString)
           }
         case Nil =>
           state.finish() match {
-            case JValueConsumer.FinalValue(value, _, _) => (value, "")
+            case JValueProducer.FinalValue(value, _, _) => (value, "")
           }
       }
     }
-    loop(JValueConsumer.newConsumer, s.map(WrappedCharArray(_)))
+    loop(JValueProducer.newProducer, s.map(WrappedCharArray(_)))
   }
 
   def withSplitString(s: String)(f: List[String] => Unit) {

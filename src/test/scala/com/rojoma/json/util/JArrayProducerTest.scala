@@ -13,36 +13,36 @@ import org.scalacheck.{Gen, Arbitrary}
 
 import io.JsonTokenGeneratorTests._
 
-class JArrayConsumerTest extends FunSuite with MustMatchers with PropertyChecks {
+class JArrayProducerTest extends FunSuite with MustMatchers with PropertyChecks {
   def r(targets: List[JValue], s: List[String]) = {
-    def loop(state: JArrayConsumer, targets: List[JValue], inputs: List[WrappedCharArray]): String = {
+    def loop(state: JArrayProducer, targets: List[JValue], inputs: List[WrappedCharArray]): String = {
       inputs match {
         case hd :: tl =>
           state(hd) match {
-            case JArrayConsumer.More(newState) =>
+            case JArrayProducer.More(newState) =>
               loop(newState, targets, tl)
-            case JArrayConsumer.Element(value, newState, remainingInput) =>
+            case JArrayProducer.Element(value, newState, remainingInput) =>
               value must equal (targets.head)
               loop(newState, targets.tail, remainingInput :: tl)
-            case JArrayConsumer.EndOfList(_, remainingInput) =>
+            case JArrayProducer.EndOfList(_, remainingInput) =>
               targets must equal (Nil)
               remainingInput.toString + tl.mkString
-            case e: JArrayConsumer.Error =>
+            case e: JArrayProducer.Error =>
               targets must equal (Nil)
-              JArrayConsumer.throwError(e)
+              JArrayProducer.throwError(e)
           }
         case Nil =>
           state.endOfInput() match {
-            case JArrayConsumer.FinalEndOfList(_, _) =>
+            case JArrayProducer.FinalEndOfList(_, _) =>
               targets must equal (Nil)
               ""
-            case e: JArrayConsumer.EndError =>
+            case e: JArrayProducer.EndError =>
               targets must equal (Nil)
-              JArrayConsumer.throwError(e)
+              JArrayProducer.throwError(e)
           }
       }
     }
-    loop(JArrayConsumer.newConsumer, targets, s.map(WrappedCharArray(_)))
+    loop(JArrayProducer.newProducer, targets, s.map(WrappedCharArray(_)))
   }
 
   def withSplitString(s: String)(f: List[String] => Unit) {

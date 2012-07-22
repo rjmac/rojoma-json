@@ -6,10 +6,10 @@ import scala.annotation.tailrec
 import io._
 import ast.JValue
 
-import JValueConsumer._
+import JValueProducer._
 
 // End-to-end character data to JValue push parser
-final class JValueConsumer private (lexer: JsonTokenGenerator, parser: JsonEventGenerator, valuator: JValueGenerator) {
+final class JValueProducer private (lexer: JsonTokenGenerator, parser: JsonEventGenerator, valuator: JValueGenerator) {
   def consume(data: WrappedCharArray): SuccessfulResult = apply(data) match {
     case r: SuccessfulResult => r
     case LexerError(e) => JsonTokenGenerator.throwError(e)
@@ -20,7 +20,7 @@ final class JValueConsumer private (lexer: JsonTokenGenerator, parser: JsonEvent
     case JsonTokenGenerator.Token(token, newLexer, remainingData) =>
       processDatum(token, newLexer, parser, valuator, remainingData)
     case JsonTokenGenerator.More(newLexer) =>
-      More(new JValueConsumer(newLexer, parser, valuator))
+      More(new JValueProducer(newLexer, parser, valuator))
     case e: JsonTokenGenerator.Error =>
       LexerError(e)
   }
@@ -69,7 +69,7 @@ final class JValueConsumer private (lexer: JsonTokenGenerator, parser: JsonEvent
               case JsonTokenGenerator.Token(newToken, newLexer, remainingData) =>
                 processDatum(newToken, newLexer, newParser, newValuator, remainingData)
               case JsonTokenGenerator.More(newLexer) =>
-                More(new JValueConsumer(newLexer, newParser, newValuator))
+                More(new JValueProducer(newLexer, newParser, newValuator))
               case e: JsonTokenGenerator.Error =>
                 LexerError(e)
             }
@@ -87,7 +87,7 @@ final class JValueConsumer private (lexer: JsonTokenGenerator, parser: JsonEvent
           case JsonTokenGenerator.Token(newToken, newLexer, remainingData) =>
             processDatum(newToken, newLexer, newParser, valuator, remainingData)
           case JsonTokenGenerator.More(newLexer) =>
-            More(new JValueConsumer(newLexer, newParser, valuator))
+            More(new JValueProducer(newLexer, newParser, valuator))
           case e: JsonTokenGenerator.Error =>
             LexerError(e)
         }
@@ -97,7 +97,7 @@ final class JValueConsumer private (lexer: JsonTokenGenerator, parser: JsonEvent
   }
  }
 
-object JValueConsumer {
+object JValueProducer {
   sealed abstract class Result
   sealed abstract class SuccessfulResult extends Result
   sealed abstract class Error extends Result
@@ -106,7 +106,7 @@ object JValueConsumer {
   sealed trait SuccessfulEndResult extends EndResult
   sealed trait EndError extends EndResult
 
-  case class More(nextState: JValueConsumer) extends SuccessfulResult
+  case class More(nextState: JValueProducer) extends SuccessfulResult
   case class Value(value: JValue, tokenGenerator: JsonTokenGenerator, remainingInput: WrappedCharArray) extends SuccessfulResult
 
   case class FinalValue(value: JValue, row: Int, col: Int) extends SuccessfulEndResult
@@ -115,6 +115,6 @@ object JValueConsumer {
   case class ParserError(err: JsonEventGenerator.AnyError) extends Error with EndError
   case class UnexpectedEndOfInput(row: Int, col: Int) extends EndError
 
-  def newConsumerFromLexer(lexer: JsonTokenGenerator) = new JValueConsumer(lexer, JsonEventGenerator.newGenerator, JValueGenerator.newGenerator)
-  val newConsumer = newConsumerFromLexer(JsonTokenGenerator.newGenerator)
+  def newProducerFromLexer(lexer: JsonTokenGenerator) = new JValueProducer(lexer, JsonEventGenerator.newGenerator, JValueGenerator.newGenerator)
+  val newProducer = newProducerFromLexer(JsonTokenGenerator.newGenerator)
 }
