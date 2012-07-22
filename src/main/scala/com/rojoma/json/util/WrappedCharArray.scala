@@ -2,6 +2,7 @@ package com.rojoma.json
 package util
 
 import java.lang.reflect.{Array => _, _}
+import java.nio.CharBuffer
 
 /** A container for a slice of an `Array[Char]` which promises to allow only read-only
  * access to that array.  Note it does not itself copy the array, so if there is another
@@ -16,10 +17,21 @@ final class WrappedCharArray private [util] (chars: Array[Char], offset: Int, co
   def toCharArray = java.util.Arrays.copyOfRange(chars, offset, count)
 
   /** @return The underlying array-slice as a String.  If the data
-   * was originally from a String, this tries not to make a copy. */
+   * was originally from a String and `WrappedCharArray.canConvertBackToStringWithoutCopying`
+   * is true, this will not involve a copy. */
   override def toString =
     if(fromString) WrappedCharArray.unsafeConstructString(chars, offset, count)
     else new String(chars, offset, count)
+
+  /** Convert this `WrappedCharArray` into a `CharBuffer`.  If the data originally came
+   * from a String, the result will be read-only.  In neither case is the data copied.
+   *
+   * @return The underlying array-slice as a CharBuffer. */
+  def toCharBuffer: CharBuffer = {
+    val cb = CharBuffer.wrap(chars, offset, count)
+    if(fromString) cb.asReadOnlyBuffer
+    else cb
+  }
 
   def apply(i: Int): Char = {
     if(i < 0) throw new IndexOutOfBoundsException("i < 0")
@@ -32,9 +44,43 @@ final class WrappedCharArray private [util] (chars: Array[Char], offset: Int, co
    * produces a WrappedCharArray containing the remaining characters without
    * copying. */
   def iterator = new WrappedCharArrayIterator(chars, offset, offset + count, fromString)
+
+  override def equals(o: Any) = o match {
+    case that: WrappedCharArray =>
+      (this eq that) || that.arrayEquals(chars, offset, count)
+    case _ => false
+  }
+
+  override def hashCode: Int = {
+    // Simple hashCode similar to the one performed by java.util.Arrays#hashCode(char[]).
+    var result = 1
+    var i = offset
+    var end = offset + count
+    while(i != end) {
+      result = 31*result + chars(i)
+      i += 1
+    }
+    result
+  }
+
+  private def arrayEquals(thoseChars: Array[Char], thatOffset: Int, thatCount: Int): Boolean = {
+    if(count != thatCount) return false
+    var i = 0
+    while(i != count) {
+      if(chars(i + offset) != thoseChars(i + thatOffset)) return false
+      i += 1
+    }
+    return true;
+  }
 }
 
 object WrappedCharArray {
+  /**
+   * Convert a slice of an array into a `WrappedCharArray`.  The new object will be backed by the
+   * array, and so changes to the array's contents will be reflected in the resulting `WrappedCharArray`.
+   *
+   * @throws IndexOutOfBoundsException
+   */
   def apply(chars: Array[Char], offset: Int, count: Int): WrappedCharArray = {
     if(offset < 0) throw new IndexOutOfBoundsException("offset < 0")
     if(count < 0) throw new IndexOutOfBoundsException("count < 0")
@@ -42,9 +88,34 @@ object WrappedCharArray {
     new WrappedCharArray(chars, offset, count, false)
   }
 
+  /**
+   * Convert an entire array into a `WrappedCharArray`.  The new object will be backed by the
+   * array, and so changes to the array's contents will be reflected in the resulting `WrappedCharArray`.
+   */
   def apply(chars: Array[Char]): WrappedCharArray = new WrappedCharArray(chars, 0, chars.length, false)
 
+  /**
+   * Convert a `String` into a `WrappedCharArray`.  If `canConvertFromStringWithoutCopying` is
+   * true, this will involve no copying of character data.
+   */
   def apply(chars: String): WrappedCharArray = unsafeRewrapString(chars)
+
+  /**
+   * Convert a `CharBuffer` into a `WrappedCharArray`.  If the `CharBuffer` has an accessible backing
+   * array, this will involve no copying of character data and so changes to that array will be reflected
+   * in the resulting `WrappedCharArray`.  Whether or not there is a backing array, after this call the
+   * `CharBuffer` has been marked as fully consumed.
+   */
+  def apply(chars: CharBuffer): WrappedCharArray =
+    if(chars.hasArray) {
+      val result = new WrappedCharArray(chars.array, chars.arrayOffset + chars.position, chars.remaining, false)
+      chars.position(chars.position + chars.remaining) // mark them all as consumed so both branches have the same side-effects
+      result
+    } else {
+      val rawChars = new Array[Char](chars.remaining)
+      chars.get(rawChars)
+      apply(rawChars)
+    }
 
   private class RewrapStringFunc(valueField: Field, offsetField: Field, countField: Field) extends Function1[String, WrappedCharArray] {
     def apply(s: String) =
@@ -68,6 +139,7 @@ object WrappedCharArray {
       }
   }
 
+  /** Indicates whether `apply(String)` can avoid copying. */
   val canConvertFromStringWithoutCopying = unsafeRewrapString.isInstanceOf[RewrapStringFunc]
 
   private class ConstructStringFunc(ctor: Constructor[String]) extends Function3[Array[Char], Int, Int, String] {
@@ -84,6 +156,8 @@ object WrappedCharArray {
       (c: Array[Char], offset: Int, length: Int) => new String(c, offset, length)
   }
 
+  /** Indicates whether a `WrappedCharArray` that originally came from a `String` can avoid copying
+   * in its `toString` method. */
   val canConvertBackToStringWithoutCopying = unsafeConstructString.isInstanceOf[ConstructStringFunc]
 
   val empty = apply("")
@@ -103,7 +177,11 @@ class WrappedCharArrayIterator private[util] (chars: Array[Char], private[this] 
     chars(offset)
   }
 
+  /** @return the number of `Char`s still available */
   def remaining = limit - offset
 
+  /** Produces a new `WrappedCharArray` containing all remaining characters.  After this
+   * call, this iterator is still valid and positioned in the same location.
+   */
   def freeze = new WrappedCharArray(chars, offset, limit - offset, fromString)
 }
