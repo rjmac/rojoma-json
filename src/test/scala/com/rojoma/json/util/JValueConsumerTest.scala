@@ -20,11 +20,11 @@ class JValueConsumerTest extends FunSuite with MustMatchers with PropertyChecks 
         case hd :: tl =>
           state.consume(hd) match {
             case JValueConsumer.More(newState) => loop(newState, tl)
-            case JValueConsumer.Value(value, remainingInput) => (value, remainingInput.toString ++ tl.mkString)
+            case JValueConsumer.Value(value, _, remainingInput) => (value, remainingInput.toString ++ tl.mkString)
           }
         case Nil =>
           state.finish() match {
-            case JValueConsumer.FinalValue(value) => (value, "")
+            case JValueConsumer.FinalValue(value, _, _) => (value, "")
           }
       }
     }

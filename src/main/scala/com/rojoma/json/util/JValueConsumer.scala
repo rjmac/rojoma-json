@@ -35,7 +35,7 @@ final class JValueConsumer private (lexer: JsonTokenGenerator, parser: JsonEvent
         }
       case JsonTokenGenerator.FinalToken(t, r, c) =>
         processDatum(t, JsonTokenGenerator.newPositionedGenerator(r, c), parser, valuator, WrappedCharArray.empty) match {
-          case Value(v, _) => FinalValue(v)
+          case Value(v, _, _) => FinalValue(v, r, c)
           case More(_) => UnexpectedEndOfInput(r, c)
           case e: LexerError => e
           case e: ParserError => e
@@ -62,7 +62,7 @@ final class JValueConsumer private (lexer: JsonTokenGenerator, parser: JsonEvent
         valuator(ev) match {
           case JValueGenerator.Value(jvalue) =>
             assert(newParser.atTopLevel)
-            Value(jvalue, data)
+            Value(jvalue, lexer, data)
           case JValueGenerator.More(newValuator) =>
             assert(!newParser.atTopLevel)
             lexer(data) match {
@@ -95,7 +95,7 @@ final class JValueConsumer private (lexer: JsonTokenGenerator, parser: JsonEvent
         ParserError(e)
     }
   }
-}
+ }
 
 object JValueConsumer {
   sealed abstract class Result
@@ -107,13 +107,14 @@ object JValueConsumer {
   sealed trait EndError extends EndResult
 
   case class More(nextState: JValueConsumer) extends SuccessfulResult
-  case class Value(value: JValue, remainingInput: WrappedCharArray) extends SuccessfulResult
+  case class Value(value: JValue, tokenGenerator: JsonTokenGenerator, remainingInput: WrappedCharArray) extends SuccessfulResult
 
-  case class FinalValue(value: JValue) extends SuccessfulEndResult
+  case class FinalValue(value: JValue, row: Int, col: Int) extends SuccessfulEndResult
 
   case class LexerError(err: JsonTokenGenerator.AnyError) extends Error with EndError
   case class ParserError(err: JsonEventGenerator.AnyError) extends Error with EndError
   case class UnexpectedEndOfInput(row: Int, col: Int) extends EndError
 
-  val newConsumer = new JValueConsumer(JsonTokenGenerator.newGenerator, JsonEventGenerator.newGenerator, JValueGenerator.newGenerator)
+  def newConsumerFromLexer(lexer: JsonTokenGenerator) = new JValueConsumer(lexer, JsonEventGenerator.newGenerator, JValueGenerator.newGenerator)
+  val newConsumer = newConsumerFromLexer(JsonTokenGenerator.newGenerator)
 }

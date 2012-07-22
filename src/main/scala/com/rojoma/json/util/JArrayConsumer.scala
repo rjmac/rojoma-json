@@ -45,14 +45,14 @@ object JArrayConsumer {
 
   case class LexerError(err: JsonTokenGenerator.AnyError) extends Error with EndError
   case class ParserError(err: JsonEventGenerator.AnyError) extends Error with EndError
-  case class UnexpectedEndOfInput(row: Int, column: Int) extends EndError
+  case class UnexpectedEndOfInput(finalValue: Option[JValue], row: Int, column: Int) extends EndError
 
   val newConsumer: JArrayConsumer = new AwaitingStartOfList(JsonTokenGenerator.newGenerator)
 
   def throwError(e: AnyError): Nothing = e match {
     case LexerError(e) => JsonTokenGenerator.throwError(e)
     case ParserError(e) => JsonEventGenerator.throwError(e)
-    case UnexpectedEndOfInput(r, c) => throw new JsonEOF(r, c)
+    case UnexpectedEndOfInput(_, r, c) => throw new JsonEOF(r, c)
   }
 }
 
@@ -60,7 +60,7 @@ private[util] object JArrayConsumerImpl {
   case class AwaitingStartOfList(lexer: JsonTokenGenerator) extends JArrayConsumer {
     def apply(data: WrappedCharArray): Result = lexer(data) match {
       case JsonTokenGenerator.Token(PositionedJsonToken(TokenOpenBracket, _, _), newLexer, remainingData) =>
-        val newState = new AwaitingDatumOrEndOfList(newLexer, JsonEventGenerator.newGenerator)
+        val newState = new AwaitingDatumOrEndOfList(newLexer)
         newState(remainingData)
       case JsonTokenGenerator.Token(token, _, _) =>
         ParserError(JsonEventGenerator.UnexpectedToken(token.token, "start of list", token.row, token.column))
@@ -74,66 +74,22 @@ private[util] object JArrayConsumerImpl {
       case e: JsonTokenGenerator.EndError =>
         LexerError(e)
       case JsonTokenGenerator.FinalToken(PositionedJsonToken(TokenOpenBracket, _, _), r, c) =>
-        UnexpectedEndOfInput(r, c)
+        UnexpectedEndOfInput(None, r, c)
       case JsonTokenGenerator.FinalToken(token, _, _) =>
         ParserError(JsonEventGenerator.UnexpectedToken(token.token, "start of list", token.row, token.column))
       case JsonTokenGenerator.EndOfInput(r, c) =>
-        UnexpectedEndOfInput(r, c)
+        UnexpectedEndOfInput(None, r, c)
     }
   }
 
-  abstract class DatumProcessing extends JArrayConsumer {
-    @tailrec
-    final def processDatum(token: PositionedJsonToken, lexer: JsonTokenGenerator, parser: JsonEventGenerator, valuator: JValueGenerator, data: WrappedCharArray): Result = {
-      // At this point we know we're handing a datum.  And "token" is part of it.
-      parser(token) match {
-        case JsonEventGenerator.Event(ev, newParser) =>
-          valuator(ev) match {
-            case JValueGenerator.Value(jvalue) =>
-              assert(newParser.atTopLevel)
-              Element(jvalue, new AwaitingCommaOrEndOfList(lexer, newParser), data)
-            case JValueGenerator.More(newValuator) =>
-              assert(!newParser.atTopLevel)
-              lexer(data) match {
-                case JsonTokenGenerator.Token(newToken, newLexer, remainingData) =>
-                  processDatum(newToken, newLexer, newParser, newValuator, remainingData)
-                case JsonTokenGenerator.More(newLexer) =>
-                  More(new AwaitingDatum(newLexer, newParser, newValuator))
-                case e: JsonTokenGenerator.Error =>
-                  LexerError(e)
-              }
-            case _ :JValueGenerator.BadParse =>
-              // this shouldn't happen
-              throw new Exception("Bad parse from JValueGenerator")
-            case JValueGenerator.UnknownIdentifier(i, row, col) =>
-              ParserError(JsonEventGenerator.UnexpectedToken(TokenIdentifier(i), "datum", row, col))
-          }
-        case JsonEventGenerator.More(newParser) =>
-          // yeah, this is an almost exact copy of the JValueGenerator.More case right above.  SURE WOULD BE
-          // NICE if the jvm had proper tailcall elimination so this could be factored out into a sister
-          // method.
-          lexer(data) match {
-            case JsonTokenGenerator.Token(newToken, newLexer, remainingData) =>
-              processDatum(newToken, newLexer, newParser, valuator, remainingData)
-            case JsonTokenGenerator.More(newLexer) =>
-              More(new AwaitingDatum(newLexer, newParser, valuator))
-            case e: JsonTokenGenerator.Error =>
-              LexerError(e)
-          }
-        case e: JsonEventGenerator.Error =>
-          ParserError(e)
-      }
-    }
-  }
-
-  case class AwaitingDatumOrEndOfList(lexer: JsonTokenGenerator, parser: JsonEventGenerator) extends DatumProcessing {
+  case class AwaitingDatumOrEndOfList(lexer: JsonTokenGenerator) extends JArrayConsumer {
     def apply(data: WrappedCharArray): Result = lexer(data) match {
       case JsonTokenGenerator.Token(PositionedJsonToken(TokenCloseBracket, _, _), _, remainingData) =>
         EndOfList(remainingData)
-      case JsonTokenGenerator.Token(token, newLexer, remainingData) =>
-        processDatum(token, newLexer, parser, JValueGenerator.newGenerator, remainingData)
+      case JsonTokenGenerator.Token(_, _, _) =>
+        new AwaitingDatum(lexer).apply(data)
       case JsonTokenGenerator.More(newLexer) =>
-        More(new AwaitingDatumOrEndOfList(newLexer, parser))
+        More(new AwaitingDatumOrEndOfList(newLexer))
       case e: JsonTokenGenerator.Error =>
         LexerError(e)
     }
@@ -143,28 +99,23 @@ private[util] object JArrayConsumerImpl {
         LexerError(e)
       case JsonTokenGenerator.FinalToken(PositionedJsonToken(TokenCloseBracket, _, _), _, _) =>
         FinalEndOfList
-      case JsonTokenGenerator.FinalToken(token, r, c) =>
-        parser(token) match {
-          case JsonEventGenerator.Event(_, _) => UnexpectedEndOfInput(r, c) // hm, should we feed it to a JValueGenerator first, knowing that this list is incomplete?
-          case JsonEventGenerator.More(_) => UnexpectedEndOfInput(r, c)
-          case e: JsonEventGenerator.Error => ParserError(e)
-        }
+      case JsonTokenGenerator.FinalToken(_, _, _) =>
+        new AwaitingDatum(lexer).endOfInput()
       case JsonTokenGenerator.EndOfInput(r, c) =>
-        UnexpectedEndOfInput(r, c)
+        UnexpectedEndOfInput(None, r, c)
     }
   }
 
-  case class AwaitingCommaOrEndOfList(lexer: JsonTokenGenerator, parser: JsonEventGenerator) extends JArrayConsumer {
+  case class AwaitingCommaOrEndOfList(lexer: JsonTokenGenerator) extends JArrayConsumer {
     def apply(data: WrappedCharArray): Result = lexer(data) match {
       case JsonTokenGenerator.Token(PositionedJsonToken(TokenComma, _, _), newLexer, remainingData) =>
-        val newState = new AwaitingDatum(newLexer, parser, JValueGenerator.newGenerator)
-        newState(remainingData)
+        new AwaitingDatum(newLexer).apply(remainingData)
       case JsonTokenGenerator.Token(PositionedJsonToken(TokenCloseBracket, _, _), _, remainingData) =>
         EndOfList(remainingData)
       case JsonTokenGenerator.Token(token, _, remainingData) =>
         ParserError(JsonEventGenerator.UnexpectedToken(token.token, "comma or end of list", token.row, token.column))
       case JsonTokenGenerator.More(newLexer) =>
-        More(new AwaitingCommaOrEndOfList(newLexer, parser))
+        More(new AwaitingCommaOrEndOfList(newLexer))
       case e: JsonTokenGenerator.Error =>
         LexerError(e)
     }
@@ -175,39 +126,34 @@ private[util] object JArrayConsumerImpl {
       case JsonTokenGenerator.FinalToken(PositionedJsonToken(TokenCloseBracket, _, _), _, _) =>
         FinalEndOfList
       case JsonTokenGenerator.FinalToken(PositionedJsonToken(TokenComma, _, _), r, c) =>
-        UnexpectedEndOfInput(r, c)
-      case JsonTokenGenerator.FinalToken(token, r, c) =>
-        parser(token) match {
-          case JsonEventGenerator.Event(_, _) => UnexpectedEndOfInput(r, c) // hm, should we feed it to a JValueGenerator first, knowing that this list is incomplete?
-          case JsonEventGenerator.More(_) => UnexpectedEndOfInput(r, c)
-          case e: JsonEventGenerator.Error => ParserError(e)
-        }
+        UnexpectedEndOfInput(None, r, c)
+      case JsonTokenGenerator.FinalToken(_, _, _) =>
+        new AwaitingDatum(lexer).endOfInput()
       case JsonTokenGenerator.EndOfInput(r, c) =>
-        UnexpectedEndOfInput(r, c)
+        UnexpectedEndOfInput(None, r, c)
     }
   }
 
-  case class AwaitingDatum(lexer: JsonTokenGenerator, parser: JsonEventGenerator, valuator: JValueGenerator) extends DatumProcessing {
-    def apply(data: WrappedCharArray): Result = lexer(data) match {
-      case JsonTokenGenerator.Token(token, newLexer, remainingData) =>
-        processDatum(token, newLexer, parser, valuator, remainingData)
-      case JsonTokenGenerator.More(newLexer) =>
-        More(new AwaitingDatum(newLexer, parser, valuator))
-      case e: JsonTokenGenerator.Error =>
-        LexerError(e)
+  case class AwaitingDatum(valueConsumer: JValueConsumer) extends JArrayConsumer {
+    def this(lexer: JsonTokenGenerator) = this(JValueConsumer.newConsumerFromLexer(lexer))
+
+    def apply(data: WrappedCharArray): Result = valueConsumer(data) match {
+      case JValueConsumer.More(newState) => More(new AwaitingDatum(newState))
+      case JValueConsumer.Value(jvalue, newLexer, remainingData) =>
+        Element(jvalue, new AwaitingCommaOrEndOfList(newLexer), remainingData)
+      case JValueConsumer.LexerError(err) => LexerError(err)
+      case JValueConsumer.ParserError(err) => ParserError(err)
     }
 
-    def endOfInput() = lexer.endOfInput() match {
-      case e: JsonTokenGenerator.EndError =>
+    def endOfInput() = valueConsumer.endOfInput() match {
+      case JValueConsumer.FinalValue(value, r, c) =>
+        UnexpectedEndOfInput(Some(value), r, c)
+      case JValueConsumer.UnexpectedEndOfInput(r, c) =>
+        UnexpectedEndOfInput(None, r, c)
+      case JValueConsumer.LexerError(e) =>
         LexerError(e)
-      case JsonTokenGenerator.FinalToken(token, r, c) =>
-        parser(token) match {
-          case JsonEventGenerator.Event(_, _) => UnexpectedEndOfInput(r, c) // hm, should we feed it to a JValueGenerator first, knowing that this list is incomplete?
-          case JsonEventGenerator.More(_) => UnexpectedEndOfInput(r, c)
-          case e: JsonEventGenerator.Error => ParserError(e)
-        }
-      case JsonTokenGenerator.EndOfInput(r, c) =>
-        UnexpectedEndOfInput(r, c)
+      case JValueConsumer.ParserError(e) =>
+        ParserError(e)
     }
   }
 }
