@@ -2,7 +2,7 @@ organization := "com.rojoma"
 
 name := "rojoma-json"
 
-version := "1.4.7"
+version := "1.4.8-SNAPSHOT"
 
 scalaVersion := "2.9.2"
 
