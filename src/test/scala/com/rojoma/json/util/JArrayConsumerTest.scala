@@ -24,7 +24,7 @@ class JArrayConsumerTest extends FunSuite with MustMatchers with PropertyChecks 
             case JArrayConsumer.Element(value, newState, remainingInput) =>
               value must equal (targets.head)
               loop(newState, targets.tail, remainingInput :: tl)
-            case JArrayConsumer.EndOfList(remainingInput) =>
+            case JArrayConsumer.EndOfList(_, remainingInput) =>
               targets must equal (Nil)
               remainingInput.toString + tl.mkString
             case e: JArrayConsumer.Error =>
@@ -33,7 +33,7 @@ class JArrayConsumerTest extends FunSuite with MustMatchers with PropertyChecks 
           }
         case Nil =>
           state.endOfInput() match {
-            case JArrayConsumer.FinalEndOfList =>
+            case JArrayConsumer.FinalEndOfList(_, _) =>
               targets must equal (Nil)
               ""
             case e: JArrayConsumer.EndError =>

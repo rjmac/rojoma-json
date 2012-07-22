@@ -37,17 +37,20 @@ object JArrayConsumer {
   sealed trait SuccessfulEndResult extends EndResult
   sealed trait EndError extends EndResult with AnyError
 
-  case class EndOfList(remainingInput: WrappedCharArray) extends SuccessfulResult
+  case class EndOfList(tokenGenerator: JsonTokenGenerator, remainingInput: WrappedCharArray) extends SuccessfulResult
   case class More(nextState: JArrayConsumer) extends SuccessfulResult
   case class Element(value: JValue, nextState: JArrayConsumer, remainingInput: WrappedCharArray) extends SuccessfulResult
 
-  case object FinalEndOfList extends SuccessfulEndResult
+  case class FinalEndOfList(row: Int, col: Int) extends SuccessfulEndResult
 
   case class LexerError(err: JsonTokenGenerator.AnyError) extends Error with EndError
   case class ParserError(err: JsonEventGenerator.AnyError) extends Error with EndError
   case class UnexpectedEndOfInput(finalValue: Option[JValue], row: Int, column: Int) extends EndError
 
-  val newConsumer: JArrayConsumer = new AwaitingStartOfList(JsonTokenGenerator.newGenerator)
+  def newConsumerFromLexer(lexer: JsonTokenGenerator): JArrayConsumer = new AwaitingStartOfList(lexer)
+  val newConsumer = newConsumerFromLexer(JsonTokenGenerator.newGenerator)
+
+  def newConsumerAfterStartOfList(lexer: JsonTokenGenerator): JArrayConsumer = new AwaitingDatumOrEndOfList(lexer)
 
   def throwError(e: AnyError): Nothing = e match {
     case LexerError(e) => JsonTokenGenerator.throwError(e)
@@ -84,8 +87,8 @@ private[util] object JArrayConsumerImpl {
 
   case class AwaitingDatumOrEndOfList(lexer: JsonTokenGenerator) extends JArrayConsumer {
     def apply(data: WrappedCharArray): Result = lexer(data) match {
-      case JsonTokenGenerator.Token(PositionedJsonToken(TokenCloseBracket, _, _), _, remainingData) =>
-        EndOfList(remainingData)
+      case JsonTokenGenerator.Token(PositionedJsonToken(TokenCloseBracket, _, _), newLexer, remainingData) =>
+        EndOfList(newLexer, remainingData)
       case JsonTokenGenerator.Token(_, _, _) =>
         new AwaitingDatum(lexer).apply(data)
       case JsonTokenGenerator.More(newLexer) =>
@@ -97,8 +100,8 @@ private[util] object JArrayConsumerImpl {
     def endOfInput() = lexer.endOfInput() match {
       case e: JsonTokenGenerator.EndError =>
         LexerError(e)
-      case JsonTokenGenerator.FinalToken(PositionedJsonToken(TokenCloseBracket, _, _), _, _) =>
-        FinalEndOfList
+      case JsonTokenGenerator.FinalToken(PositionedJsonToken(TokenCloseBracket, _, _), r, c) =>
+        FinalEndOfList(r, c)
       case JsonTokenGenerator.FinalToken(_, _, _) =>
         new AwaitingDatum(lexer).endOfInput()
       case JsonTokenGenerator.EndOfInput(r, c) =>
@@ -110,8 +113,8 @@ private[util] object JArrayConsumerImpl {
     def apply(data: WrappedCharArray): Result = lexer(data) match {
       case JsonTokenGenerator.Token(PositionedJsonToken(TokenComma, _, _), newLexer, remainingData) =>
         new AwaitingDatum(newLexer).apply(remainingData)
-      case JsonTokenGenerator.Token(PositionedJsonToken(TokenCloseBracket, _, _), _, remainingData) =>
-        EndOfList(remainingData)
+      case JsonTokenGenerator.Token(PositionedJsonToken(TokenCloseBracket, _, _), newLexer, remainingData) =>
+        EndOfList(newLexer, remainingData)
       case JsonTokenGenerator.Token(token, _, remainingData) =>
         ParserError(JsonEventGenerator.UnexpectedToken(token.token, "comma or end of list", token.row, token.column))
       case JsonTokenGenerator.More(newLexer) =>
@@ -123,8 +126,8 @@ private[util] object JArrayConsumerImpl {
     def endOfInput() = lexer.endOfInput() match {
       case e: JsonTokenGenerator.EndError =>
         LexerError(e)
-      case JsonTokenGenerator.FinalToken(PositionedJsonToken(TokenCloseBracket, _, _), _, _) =>
-        FinalEndOfList
+      case JsonTokenGenerator.FinalToken(PositionedJsonToken(TokenCloseBracket, _, _), r, c) =>
+        FinalEndOfList(r, c)
       case JsonTokenGenerator.FinalToken(PositionedJsonToken(TokenComma, _, _), r, c) =>
         UnexpectedEndOfInput(None, r, c)
       case JsonTokenGenerator.FinalToken(_, _, _) =>
