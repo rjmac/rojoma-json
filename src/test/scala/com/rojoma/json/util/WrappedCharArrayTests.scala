@@ -1,6 +1,8 @@
 package com.rojoma.json
 package util
 
+import java.nio.CharBuffer
+
 import org.scalatest.FunSuite
 import org.scalatest.matchers.MustMatchers
 import org.scalatest.prop.PropertyChecks
@@ -16,12 +18,42 @@ class WrappedCharArrayTests extends FunSuite with MustMatchers with PropertyChec
     WrappedCharArray.canConvertBackToStringWithoutCopying must be (true)
   }
 
+  test("WrappedCharArray believes it need not copy read-only heap-based CharBuffers") {
+    WrappedCharArray.canConvertReadOnlyHeapCharBufferWithoutCopying must be (true)
+  }
+
   test("Converting a String to a WrappedCharArray succeeds") {
     WrappedCharArray("hello there")
   }
 
+  test("Converting a heap-backed CharBuffer to a WrappedCharArray succeeds") {
+    WrappedCharArray(CharBuffer.wrap("hello there"))
+  }
+
+  test("Converting a read-only heap-backed CharBuffer to a WrappedCharArray succeeds") {
+    WrappedCharArray(CharBuffer.wrap("hello there").asReadOnlyBuffer)
+  }
+
   test("Converting a String-based WrappedCharArray back into a String succeeds") {
-    WrappedCharArray("hello there").toString
+    WrappedCharArray("hello there").toString must equal ("hello there")
+  }
+
+  test("Converting a read-only-heap-backed-CharBuffer-based WrappedCharArray back to a CharBuffer succeeds") {
+    // can't use "must be ('readOnly)" because the dynamic type of the class is inaccessible.
+    WrappedCharArray(CharBuffer.wrap("hello there".toCharArray).asReadOnlyBuffer).toCharBuffer.isReadOnly must be (true)
+    WrappedCharArray(CharBuffer.wrap("hello there")).toCharBuffer.isReadOnly must be (true)
+  }
+
+  test("Converting a String-based WrappedCharArray to a CharBuffer succeeds") {
+    WrappedCharArray("hello there").toCharBuffer.isReadOnly must be (true)
+  }
+
+  test("Converting an array-based WrappedCharArray to a CharBuffer succeeds") {
+    WrappedCharArray("hello there".toCharArray).toCharBuffer.isReadOnly must be (false)
+  }
+
+  test("Converting a non-read-only-heap-backed-CharBuffer-based WrappedCharArray to a CharBuffer succeeds") {
+    WrappedCharArray(CharBuffer.wrap("hello there".toCharArray)).toCharBuffer.isReadOnly must be (false)
   }
 
   test("Extracting a slice of a char array works") {

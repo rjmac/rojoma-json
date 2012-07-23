@@ -8,7 +8,7 @@ import java.nio.CharBuffer
  * access to that array.  Note it does not itself copy the array, so if there is another
  * reference the data can be mutated by other operations.  This is used for copyless
  * lexing of data contained in Strings. */
-final class WrappedCharArray private [util] (chars: Array[Char], offset: Int, count: Int, fromString: Boolean) {
+final class WrappedCharArray private [util] (chars: Array[Char], offset: Int, count: Int, from: Int) {
   def isEmpty = count == 0
 
   def length = count
@@ -20,17 +20,18 @@ final class WrappedCharArray private [util] (chars: Array[Char], offset: Int, co
    * was originally from a String and `WrappedCharArray.canConvertBackToStringWithoutCopying`
    * is true, this will not involve a copy. */
   override def toString =
-    if(fromString) WrappedCharArray.unsafeConstructString(chars, offset, count)
+    if(from == WrappedCharArray.FromString) WrappedCharArray.unsafeConstructString(chars, offset, count)
     else new String(chars, offset, count)
 
   /** Convert this `WrappedCharArray` into a `CharBuffer`.  If the data originally came
-   * from a String, the result will be read-only.  In neither case is the data copied.
+   * from a String or read-only `CharBuffer`, the result will be read-only.  In neither
+   * case is the data copied.
    *
    * @return The underlying array-slice as a CharBuffer. */
   def toCharBuffer: CharBuffer = {
     val cb = CharBuffer.wrap(chars, offset, count)
-    if(fromString) cb.asReadOnlyBuffer
-    else cb
+    if(from == WrappedCharArray.FromMutable) cb
+    else cb.asReadOnlyBuffer
   }
 
   def apply(i: Int): Char = {
@@ -43,7 +44,7 @@ final class WrappedCharArray private [util] (chars: Array[Char], offset: Int, co
    * returns the number of characters left to consume, and "freeze". which
    * produces a WrappedCharArray containing the remaining characters without
    * copying. */
-  def iterator = new WrappedCharArrayIterator(chars, offset, offset + count, fromString)
+  def iterator = new WrappedCharArrayIterator(chars, offset, offset + count, from)
 
   override def equals(o: Any) = o match {
     case that: WrappedCharArray =>
@@ -85,14 +86,14 @@ object WrappedCharArray {
     if(offset < 0) throw new IndexOutOfBoundsException("offset < 0")
     if(count < 0) throw new IndexOutOfBoundsException("count < 0")
     if(offset > chars.length - count) throw new IndexOutOfBoundsException("offset + count > length")
-    new WrappedCharArray(chars, offset, count, false)
+    new WrappedCharArray(chars, offset, count, FromMutable)
   }
 
   /**
    * Convert an entire array into a `WrappedCharArray`.  The new object will be backed by the
    * array, and so changes to the array's contents will be reflected in the resulting `WrappedCharArray`.
    */
-  def apply(chars: Array[Char]): WrappedCharArray = new WrappedCharArray(chars, 0, chars.length, false)
+  def apply(chars: Array[Char]): WrappedCharArray = new WrappedCharArray(chars, 0, chars.length, FromMutable)
 
   /**
    * Convert a `String` into a `WrappedCharArray`.  If `canConvertFromStringWithoutCopying` is
@@ -108,18 +109,24 @@ object WrappedCharArray {
    */
   def apply(chars: CharBuffer): WrappedCharArray =
     if(chars.hasArray) {
-      val result = new WrappedCharArray(chars.array, chars.arrayOffset + chars.position, chars.remaining, false)
+      val result = new WrappedCharArray(chars.array, chars.arrayOffset + chars.position, chars.remaining, FromMutable)
       chars.position(chars.position + chars.remaining) // mark them all as consumed so both branches have the same side-effects
       result
+    } else if(chars.getClass.getName == "java.nio.HeapCharBufferR") {
+      unsafeRewrapHeapCharBufferR(chars)
     } else {
-      val rawChars = new Array[Char](chars.remaining)
-      chars.get(rawChars)
-      apply(rawChars)
+      copyCharBuffer(chars)
     }
+
+  private def copyCharBuffer(chars: CharBuffer) = {
+    val rawChars = new Array[Char](chars.remaining)
+    chars.get(rawChars)
+    new WrappedCharArray(rawChars, 0, rawChars.length, FromString) // we're the only ones with a ref to this array, so we can get away with this
+  }
 
   private class RewrapStringFunc(valueField: Field, offsetField: Field, countField: Field) extends Function1[String, WrappedCharArray] {
     def apply(s: String) =
-      new WrappedCharArray(valueField.get(s).asInstanceOf[Array[Char]], offsetField.getInt(s), countField.getInt(s), true)
+      new WrappedCharArray(valueField.get(s).asInstanceOf[Array[Char]], offsetField.getInt(s), countField.getInt(s), FromString)
   }
 
   private val unsafeRewrapString = try {
@@ -135,7 +142,7 @@ object WrappedCharArray {
     case _: NoSuchFieldException | _: SecurityException =>
       { (s: String) =>
         val arr = s.toCharArray
-        new WrappedCharArray(arr, 0, arr.length, true)
+        new WrappedCharArray(arr, 0, arr.length, FromString)
       }
   }
 
@@ -160,10 +167,41 @@ object WrappedCharArray {
    * in its `toString` method. */
   val canConvertBackToStringWithoutCopying = unsafeConstructString.isInstanceOf[ConstructStringFunc]
 
+  private class RewrapHeapCharBufferRFunc(hbField: Field, offsetField: Field) extends Function1[CharBuffer, WrappedCharArray] {
+    def apply(cb: CharBuffer): WrappedCharArray = {
+      val array = hbField.get(cb).asInstanceOf[Array[Char]]
+      if(array == null) return copyCharBuffer(cb)
+      val offset = offsetField.getInt(cb)
+      val result = new WrappedCharArray(array, offset + cb.position, cb.remaining, FromReadOnlyCharBuffer)
+      cb.position(cb.limit)
+      result
+    }
+  }
+
+  private val unsafeRewrapHeapCharBufferR = try {
+    val strCls = classOf[CharBuffer]
+    val hbField = strCls.getDeclaredField("hb")
+    val offsetField = strCls.getDeclaredField("offset")
+    hbField.setAccessible(true)
+    offsetField.setAccessible(true)
+    new RewrapHeapCharBufferRFunc(hbField, offsetField)
+  } catch {
+    case _: NoSuchFieldException | _: SecurityException =>
+      copyCharBuffer _
+  }
+
+  /** Indicates whether `apply(CharBuffer)` can avoid copying read-only array-backed
+   * char buffers. */
+  val canConvertReadOnlyHeapCharBufferWithoutCopying = unsafeRewrapHeapCharBufferR.isInstanceOf[RewrapHeapCharBufferRFunc]
+
   val empty = apply("")
+
+  private final val FromMutable = 0
+  private final val FromString = 1
+  private final val FromReadOnlyCharBuffer = 2
 }
 
-class WrappedCharArrayIterator private[util] (chars: Array[Char], private[this] var offset: Int, limit: Int, fromString: Boolean) extends BufferedIterator[Char] {
+class WrappedCharArrayIterator private[util] (chars: Array[Char], private[this] var offset: Int, limit: Int, from: Int) extends BufferedIterator[Char] {
   def hasNext = offset != limit
 
   def next() = {
@@ -183,5 +221,5 @@ class WrappedCharArrayIterator private[util] (chars: Array[Char], private[this] 
   /** Produces a new `WrappedCharArray` containing all remaining characters.  After this
    * call, this iterator is still valid and positioned in the same location.
    */
-  def freeze = new WrappedCharArray(chars, offset, limit - offset, fromString)
+  def freeze = new WrappedCharArray(chars, offset, limit - offset, from)
 }
