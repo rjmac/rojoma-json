@@ -2,24 +2,25 @@ package com.rojoma.json
 package io
 
 class JsonEventIterator(input: Iterator[JsonToken]) extends BufferedIterator[JsonEvent] {
-  import JsonEventIterator._
-
+  private var parser = JsonEventGenerator.newGenerator
   private val underlying = input.buffered
-  private var stack = new StateStack
   private var available: JsonEvent = null
-  private var atTop = true
+  private var atTop = true // this reflects the state *before* the feed that resulted in "available" being set.
 
   def hasNext: Boolean = {
     if(available != null) {
       true
     } else {
-      atTop = stack.isEmpty
-      if(underlying.hasNext) {
-        if(atTop) stack.push(AwaitingDatum) // start of new top-level object
-        do {
-          val token = underlying.next()
-          available = stack.pop.handle(token, stack)
-        } while(available == null && !stack.isEmpty)
+      atTop = parser.atTopLevel
+      while(underlying.hasNext && available == null) {
+        val token = underlying.next()
+        parser.parse(token) match {
+          case JsonEventGenerator.Event(ev, newParser) =>
+            available = ev
+            parser = newParser
+          case JsonEventGenerator.More(newParser) =>
+            parser = newParser
+        }
       }
       available != null
     }
@@ -46,7 +47,7 @@ class JsonEventIterator(input: Iterator[JsonToken]) extends BufferedIterator[Jso
    * Throws `JsonEOF` if the end-of-input occurs before finishing
    * this object.
    */
-  def skipRestOfCompound(): this.type= {
+  def skipRestOfCompound(): this.type = {
     hasNext // hasNext to make sure atTop is in an accurate state
     if(!atTop) {
       try {

@@ -91,4 +91,23 @@ class JsonTokenIteratorTests extends FunSuite with MustMatchers {
     l(":/*bleh*/ :") must equal (List(TokenColon(), TokenColon()))
     l(",// gnu\n  :") must equal (List(TokenComma(), TokenColon()))
   }
+
+  test("reading replaces broken surrogate pairs") {
+    t("'\ud800'") must equal (TokenString("\ufffd"))
+    t("'\ud800x'") must equal (TokenString("\ufffdx"))
+    t("'\udc00'") must equal (TokenString("\ufffd"))
+    t("'\udc00x'") must equal (TokenString("\ufffdx"))
+    t("'\udc00\ud800\udc00'") must equal (TokenString("\ufffd\ud800\udc00"))
+
+    t("'\\ud800'") must equal (TokenString("\ufffd"))
+    t("'\\ud800x'") must equal (TokenString("\ufffdx"))
+    t("'\\udc00'") must equal (TokenString("\ufffd"))
+    t("'\\udc00x'") must equal (TokenString("\ufffdx"))
+    t("'\\udc00\\ud800\\udc00'") must equal (TokenString("\ufffd\ud800\udc00"))
+  }
+
+  test("reading handles mixed escaped/unescaped surrogate pairs") {
+    t("'\\ud800\udc00'") must equal (TokenString("\ud800\udc00"))
+    t("'\ud800\\udc00'") must equal (TokenString("\ud800\udc00"))
+  }
 }

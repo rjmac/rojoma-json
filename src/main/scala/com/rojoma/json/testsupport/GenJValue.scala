@@ -9,23 +9,30 @@ import org.scalacheck.Gen
 object GenJValue {
   import Arbitrary.arbitrary
 
+  import ArbitraryValidString._
+
   val genJBoolean = for {
     x <- arbitrary[Boolean]
   } yield JBoolean(x)
 
+  private val safeFloat = for {
+    i <- arbitrary[BigInt]
+    s <- Gen.choose(Int.MinValue + 1, Int.MaxValue)
+  } yield BigDecimal(i, s, java.math.MathContext.UNLIMITED)
+
   val genJNumber: Gen[JNumber] = {
     val genJInteger = arbitrary[BigInt].map(JNumber.apply)
-    val genJFloatingPoint = arbitrary[Double].map(JNumber.apply) // When ScalaCheck's BigDecimal generator is fixed, replace this
+    val genJFloatingPoint = safeFloat.map(JNumber.apply)
     Gen.oneOf(genJInteger, genJFloatingPoint)
   }
 
-  def genJString(implicit arbString: Arbitrary[String]) = for {
-    x <- arbString.arbitrary
+  def genJString = for {
+    x <- ArbitraryValidString.arbitrary
   } yield JString(x)
 
   val genJNull: Gen[JNull] = Gen.value(JNull) // Just for completeness' sake
 
-  def genJAtom(implicit arbString: Arbitrary[String]): Gen[JAtom] =
+  def genJAtom: Gen[JAtom] =
     Gen.oneOf(genJNull, genJBoolean, genJNumber, genJString)
 
   def genJArray(elementGen: Gen[JValue] = genJValue, sizeFactor: Double = 0.5): Gen[JArray] = Gen.sized { sz =>
@@ -34,9 +41,9 @@ object GenJValue {
     } yield JArray(x)
   }
 
-  def genJObject(elementGen: Gen[JValue] = genJValue, sizeFactor: Double = 0.5)(implicit arbString: Arbitrary[String]): Gen[JObject] = Gen.sized { sz =>
+  def genJObject(elementGen: Gen[JValue] = genJValue, sizeFactor: Double = 0.5): Gen[JObject] = Gen.sized { sz =>
     def pairGen = for {
-      x <- arbString.arbitrary
+      x <- ArbitraryValidString.arbitrary
       y <- elementGen
     } yield (x, y)
 
@@ -45,9 +52,9 @@ object GenJValue {
     } yield JObject(x.toMap)
   }
 
-  def genJCompound(elementGen: Gen[JValue] = genJValue, sizeFactor: Double = 0.5)(implicit arbString: Arbitrary[String]): Gen[JCompound] =
+  def genJCompound(elementGen: Gen[JValue] = genJValue, sizeFactor: Double = 0.5): Gen[JCompound] =
     Gen.oneOf(genJArray(elementGen, sizeFactor), genJObject(elementGen, sizeFactor))
 
-  def genJValue(implicit arbString: Arbitrary[String]): Gen[JValue] =
+  def genJValue: Gen[JValue] =
     Gen.oneOf(genJAtom, genJCompound(Gen.lzy(genJValue)))
 }
