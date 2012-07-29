@@ -2,25 +2,16 @@
 
 ## Getting it
 
-There is a maven-ish repository at http://rjmac.github.com/maven/ --
-setting up SBT is as simple as
+rojoma-json is published to oss.sonatype.org and thence mirrored to
+central.  Configuring SBT is as simple as:
 
 ```scala
-resolvers += "rojoma.com" at "http://rjmac.github.com/maven/releases/"
-
 libraryDependencies += "com.rojoma" %% "rojoma-json" % "%VERSION%"
 ```
 
-While for Maven, the pom snippets are:
+While for Maven, the pom snippet is:
 
 ```xml
-<repositories>
-  <repository>
-    <id>rojoma.com</id>
-    <url>http://rjmac.github.com/maven/releases/</url>
-  </repository>
-</repositories>
-
 <dependencies>
   <dependency>
     <groupId>com.rojoma</groupId>
