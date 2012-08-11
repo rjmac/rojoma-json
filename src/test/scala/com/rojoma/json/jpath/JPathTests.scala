@@ -9,7 +9,7 @@ import org.scalatest.matchers.MustMatchers
 class JPathTests extends FunSuite with MustMatchers {
   def j(s: String) = io.JsonReader.fromString(s)
 
-  def isNumberGreaterThan(x: Int)(f: zipper.JsonZipper[_]): Boolean = f.here match {
+  def isNumberGreaterThan(x: Int)(f: zipper.JsonZipper): Boolean = f.value match {
     case JNumber(n) => n > BigDecimal(x)
     case _ => false
   }
@@ -32,11 +32,11 @@ class JPathTests extends FunSuite with MustMatchers {
 
   test("rec includes the current node") {
     val orig = j("""[{foo:[1,2,3]},{foo:[4,5,6]},{foo:[7,8,9]}]""")
-    (new JPath(orig).rec.where(_.here.isInstanceOf[JArray]).finish.toSet) must equal (Set(orig, j("""[1,2,3]"""), j("""[4,5,6]"""),j("""[7,8,9]""")))
+    (new JPath(orig).rec.where(_.value.isInstanceOf[JArray]).finish.toSet) must equal (Set(orig, j("""[1,2,3]"""), j("""[4,5,6]"""),j("""[7,8,9]""")))
   }
 
   test("** is the equivalent of *-and-rec") {
     val orig = j("""[{foo:[1,2,3]},{foo:[4,5,6]},{foo:[7,8,9]}]""")
-    (new JPath(orig).**.where(_.here.isInstanceOf[JArray]).finish.toSet) must equal (Set(j("""[1,2,3]"""), j("""[4,5,6]"""),j("""[7,8,9]""")))
+    (new JPath(orig).**.where(_.value.isInstanceOf[JArray]).finish.toSet) must equal (Set(j("""[1,2,3]"""), j("""[4,5,6]"""),j("""[7,8,9]""")))
   }
 }
