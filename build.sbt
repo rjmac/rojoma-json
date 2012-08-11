@@ -24,6 +24,8 @@ libraryDependencies <++= scalaVersion { sv =>
   }
 }
 
+testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
+
 // Include generated sources in source jar
 mappings in (Compile, packageSrc) <++= (sourceManaged in Compile, managedSources in Compile) map { (base, srcs) =>
   import Path.{flat, relativeTo}
