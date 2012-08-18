@@ -169,6 +169,7 @@ class JsonZipperTests extends FunSuite with MustMatchers {
 
   test("Remove-and-replace on an array works") {
     JsonZipper(r[JArray]("[1,2,3]")).down_!(1).remove.replace(JString("hello")).top.value must equal (r[JArray]("[1,'hello',3]"))
+    JsonZipper(r[JArray]("[1,2,3]")).down_!(1).remove.replace(JString("hello")).next_!.value must equal (JNumber(3))
   }
 
   test("Remove-and-replace on object works") {
