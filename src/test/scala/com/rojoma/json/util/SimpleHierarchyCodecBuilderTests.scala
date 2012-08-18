@@ -12,21 +12,21 @@ object SimpleHierarchyCodecBuilderTests {
   // A simple hierarchy
   sealed abstract class Base
   case class A(x: String) extends Base
-  implicit val aCodec = SimpleJsonCodecBuilder[A].gen("x", _.x)
+  implicit val aCodec = SimpleJsonCodecBuilder[A].build("x", _.x)
   case class B(x: Int) extends Base
-  implicit val bCodec = com.rojoma.json.util.SimpleJsonCodecBuilder[B].gen("x", _.x)
+  implicit val bCodec = com.rojoma.json.util.SimpleJsonCodecBuilder[B].build("x", _.x)
 
   def baseCodec(typeTag: TagType) =
     SimpleHierarchyCodecBuilder[Base](typeTag).
       branch[A]("a").
       branch[B]("b").
-      gen
+      build
 
   def baseCodec(typeTag: NoTag) =
     SimpleHierarchyCodecBuilder[Base](typeTag).
       branch[A].
       branch[B].
-      gen
+      build
 
   def j(s: String) = JsonReader.fromString(s)
 }
@@ -193,25 +193,25 @@ class SimpleHierarchyCodecBuilderTests extends FunSuite with MustMatchers {
 
   test("Defining no branches fails for tag-and-value") {
     evaluating {
-      SimpleHierarchyCodecBuilder[Base](TagAndValue("type", "value")).gen
+      SimpleHierarchyCodecBuilder[Base](TagAndValue("type", "value")).build
     } must produce [IllegalStateException]
   }
 
   test("Defining no branches fails for tag-to-value") {
     evaluating {
-      SimpleHierarchyCodecBuilder[Base](TagToValue).gen
+      SimpleHierarchyCodecBuilder[Base](TagToValue).build
     } must produce [IllegalStateException]
   }
 
   test("Defining no branches fails for internal-tag") {
     evaluating {
-      SimpleHierarchyCodecBuilder[Base](InternalTag("x")).gen
+      SimpleHierarchyCodecBuilder[Base](InternalTag("x")).build
     } must produce [IllegalStateException]
   }
 
   test("Defining no branches fails for no-tag") {
     evaluating {
-      SimpleHierarchyCodecBuilder[Base](NoTag).gen
+      SimpleHierarchyCodecBuilder[Base](NoTag).build
     } must produce [IllegalStateException]
   }
 }

@@ -68,7 +68,7 @@ object SimpleJsonCodecBuilder {
     def mapNames3[T](a: Int => String, b: Int => String, c: Int => String)(f: (String, String, String) => T) = (0 until n).map(x => (a(x), b(x), c(x))).map(f.tupled)
     def foreachNames4(a: Int => String, b: Int => String, c: Int => String, d: Int => String)(f: (String, String, String, String) => Any) = (0 until n).map(x => (a(x), b(x), c(x), d(x))).foreach(f.tupled)
 
-    sb.append("def gen").append(mapNames1(typeName)(_ + ": JsonCodecOrOption: Manifest").mkString("[", ", ", "]")).append(mapNames3(fieldName, accessorName, typeName)(_ + ": String, " + _ + ": TT => " + _).mkString("(",", ",")")).append(": JsonCodec[TT] = {\n")
+    sb.append("def build").append(mapNames1(typeName)(_ + ": JsonCodecOrOption: Manifest").mkString("[", ", ", "]")).append(mapNames3(fieldName, accessorName, typeName)(_ + ": String, " + _ + ": TT => " + _).mkString("(",", ",")")).append(": JsonCodec[TT] = {\n")
     sb.append("  val ctor = findCtor(t[TT])").append(mapNames1(typeName)("t[" + _ + "]").mkString("(",", ",")")).append("\n")
     foreachNames4(assignName, retrieveName, patTargetName, typeName) { (a, r, p, t) =>
       sb.append("  val (" + a + ", " + r + ", " + p + ") = extract[" + t + "]\n")

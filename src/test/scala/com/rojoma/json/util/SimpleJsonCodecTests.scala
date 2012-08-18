@@ -10,7 +10,7 @@ import org.scalatest.matchers.MustMatchers
 case class Foo(a: Int, b: Option[String])
 
 class SimpleJsonCodecTests extends FunSuite with MustMatchers {
-  implicit val codec = SimpleJsonCodecBuilder[Foo].gen("a", _.a, "b", _.b)
+  implicit val codec = SimpleJsonCodecBuilder[Foo].build("a", _.a, "b", _.b)
 
   test("Generated codecs work") {
     toJValue(Foo(1, Some("one"))) must equal (JObject(Map("a" -> JNumber(1), "b" -> JString("one"))))

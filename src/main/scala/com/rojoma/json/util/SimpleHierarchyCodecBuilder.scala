@@ -17,7 +17,7 @@ class SimpleHierarchyCodecBuilder[Root <: AnyRef] private[util] (tagType: TagTyp
       case None => throw new IllegalArgumentException("No codec defined for " + x.getClass)
     }
 
-  def gen: JsonCodec[Root] = {
+  def build: JsonCodec[Root] = {
     if(subcodecs.isEmpty) throw new IllegalStateException("No branches defined")
     tagType match {
       case TagToValue =>
@@ -100,7 +100,7 @@ class NoTagSimpleHierarchyCodecBuilder[Root <: AnyRef] private[util] (subcodecs:
     new NoTagSimpleHierarchyCodecBuilder[Root](subcodecs :+ (mfst.erasure -> codec))
   }
 
-  def gen: JsonCodec[Root] = {
+  def build: JsonCodec[Root] = {
     if(subcodecs.isEmpty) throw new IllegalStateException("No branches defined")
     new JsonCodec[Root] {
       val codecsMap = subcodecs.toMap
