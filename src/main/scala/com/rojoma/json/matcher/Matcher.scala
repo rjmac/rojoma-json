@@ -4,7 +4,7 @@ package matcher
 import ast._
 import codec.JsonCodec
 
-case class JsonGenerationException() extends RuntimeException("Cannot generate JSON; this is always a logic error.  You've forgotten to bind a variable, or you've used a pattern that cannot generate.")
+class JsonGenerationException extends RuntimeException("Cannot generate JSON; this is always a logic error.  You've forgotten to bind a variable, or you've used a pattern that cannot generate.")
 
 sealed trait OptPattern
 
@@ -20,7 +20,7 @@ trait Pattern extends OptPattern {
   def evaluate(x: JValue, environment: Pattern.Results): Option[Pattern.Results]
 
   def generate(bindings: (Pattern.Results => Pattern.Results)*): JValue =
-    generate(bindings.foldLeft(Map.empty : Pattern.Results) { (e, b) => b(e) }).getOrElse(throw JsonGenerationException())
+    generate(bindings.foldLeft(Map.empty : Pattern.Results) { (e, b) => b(e) }).getOrElse(throw new JsonGenerationException)
 
   def generate(environment: Pattern.Results): Option[JValue]
 
