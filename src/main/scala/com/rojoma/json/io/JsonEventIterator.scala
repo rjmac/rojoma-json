@@ -12,6 +12,7 @@ package io
  * As an extension, this class allows unquoted identifiers to be used
  * as object keys.
  *
+ * @see [[com.rojoma.json.io.JsonEventGenerator]]
  * @see [[com.rojoma.json.io.JsonEvent]]
  */
 class JsonEventIterator(input: Iterator[JsonToken]) extends BufferedIterator[JsonEvent] {

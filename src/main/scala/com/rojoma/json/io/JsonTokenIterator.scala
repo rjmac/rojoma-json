@@ -22,6 +22,7 @@ import scala.annotation.switch
   * strings and Javascript-style comments.
   *
   * @see [[com.rojoma.json.io.BlockJsonTokenIterator]]
+  * @see [[com.rojoma.json.io.JsonTokenGenerator]]
   * @see [[com.rojoma.json.io.JsonToken]]
   */
 class JsonTokenIterator(reader: Reader) extends BufferedIterator[JsonToken] {

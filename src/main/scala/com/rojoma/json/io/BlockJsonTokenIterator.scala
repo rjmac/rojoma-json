@@ -16,6 +16,7 @@ import util.WrappedCharArray
   * strings and Javascript-style comments.
   *
   * @see [[com.rojoma.json.io.JsonTokenIterator]]
+  * @see [[com.rojoma.json.io.JsonTokenGenerator]]
   * @see [[com.rojoma.json.io.JsonToken]]
   */
 class BlockJsonTokenIterator(reader: java.io.Reader, blockSize: Int = 1024) extends BufferedIterator[JsonToken] {
