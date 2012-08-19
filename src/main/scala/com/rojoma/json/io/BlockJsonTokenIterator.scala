@@ -5,6 +5,19 @@ import scala.annotation.tailrec
 
 import util.WrappedCharArray
 
+/** Convert a character-stream into a token-stream.
+  *
+  * This reads characters in blocks of size `blockSize`, so if the
+  * underlying `Reader` is to be re-used for other non-JSON purposes
+  * after finishing reading, a [[com.rojoma.json.io.JsonTokenIterator]]
+  * should be used instead.
+  *
+  * As extensions to standard JSON, this reader supports single-quoted
+  * strings and Javascript-style comments.
+  *
+  * @see [[com.rojoma.json.io.JsonTokenIterator]]
+  * @see [[com.rojoma.json.io.JsonToken]]
+  */
 class BlockJsonTokenIterator(reader: java.io.Reader, blockSize: Int = 1024) extends BufferedIterator[JsonToken] {
   private val buf = new Array[Char](blockSize)
   private var lexer = JsonTokenGenerator.newGenerator

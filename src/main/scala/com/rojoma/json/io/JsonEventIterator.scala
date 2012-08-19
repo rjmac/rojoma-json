@@ -1,6 +1,19 @@
 package com.rojoma.json
 package io
 
+/** Turns a raw token-stream into an event stream, checking for JSON
+ * well-formedness.
+ *
+ * A `JsonEventIterator` checks a token stream for syntactic correctness
+ * and produces events that reflect the syntax of JSON.  It guarantees
+ * to demand no more input from the input iterator than is absolutely
+ * required.
+ *
+ * As an extension, this class allows unquoted identifiers to be used
+ * as object keys.
+ *
+ * @see [[com.rojoma.json.io.JsonEvent]]
+ */
 class JsonEventIterator(input: Iterator[JsonToken]) extends BufferedIterator[JsonEvent] {
   private var parser = JsonEventGenerator.newGenerator
   private val underlying = input.buffered
@@ -44,8 +57,9 @@ class JsonEventIterator(input: Iterator[JsonToken]) extends BufferedIterator[Jso
    * defined as "the most recent compound object started by `next()`.
    * If a top-level object has not been started, this does nothing.
    *
-   * Throws `JsonEOF` if the end-of-input occurs before finishing
-   * this object.
+   * @return This iterator
+   * @throws JsonEOF If the end-of-input occurs before finishing
+   *   this object.
    */
   def skipRestOfCompound(): this.type = {
     hasNext // hasNext to make sure atTop is in an accurate state
@@ -78,8 +92,9 @@ class JsonEventIterator(input: Iterator[JsonToken]) extends BufferedIterator[Jso
    * made and the next call to `head` or `next()` will still return the end
    * event.  Otherwise, it's an atom and is consumed.
    *
-   * If the iterator is empty at the start of this call, `NoSuchElementException`
-   * is raised.  If it runs out while skipping the datum, `JsonEOF` is raised.
+   * @return This iterator
+   * @throws NoSuchElementException if this iterator is empty at the start of the call
+   * @throws JsonEOF if the token iterator runs out before the end of the datum
    */
   def skipNextDatum(): this.type = head match {
     case StartOfObjectEvent() | StartOfArrayEvent() =>

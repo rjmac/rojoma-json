@@ -6,18 +6,23 @@ import java.io.Reader
 import scala.annotation.switch
 
 /** Convert a character-stream into a token-stream.
-  * 
+  *
   * This is guaranteed to read no more than necessary to ensure it has
   * reached the end of a single token.  For objects, arrays, and
-  * strings, it will read only up to the closing delimiter.  For other
-  * types, it may read one character further to assure itself that it
-  * has reached the end.
+  * strings, it will read only up to (and, of course, including) the
+  * closing delimiter.  For other types, it may read one character
+  * further to assure itself that it has reached the end.
   *
-  * This class does many small reads; it may be a good idea to wrap
-  * the input `Reader` into a `BufferedReader`.
+  * A `JsonTokenIterator` does many small reads; it may be a good idea
+  * to wrap the input `Reader` into a `BufferedReader`.  If you do not
+  * need to read non-JSON out of the underlying `Reader` afterward, a
+  * [[com.rojoma.json.io.BlockJsonTokenIterator]] maybe be faster.
   *
-  * As extensions, this reader supports single-quoted strings and
-  * Javascript-style comments.
+  * As extensions to standard JSON, this reader supports single-quoted
+  * strings and Javascript-style comments.
+  *
+  * @see [[com.rojoma.json.io.BlockJsonTokenIterator]]
+  * @see [[com.rojoma.json.io.JsonToken]]
   */
 class JsonTokenIterator(reader: Reader) extends BufferedIterator[JsonToken] {
   private var isPeeked: Boolean = false
