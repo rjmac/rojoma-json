@@ -120,23 +120,25 @@ sealed trait JCompound extends JValue {
 
 /** A JSON array, implemented as a thin wrapper around a sequence of [[com.rojoma.json.ast.JValue]]s.
   * In many ways this can be treated as a `Seq`, but it is in fact not one. */
-case class JArray(override val toSeq: sc.Seq[JValue]) extends Iterable[JValue] with PartialFunction[Int, JValue] with JCompound {
+case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFunction[Int, JValue] with JCompound {
   import com.rojoma.`json-impl`.AnnoyingJArrayHack._
 
-  override def size = toSeq.size
-  def length = size
-  override def toIndexedSeq[B >: JValue] = toSeq.toIndexedSeq[B]
-  override def toList = toSeq.toList
-  override def toStream = toSeq.toStream
-  override def toArray[B >: JValue : ClassManifest] = toSeq.toArray[B]
+  override def size = elems.size
+  def length = elems.length
+  override def toIndexedSeq[B >: JValue] = elems.toIndexedSeq[B]
+  override def toList = elems.toList
+  override def toStream = elems.toStream
+  override def toArray[B >: JValue : ClassManifest] = elems.toArray[B]
 
-  def apply(idx: Int) = toSeq(idx)
-  def isDefinedAt(idx: Int) = toSeq.isDefinedAt(idx)
-  def iterator = toSeq.iterator
+  def apply(idx: Int) = elems(idx)
+  def isDefinedAt(idx: Int) = elems.isDefinedAt(idx)
+  def iterator = elems.iterator
+
+  override def toSeq = elems
 
   def forced: JArray = {
     // not just "toSeq.map(_forced)" because the seq might be a Stream or view
-    val forcedArray: Vector[JValue] = convertForForce(toSeq).map(_.forced)(sc.breakOut)
+    val forcedArray: Vector[JValue] = convertForForce(elems).map(_.forced)(sc.breakOut)
     new JArray(forcedArray) {
       override def forced = this
     }
@@ -145,7 +147,7 @@ case class JArray(override val toSeq: sc.Seq[JValue]) extends Iterable[JValue] w
   override def equals(o: Any): Boolean = {
     o match {
       case that: JArray =>
-        convertForEquals(this.toSeq) == convertForEquals(that.toSeq)
+        convertForEquals(this.elems) == convertForEquals(that.elems)
       case _ =>
         false
     }
