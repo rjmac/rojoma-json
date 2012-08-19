@@ -1,6 +1,8 @@
 package com.rojoma.json
 package io
 
+import scala.annotation.tailrec
+
 import util.WrappedCharArray
 
 class BlockJsonTokenIterator(reader: java.io.Reader, blockSize: Int = 1024) extends BufferedIterator[JsonToken] {
@@ -30,33 +32,36 @@ class BlockJsonTokenIterator(reader: java.io.Reader, blockSize: Int = 1024) exte
   def hasNext: Boolean =
     if(token != null) true
     else if(lastPos.isValid) false
-    else {
+    else advance()
+
+  @tailrec
+  private def advance(): Boolean = {
+    if(remaining == null) {
+      fillRemaining()
       if(remaining == null) {
-        fillRemaining()
-        if(remaining == null) {
-          lexer.finish() match {
-            case JsonTokenGenerator.EndOfInput(pos) =>
-              lastPos = pos
-              return false
-            case JsonTokenGenerator.FinalToken(t, pos) =>
-              token = t
-              lastPos = pos
-              return true
-          }
+        lexer.finish() match {
+          case JsonTokenGenerator.EndOfInput(pos) =>
+            lastPos = pos
+            return false
+          case JsonTokenGenerator.FinalToken(t, pos) =>
+            token = t
+            lastPos = pos
+            return true
         }
       }
-      // ok, remaining != null...
-      lexer.lex(remaining) match {
-        case JsonTokenGenerator.Token(t, newLexer, newRemaining) =>
-          token = t
-          lexer = newLexer
-          if(newRemaining.isEmpty) remaining = null
-          else remaining = newRemaining
-          true
-        case JsonTokenGenerator.More(newLexer) =>
-          lexer = newLexer
-          remaining = null
-          hasNext
-      }
     }
+    // ok, remaining != null...
+    lexer.lex(remaining) match {
+      case JsonTokenGenerator.Token(t, newLexer, newRemaining) =>
+        token = t
+        lexer = newLexer
+        if(newRemaining.isEmpty) remaining = null
+        else remaining = newRemaining
+        true
+      case JsonTokenGenerator.More(newLexer) =>
+        lexer = newLexer
+        remaining = null
+        advance()
+    }
+  }
 }
