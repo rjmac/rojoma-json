@@ -2,7 +2,7 @@ organization := "com.rojoma"
 
 name := "rojoma-json"
 
-version := "2.0.0-SNAPSHOT"
+version := "2.0.0"
 
 scalaVersion := "2.9.2"
 
@@ -40,4 +40,4 @@ sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion in Compi
 
 // Bit of a hack; regenerate README.markdown when version is changed
 // to a non-SNAPSHOT value.
-sourceGenerators in Compile <+= (baseDirectory, version) map READMEBuilder
+sourceGenerators in Compile <+= (baseDirectory, version, crossScalaVersions) map READMEBuilder

@@ -2,33 +2,26 @@
 
 ## Getting it
 
-There is a maven-ish repository at http://rjmac.github.com/maven/ --
-setting up SBT is as simple as
+Starting with version 2.0.0, rojoma-json is published on Maven
+central, so setting up SBT is as simple as
 
 ```scala
-resolvers += "rojoma.com" at "http://rjmac.github.com/maven/releases/"
-
-libraryDependencies += "com.rojoma" %% "rojoma-json" % "1.4.7"
+libraryDependencies += "com.rojoma" %% "rojoma-json" % "2.0.0"
 ```
 
-While for Maven, the pom snippets are:
+While for Maven, the pom snippet is:
 
 ```xml
-<repositories>
-  <repository>
-    <id>rojoma.com</id>
-    <url>http://rjmac.github.com/maven/releases/</url>
-  </repository>
-</repositories>
-
 <dependencies>
   <dependency>
     <groupId>com.rojoma</groupId>
     <artifactId>rojoma-json_${scala.version}</artifactId>
-    <version>1.4.7</version>
+    <version>2.0.0</version>
   </dependency>
 </dependencies>
 ```
+
+rojoma-json is published for Scala versions 2.8.1, 2.8.2, 2.9.0, 2.9.0-1, 2.9.1, 2.9.1-1, and 2.9.2.
 
 ## Documentation
 
@@ -208,26 +201,24 @@ or `FirstOf`) `variable :=? optValue`, where `optValue` is an `Option`.
 
 ### package com.rojoma.json.zipper
 
-A zipper for navigating JSON.  There are six interfaces:
+A zipper for navigating JSON.  There are five interfaces:
 
  * `JsonZipper`
     * `JAtomZipper`
-    * `JCompoundZipper`
-       * `JArrayZipper`
-       * `JObjectZipper`
+    * `JArrayZipper`
+    * `JObjectZipper`
  * `NothingZipper`
 
-Each one is parameterized with the type of its "parent" zipper in the
-path from the root of the JSON object being traversed, though this
-will probably change in the future as experience has shown that this
-is more trouble than it's worth, at least without dependent types.  An
-array or object zipper may be acquired by calling `asArray` or
+An array or object zipper may be acquired by calling `asArray` or
 `asObject` on a generic zipper.
 
 Each of the first five allows you to move `up`, to the `top` of the
-object, or find the object `here` or `replace` it.  In addition, the
-array and object zippers allow `replace`ing or `remove`ing child
-elements.
+object, or find the zipper's current `value`, `replace`, or `remove`
+it.  In addition, the array and object zippers allow `replace`ing or
+`remove`ing child elements.  All of the motion operators (except
+`top`) return `Option`s; suffix the operator with `_!` to make it
+return the value directly or throw a `NoSuchElementException` if the
+motion is impossible.
 
 The `NothingZipper` is special -- it is what is returned from removing
 the current object.  With a `NothingZipper` you can either put a new

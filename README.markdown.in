@@ -2,8 +2,8 @@
 
 ## Getting it
 
-rojoma-json is published to oss.sonatype.org and thence mirrored to
-central.  Configuring SBT is as simple as:
+Starting with version 2.0.0, rojoma-json is published on Maven
+central, so setting up SBT is as simple as
 
 ```scala
 libraryDependencies += "com.rojoma" %% "rojoma-json" % "%VERSION%"
@@ -20,6 +20,8 @@ While for Maven, the pom snippet is:
   </dependency>
 </dependencies>
 ```
+
+rojoma-json is published for Scala versions %SCALAVERSIONS%.
 
 ## Documentation
 
