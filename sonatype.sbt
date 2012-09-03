@@ -9,6 +9,9 @@ pomExtra := (
   <url>http://www.github.com/rjmac/rojoma-json</url>
   <licenses>
     <!-- I do not accept that I have the right to dictate terms of use -->
+    <license>
+      <name>Public domain</name>
+    </license>
   </licenses>
   <scm>
     <url>git://github.com/rjmac/rojoma-json.git</url>
