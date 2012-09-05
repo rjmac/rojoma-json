@@ -278,3 +278,20 @@ interpolation](rojoma-json/blob/master/future/StringInterpolation.scala).
 Also [macros](http://www.scalamacros.org), which will hopefully be
 able to be used to automatically create codecs in a non-reflective
 manner at compile time.
+
+## Incompatible changes from rojoma-json 1
+
+In the low-level IO code, the various `Positioned` classes are gone.
+Instead all tokens and events carry their own positions.  As a
+consequence, none of the tokens or events are singleton objects anymore.
+Instead, they're case classes with empty parameter lists.
+`TokenIterator` is renamed to `JsonTokenIterator` (since it always
+returned `JsonToken`s anyway).  None of the `JsonReaderException`s
+are case classes any longer.
+
+`JsonZipper` has lost its useless and annoying type parameter in
+addition to other minor changes to the API to make it generally more
+pleasant to use.
+
+In the utilities package, the builders have had their `gen` method
+renamed to `build`.
