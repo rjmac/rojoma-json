@@ -12,16 +12,12 @@ object JArrayShimBuilder extends ((File, String) => Seq[File]) {
       f.write("import com.rojoma.json.ast._\n")
       f.write("\n")
 
-      // In the future, if SIP-15 comes to pass, SuperClass may become
-      // a type alias for AnyVal.  equals and hashCode are automatically
-      // provided and cannot be overriden on value classes as of this
-      // writing, which is why they're here in the pre-SIP-15 shim.
       f.write("  trait JArrayShim extends Iterable[JValue] {\n")
       f.write("    def elems: Seq[JValue]\n")
-      if(scalaVersion.startsWith("2.10.")) {
-        f.write("  override def toIndexedSeq = elems.toIndexedSeq\n")
-      } else {
+      if(scalaVersion.startsWith("2.8.") || scalaVersion.startsWith("2.9.")) {
         f.write("  override def toIndexedSeq[B >: JValue] = elems.toIndexedSeq[B]\n")
+      } else {
+        f.write("  override def toIndexedSeq = elems.toIndexedSeq\n")
       }
       f.write("}\n")
     } finally {
