@@ -1,8 +1,15 @@
+import com.typesafe.tools.mima.plugin.MimaPlugin.mimaDefaultSettings
+import com.typesafe.tools.mima.plugin.MimaKeys.previousArtifact
+
+mimaDefaultSettings
+
 organization := "com.rojoma"
 
 name := "rojoma-json"
 
 version := "2.0.1-SNAPSHOT"
+
+previousArtifact <<= scalaVersion { sv => Some("com.rojoma" % ("rojoma-json_" + sv) % "2.0.0") }
 
 scalaVersion := "2.9.2"
 
