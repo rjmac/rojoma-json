@@ -3,7 +3,6 @@ import sbt._
 object ValueClassSupportBuilder extends ((File, String) => Seq[File]) {
   def apply(root: File, scalaVersion: String): Seq[File] =
     go(root, scalaVersion)(
-      ("dynamic", "DynamicJValue", "static"),
       ("io", "Position", "__rowCol")
     )
 
@@ -20,19 +19,19 @@ object ValueClassSupportBuilder extends ((File, String) => Seq[File]) {
     try {
       f.write("package " + packagePath.foldLeft("com.rojoma.`json-impl`")(_ + "." + _) + "\n\n")
 
-      // In the future, if SIP-15 comes to pass, SuperClass may become
-      // a type alias for AnyVal.  equals and hashCode are automatically
-      // provided and cannot be overriden on value classes as of this
-      // writing, which is why they're here in the pre-SIP-15 shim.
       f.write("object " + className + "SuperClassHolder {\n")
-      f.write("  import " + packagePath.foldLeft("com.rojoma.json")(_ + "." + _) + "." + className + "\n")
-      f.write("  abstract class SuperClass { this: " + className + " =>\n")
-      f.write("    override def hashCode = " + field+ ".hashCode\n")
-      f.write("    override def equals(x: Any) = x match {\n")
-      f.write("      case that: " + className + " => this." + field + " == that." + field + "\n")
-      f.write("      case _ => false\n")
-      f.write("    }\n")
-      f.write("  }\n")
+      if(scalaVersion.startsWith("2.8.") || scalaVersion.startsWith("2.9.")) {
+        f.write("  import " + packagePath.foldLeft("com.rojoma.json")(_ + "." + _) + "." + className + "\n")
+        f.write("  abstract class SuperClass { this: " + className + " =>\n")
+        f.write("    override def hashCode = " + field+ ".hashCode\n")
+        f.write("    override def equals(x: Any) = x match {\n")
+        f.write("      case that: " + className + " => this." + field + " == that." + field + "\n")
+        f.write("      case _ => false\n")
+        f.write("    }\n")
+        f.write("  }\n")
+      } else {
+        f.write("  type SuperClass = AnyVal\n")
+      }
       f.write("}\n")
     } finally {
       f.close()

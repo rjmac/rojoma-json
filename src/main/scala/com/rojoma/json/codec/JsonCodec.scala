@@ -54,7 +54,7 @@ object JsonCodec {
     }
   }
 
-  implicit def arrayCodec[T: JsonCodec: ClassManifest] = new JsonCodec[Array[T]] {
+  implicit def arrayCodec[T: JsonCodec: com.rojoma.`json-impl`.CM] = new JsonCodec[Array[T]] {
     def encode(x: Array[T]): JValue =
       if(x.length > 0)
         JArray(x.view.map(JsonCodec[T].encode))
@@ -201,7 +201,7 @@ object JsonCodec {
     }
   }
 
-  implicit def jvalueCodec[T <: JValue : ClassManifest] = new JsonCodec[T] {
+  implicit def jvalueCodec[T <: JValue : com.rojoma.`json-impl`.CM] = new JsonCodec[T] {
     def encode(x: T) = x
     def decode(x: JValue) = x.cast[T]
   }

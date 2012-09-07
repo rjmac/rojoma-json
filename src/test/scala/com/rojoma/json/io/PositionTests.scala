@@ -18,7 +18,6 @@ class PositionTests extends FunSuite with Checkers {
     check(forAll { (row: Int, column: Int) =>
       Position(row, column) match {
         case Position(r,c) => row == r && column == c
-        case _ => false
       }
     })
   }
