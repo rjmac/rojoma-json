@@ -1,7 +1,7 @@
 package com.rojoma.json
 package io
 
-import java.io.{Reader, StringReader}
+import java.io.Reader
 
 import ast._
 
@@ -9,7 +9,8 @@ import ast._
   * this parser accepts unquoted strings (i.e., identifiers) as field-names. */
 class JsonReader(input: Iterator[JsonEvent]) {
   def this(tokens: Iterator[JsonToken])(implicit dummy: com.rojoma.`json-impl`.StupidErasure = null) = this(new JsonEventIterator(tokens))
-  def this(text: String) = this(new JsonTokenIterator(new StringReader(text)))
+  def this(reader: Reader) = this(new JsonEventIterator(reader))
+  def this(text: String) = this(new JsonEventIterator(text))
 
   val lexer = input.buffered
 
@@ -82,8 +83,8 @@ class JsonReader(input: Iterator[JsonEvent]) {
 }
 
 object JsonReader {
-  def apply(r: Reader): JsonReader = new JsonReader(new JsonTokenIterator(r))
-  def apply(s: String): JsonReader = apply(new StringReader(s))
+  def apply(r: Reader): JsonReader = new JsonReader(r)
+  def apply(s: String): JsonReader = new JsonReader(s)
 
   /** Read a [[com.rojoma.json.ast.JValue]] out of a `Reader`.
     * @param r The source of characters.

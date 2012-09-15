@@ -1,6 +1,8 @@
 package com.rojoma.json
 package io
 
+import java.io.Reader
+
 /** Turns a raw token-stream into an event stream, checking for JSON
  * well-formedness.
  *
@@ -16,6 +18,9 @@ package io
  * @see [[com.rojoma.json.io.JsonEvent]]
  */
 class JsonEventIterator(input: Iterator[JsonToken]) extends BufferedIterator[JsonEvent] {
+  def this(reader: Reader) = this(new JsonTokenIterator(reader))
+  def this(text: String) = this(new BlockJsonTokenIterator(text))
+
   private var parser = JsonEventGenerator.newGenerator
   private val underlying = input.buffered
   private var available: JsonEvent = null

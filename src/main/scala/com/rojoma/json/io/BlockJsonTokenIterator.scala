@@ -3,6 +3,8 @@ package io
 
 import scala.annotation.tailrec
 
+import java.io.Reader
+
 import util.WrappedCharArray
 
 /** Convert a character-stream into a token-stream.
@@ -19,10 +21,11 @@ import util.WrappedCharArray
   * @see [[com.rojoma.json.io.JsonTokenGenerator]]
   * @see [[com.rojoma.json.io.JsonToken]]
   */
-class BlockJsonTokenIterator(reader: java.io.Reader, blockSize: Int = 1024) extends BufferedIterator[JsonToken] {
-  private val buf = new Array[Char](blockSize)
+class BlockJsonTokenIterator private (private var remaining: WrappedCharArray, reader: Reader, buf: Array[Char]) extends BufferedIterator[JsonToken] {
+  def this(reader: Reader, blockSize: Int = 1024) = this(null, reader, new Array[Char](blockSize))
+  def this(text: String) = this(WrappedCharArray(text), BlockJsonTokenIterator.emptyReader, null)
+
   private var lexer = JsonTokenGenerator.newGenerator
-  private var remaining: WrappedCharArray = null
   private var token: JsonToken = null
   private var lastPos = Position.Invalid
 
@@ -77,5 +80,13 @@ class BlockJsonTokenIterator(reader: java.io.Reader, blockSize: Int = 1024) exte
         remaining = null
         advance()
     }
+  }
+}
+
+object BlockJsonTokenIterator {
+  private def emptyReader = new Reader {
+    def close() {}
+    def read(buf: Array[Char], offset: Int, len: Int) = -1
+    override def read(buf: Array[Char]) = -1
   }
 }
