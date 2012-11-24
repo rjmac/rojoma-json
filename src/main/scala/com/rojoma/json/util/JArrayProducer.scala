@@ -10,7 +10,13 @@ import JArrayProducer._
 import JArrayProducerImpl._
 
 // Incremental parsing of JSON lists
-abstract class JArrayProducer {
+abstract class JArrayProducer private [util] (val fieldCache: FieldCache, dummy: Int) {
+  @deprecated(message = "Use JArrayProducer.Builder")
+  def this(fieldCache: FieldCache) = this(fieldCache, 0)
+
+  @deprecated(message = "Use JArrayProducer.Builder")
+  def this() = this(IdentityFieldCache, 0)
+
   def apply(data: WrappedCharArray): Result
 
   def consume(data: WrappedCharArray): SuccessfulResult = apply(data) match {
@@ -47,10 +53,39 @@ object JArrayProducer {
   case class ParserError(err: JsonEventGenerator.AnyError) extends Error with EndError
   case class UnexpectedEndOfInput(finalValue: Option[JValue], endPosition: Position) extends EndError
 
-  def newProducerFromLexer(lexer: JsonTokenGenerator): JArrayProducer = new AwaitingStartOfList(lexer)
-  val newProducer = newProducerFromLexer(JsonTokenGenerator.newGenerator)
+  @deprecated(message = "use JArrayProducer.Builder")
+  def newProducerFromLexer(lexer: JsonTokenGenerator): JArrayProducer =
+    new Builder().withLexer(lexer).build
 
-  def newProducerAfterStartOfList(lexer: JsonTokenGenerator): JArrayProducer = new AwaitingDatumOrEndOfList(lexer)
+  @deprecated(message = "use JArrayProducer.Builder")
+  def newProducer = newProducerFromLexer(JsonTokenGenerator.newGenerator)
+
+  @deprecated(message = "use JArrayProducer.Builder")
+  def newProducerAfterStartOfList(lexer: JsonTokenGenerator): JArrayProducer =
+    new Builder().withLexer(lexer).afterStartOfList.build
+
+  class Builder private (lexer: JsonTokenGenerator, afterStartOfList: Boolean, fieldCache: FieldCache) {
+    def this() = this(null, false, null)
+
+    private def copy(
+      lexer: JsonTokenGenerator = this.lexer,
+      afterStartOfList: Boolean = this.afterStartOfList,
+      fieldCache: FieldCache = this.fieldCache
+    ): Builder =
+      new Builder(lexer, afterStartOfList, fieldCache)
+
+    def withLexer(lexer: JsonTokenGenerator) = copy(lexer = lexer)
+    def afterStartOfList = copy(afterStartOfList = true)
+    def withFieldCache(fieldCache: FieldCache) = copy(fieldCache = fieldCache)
+
+    def build = {
+      val trueLexer = if(lexer == null) JsonTokenGenerator.newGenerator else lexer
+      val trueFieldCache = if(fieldCache == null) IdentityFieldCache else fieldCache
+
+      if(afterStartOfList) new AwaitingDatumOrEndOfList(trueLexer, trueFieldCache)
+      else new AwaitingStartOfList(trueLexer, trueFieldCache)
+    }
+  }
 
   def throwError(e: AnyError): Nothing = e match {
     case LexerError(e) => JsonTokenGenerator.throwError(e)
@@ -60,15 +95,15 @@ object JArrayProducer {
 }
 
 private[util] object JArrayProducerImpl {
-  case class AwaitingStartOfList(lexer: JsonTokenGenerator) extends JArrayProducer {
+  class AwaitingStartOfList(lexer: JsonTokenGenerator, fc: FieldCache) extends JArrayProducer(fc, 0) {
     def apply(data: WrappedCharArray): Result = lexer(data) match {
       case JsonTokenGenerator.Token(TokenOpenBracket(), newLexer, remainingData) =>
-        val newState = new AwaitingDatumOrEndOfList(newLexer)
+        val newState = new AwaitingDatumOrEndOfList(newLexer, fieldCache)
         newState(remainingData)
       case JsonTokenGenerator.Token(token, _, _) =>
         ParserError(JsonEventGenerator.UnexpectedToken(token, "start of list"))
       case JsonTokenGenerator.More(newLexer) =>
-        More(new AwaitingStartOfList(newLexer))
+        More(new AwaitingStartOfList(newLexer, fieldCache))
       case e: JsonTokenGenerator.Error =>
         LexerError(e)
     }
@@ -85,14 +120,14 @@ private[util] object JArrayProducerImpl {
     }
   }
 
-  case class AwaitingDatumOrEndOfList(lexer: JsonTokenGenerator) extends JArrayProducer {
+  class AwaitingDatumOrEndOfList(lexer: JsonTokenGenerator, fc: FieldCache) extends JArrayProducer(fc, 0) {
     def apply(data: WrappedCharArray): Result = lexer(data) match {
       case JsonTokenGenerator.Token(TokenCloseBracket(), newLexer, remainingData) =>
         EndOfList(newLexer, remainingData)
       case JsonTokenGenerator.Token(_, _, _) =>
-        new AwaitingDatum(lexer).apply(data)
+        new AwaitingDatum(lexer, fieldCache).apply(data)
       case JsonTokenGenerator.More(newLexer) =>
-        More(new AwaitingDatumOrEndOfList(newLexer))
+        More(new AwaitingDatumOrEndOfList(newLexer, fieldCache))
       case e: JsonTokenGenerator.Error =>
         LexerError(e)
     }
@@ -103,22 +138,22 @@ private[util] object JArrayProducerImpl {
       case JsonTokenGenerator.FinalToken(TokenCloseBracket(), pos) =>
         FinalEndOfList(pos)
       case JsonTokenGenerator.FinalToken(_, _) =>
-        new AwaitingDatum(lexer).endOfInput()
+        new AwaitingDatum(lexer, fieldCache).endOfInput()
       case JsonTokenGenerator.EndOfInput(pos) =>
         UnexpectedEndOfInput(None, pos)
     }
   }
 
-  case class AwaitingCommaOrEndOfList(lexer: JsonTokenGenerator) extends JArrayProducer {
+  class AwaitingCommaOrEndOfList(lexer: JsonTokenGenerator, fc: FieldCache) extends JArrayProducer(fc, 0) {
     def apply(data: WrappedCharArray): Result = lexer(data) match {
       case JsonTokenGenerator.Token(TokenComma(), newLexer, remainingData) =>
-        new AwaitingDatum(newLexer).apply(remainingData)
+        new AwaitingDatum(newLexer, fieldCache).apply(remainingData)
       case JsonTokenGenerator.Token(TokenCloseBracket(), newLexer, remainingData) =>
         EndOfList(newLexer, remainingData)
       case JsonTokenGenerator.Token(token, _, remainingData) =>
         ParserError(JsonEventGenerator.UnexpectedToken(token, "comma or end of list"))
       case JsonTokenGenerator.More(newLexer) =>
-        More(new AwaitingCommaOrEndOfList(newLexer))
+        More(new AwaitingCommaOrEndOfList(newLexer, fieldCache))
       case e: JsonTokenGenerator.Error =>
         LexerError(e)
     }
@@ -131,19 +166,20 @@ private[util] object JArrayProducerImpl {
       case JsonTokenGenerator.FinalToken(TokenComma(), endPos) =>
         UnexpectedEndOfInput(None, endPos)
       case JsonTokenGenerator.FinalToken(_, _) =>
-        new AwaitingDatum(lexer).endOfInput()
+        new AwaitingDatum(lexer, fieldCache).endOfInput()
       case JsonTokenGenerator.EndOfInput(pos) =>
         UnexpectedEndOfInput(None, pos)
     }
   }
 
-  case class AwaitingDatum(valueProducer: JValueProducer) extends JArrayProducer {
-    def this(lexer: JsonTokenGenerator) = this(JValueProducer.newProducerFromLexer(lexer))
+  class AwaitingDatum(valueProducer: JValueProducer, fc: FieldCache) extends JArrayProducer(fc, 0) {
+    def this(lexer: JsonTokenGenerator, fieldCache: FieldCache) =
+      this(new JValueProducer.Builder().withLexer(lexer).withFieldCache(fieldCache).build, fieldCache)
 
     def apply(data: WrappedCharArray): Result = valueProducer(data) match {
-      case JValueProducer.More(newState) => More(new AwaitingDatum(newState))
+      case JValueProducer.More(newState) => More(new AwaitingDatum(newState, fieldCache))
       case JValueProducer.Value(jvalue, newLexer, remainingData) =>
-        Element(jvalue, new AwaitingCommaOrEndOfList(newLexer), remainingData)
+        Element(jvalue, new AwaitingCommaOrEndOfList(newLexer, fieldCache), remainingData)
       case JValueProducer.LexerError(err) => LexerError(err)
       case JValueProducer.ParserError(err) => ParserError(err)
     }

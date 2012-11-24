@@ -117,6 +117,28 @@ object JValueProducer {
   case class ParserError(err: JsonEventGenerator.AnyError) extends Error with EndError
   case class UnexpectedEndOfInput(position: Position) extends EndError
 
+  @deprecated(message = "use JValueProducer.Builder")
   def newProducerFromLexer(lexer: JsonTokenGenerator) = new JValueProducer(lexer, JsonEventGenerator.newGenerator, JValueGenerator.newGenerator)
-  val newProducer = newProducerFromLexer(JsonTokenGenerator.newGenerator)
+
+  @deprecated(message = "use JValueProducer.Builder")
+  def newProducer = newProducerFromLexer(JsonTokenGenerator.newGenerator)
+
+  class Builder private (lexer: JsonTokenGenerator, fieldCache: FieldCache) {
+    def this() = this(null, null)
+
+    private def copy(
+      lexer: JsonTokenGenerator = this.lexer,
+      fieldCache: FieldCache = this.fieldCache
+    ): Builder =
+      new Builder(lexer, fieldCache)
+
+    def withLexer(lexer: JsonTokenGenerator) = copy(lexer = lexer)
+    def withFieldCache(fieldCache: FieldCache) = copy(fieldCache = fieldCache)
+
+    def build = {
+      val trueLexer = if(lexer == null) JsonTokenGenerator.newGenerator else lexer
+      val trueFieldCache = if(fieldCache == null) IdentityFieldCache else fieldCache
+      new JValueProducer(trueLexer, JsonEventGenerator.newGenerator(trueFieldCache), JValueGenerator.newGenerator)
+    }
+  }
 }

@@ -17,11 +17,15 @@ import java.io.Reader
  * @see [[com.rojoma.json.io.JsonEventGenerator]]
  * @see [[com.rojoma.json.io.JsonEvent]]
  */
-class JsonEventIterator(input: Iterator[JsonToken]) extends BufferedIterator[JsonEvent] {
-  def this(reader: Reader) = this(new JsonTokenIterator(reader))
-  def this(text: String) = this(new BlockJsonTokenIterator(text))
+class JsonEventIterator(input: Iterator[JsonToken], fieldCache: FieldCache) extends BufferedIterator[JsonEvent] {
+  def this(reader: Reader, fieldCache: FieldCache) = this(new JsonTokenIterator(reader), fieldCache)
+  def this(text: String, fieldCache: FieldCache) = this(new BlockJsonTokenIterator(text), fieldCache)
 
-  private var parser = JsonEventGenerator.newGenerator
+  def this(input: Iterator[JsonToken]) = this(input, IdentityFieldCache)
+  def this(reader: Reader) = this(reader, IdentityFieldCache)
+  def this(text: String) = this(new BlockJsonTokenIterator(text), IdentityFieldCache)
+
+  private var parser = JsonEventGenerator.newGenerator(fieldCache)
   private val underlying = input.buffered
   private var available: JsonEvent = null
   private var atTop = true // this reflects the state *before* the feed that resulted in "available" being set.

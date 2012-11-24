@@ -4,7 +4,7 @@ package io
 import JsonEventGenerator._
 import JsonEventGeneratorImpl._
 
-sealed abstract class JsonEventGenerator private[io] (protected val stack: Stack) {
+sealed abstract class JsonEventGenerator private[io] (val fieldCache: FieldCache, protected val stack: Stack) {
   def apply(token: JsonToken): Result
   protected def name: String
 
@@ -54,7 +54,7 @@ sealed abstract class JsonEventGenerator private[io] (protected val stack: Stack
   protected def event(token: JsonToken, ev: JsonEvent, newState: JsonEventGenerator): Result = {
     ev.row = token.row
     ev.column = token.column
-    val trueNewState = if(newState eq null) newGenerator else newState
+    val trueNewState = if(newState eq null) newGenerator(fieldCache) else newState
     Event(ev, trueNewState)
   }
 
@@ -84,7 +84,8 @@ object JsonEventGenerator {
   case class UnexpectedToken(token: JsonToken, expected: String) extends Error with EndError
   case class Unfinished(position: Position) extends EndError
 
-  val newGenerator: JsonEventGenerator = new AwaitingDatum(null)
+  val newGenerator: JsonEventGenerator = newGenerator(IdentityFieldCache)
+  def newGenerator(fieldCache: FieldCache): JsonEventGenerator = new AwaitingDatum(fieldCache, null)
 
   def throwError(e: AnyError): Nothing = e match {
     case UnexpectedToken(token, expected) => throw new JsonUnexpectedToken(token, expected)
@@ -95,12 +96,12 @@ object JsonEventGenerator {
 private[io] object JsonEventGeneratorImpl {
   type Stack = JsonEventGenerator
 
-  class AwaitingDatum(s: Stack) extends JsonEventGenerator(s) {
+  class AwaitingDatum(fc: FieldCache, s: Stack) extends JsonEventGenerator(fc, s) {
     def apply(token: JsonToken) = token match {
       case TokenOpenBrace() =>
-        event(token, StartOfObjectEvent(), new AwaitingFieldNameOrEndOfObject(stack))
+        event(token, StartOfObjectEvent(), new AwaitingFieldNameOrEndOfObject(fieldCache, stack))
       case TokenOpenBracket() =>
-        event(token, StartOfArrayEvent(), new AwaitingEntryOrEndOfArray(stack))
+        event(token, StartOfArrayEvent(), new AwaitingEntryOrEndOfArray(fieldCache, stack))
       case TokenIdentifier(text) =>
         event(token, IdentifierEvent(text), stack)
       case TokenNumber(number) =>
@@ -114,18 +115,18 @@ private[io] object JsonEventGeneratorImpl {
     def name = "AwaitingDatum"
   }
 
-  class AwaitingEntryOrEndOfArray(s: Stack) extends JsonEventGenerator(s) {
+  class AwaitingEntryOrEndOfArray(fc: FieldCache, s: Stack) extends JsonEventGenerator(fc, s) {
     def apply(token: JsonToken) = token match {
       case TokenOpenBrace() =>
-        event(token, StartOfObjectEvent(), new AwaitingFieldNameOrEndOfObject(new AwaitingCommaOrEndOfArray(stack)))
+        event(token, StartOfObjectEvent(), new AwaitingFieldNameOrEndOfObject(fieldCache, new AwaitingCommaOrEndOfArray(fieldCache, stack)))
       case TokenOpenBracket() =>
-        event(token, StartOfArrayEvent(), new AwaitingEntryOrEndOfArray(new AwaitingCommaOrEndOfArray(stack)))
+        event(token, StartOfArrayEvent(), new AwaitingEntryOrEndOfArray(fieldCache, new AwaitingCommaOrEndOfArray(fieldCache, stack)))
       case TokenIdentifier(text) =>
-        event(token, IdentifierEvent(text), new AwaitingCommaOrEndOfArray(stack))
+        event(token, IdentifierEvent(text), new AwaitingCommaOrEndOfArray(fieldCache, stack))
       case TokenNumber(number) =>
-        event(token, NumberEvent(number), new AwaitingCommaOrEndOfArray(stack))
+        event(token, NumberEvent(number), new AwaitingCommaOrEndOfArray(fieldCache, stack))
       case TokenString(string) =>
-        event(token, StringEvent(string), new AwaitingCommaOrEndOfArray(stack))
+        event(token, StringEvent(string), new AwaitingCommaOrEndOfArray(fieldCache, stack))
       case TokenCloseBracket() =>
         event(token, EndOfArrayEvent(), stack)
       case _ =>
@@ -135,10 +136,10 @@ private[io] object JsonEventGeneratorImpl {
     def name = "AwaitingEntryOrEndOfArray"
   }
 
-  class AwaitingCommaOrEndOfArray(s: Stack) extends JsonEventGenerator(s) {
+  class AwaitingCommaOrEndOfArray(fc: FieldCache, s: Stack) extends JsonEventGenerator(fc, s) {
     def apply(token: JsonToken) = token match {
       case TokenComma() =>
-        more(new AwaitingDatum(new AwaitingCommaOrEndOfArray(stack)))
+        more(new AwaitingDatum(fieldCache, new AwaitingCommaOrEndOfArray(fieldCache, stack)))
       case TokenCloseBracket() =>
         event(token, EndOfArrayEvent(), stack)
       case _ =>
@@ -148,14 +149,14 @@ private[io] object JsonEventGeneratorImpl {
     def name = "AwaitingCommaOrEndOfArray"
   }
 
-  class AwaitingFieldNameOrEndOfObject(s: Stack) extends JsonEventGenerator(s) {
+  class AwaitingFieldNameOrEndOfObject(fc: FieldCache, s: Stack) extends JsonEventGenerator(fc, s) {
     def apply(token: JsonToken) = token match {
       case TokenCloseBrace() =>
         event(token, EndOfObjectEvent(), stack)
       case TokenString(text) =>
-        event(token, FieldEvent(text), new AwaitingKVSep(new AwaitingCommaOrEndOfObject(stack)))
+        event(token, FieldEvent(fieldCache(text)), new AwaitingKVSep(fieldCache, new AwaitingCommaOrEndOfObject(fieldCache, stack)))
       case TokenIdentifier(text) =>
-        event(token, FieldEvent(text), new AwaitingKVSep(new AwaitingCommaOrEndOfObject(stack)))
+        event(token, FieldEvent(fieldCache(text)), new AwaitingKVSep(fieldCache, new AwaitingCommaOrEndOfObject(fieldCache, stack)))
       case _ =>
         error(token, "field name or end of object")
     }
@@ -163,12 +164,12 @@ private[io] object JsonEventGeneratorImpl {
     def name = "AwaitingFieldNameOrEndOfObject"
   }
 
-  class AwaitingFieldName(s: Stack) extends JsonEventGenerator(s) {
+  class AwaitingFieldName(fc: FieldCache, s: Stack) extends JsonEventGenerator(fc, s) {
     def apply(token: JsonToken) = token match {
       case TokenString(text) =>
-        event(token, FieldEvent(text), new AwaitingKVSep(stack))
+        event(token, FieldEvent(fieldCache(text)), new AwaitingKVSep(fieldCache, stack))
       case TokenIdentifier(text) =>
-        event(token, FieldEvent(text), new AwaitingKVSep(stack))
+        event(token, FieldEvent(fieldCache(text)), new AwaitingKVSep(fieldCache, stack))
       case _ =>
         error(token, "field name")
     }
@@ -176,10 +177,10 @@ private[io] object JsonEventGeneratorImpl {
     def name = "AwaitingFieldName"
   }
 
-  class AwaitingKVSep(s: Stack) extends JsonEventGenerator(s) {
+  class AwaitingKVSep(fc: FieldCache, s: Stack) extends JsonEventGenerator(fc, s) {
     def apply(token: JsonToken) = token match {
       case TokenColon() =>
-        more(new AwaitingDatum(stack))
+        more(new AwaitingDatum(fieldCache, stack))
       case _ =>
         error(token, "colon")
     }
@@ -187,10 +188,10 @@ private[io] object JsonEventGeneratorImpl {
     def name = "AwaitingKVSep"
   }
 
-  class AwaitingCommaOrEndOfObject(s: Stack) extends JsonEventGenerator(s) {
+  class AwaitingCommaOrEndOfObject(fc: FieldCache, s: Stack) extends JsonEventGenerator(fc, s) {
     def apply(token: JsonToken) = token match {
       case TokenComma() =>
-        more(new AwaitingFieldName(new AwaitingCommaOrEndOfObject(stack)))
+        more(new AwaitingFieldName(fieldCache, new AwaitingCommaOrEndOfObject(fieldCache, stack)))
       case TokenCloseBrace() =>
         event(token, EndOfObjectEvent(), stack)
       case _ =>
