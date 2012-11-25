@@ -13,11 +13,11 @@ previousArtifact <<= scalaVersion { sv => Some("com.rojoma" % ("rojoma-json_" + 
 
 scalaVersion := "2.9.2"
 
-crossScalaVersions := Seq("2.8.1", "2.8.2", "2.9.0", "2.9.0-1", "2.9.1", "2.9.1-1", "2.9.2", "2.10.0-M7")
+crossScalaVersions := Seq("2.8.1", "2.8.2", "2.9.0", "2.9.0-1", "2.9.1", "2.9.1-1", "2.9.2", "2.10.0-RC3")
 
 libraryDependencies <+= scalaVersion {
-  case "2.10.0-M7" =>
-    "org.scalatest" % "scalatest_2.10.0-M7" % "1.9-2.10.0-M7-B1"
+  case "2.10.0-RC3" =>
+    "org.scalatest" % "scalatest_2.10.0-RC3" % "2.0.M5-B1"
   case _ =>
     "org.scalatest" %% "scalatest" % "1.8" % "test"
 }
@@ -25,10 +25,10 @@ libraryDependencies <+= scalaVersion {
 libraryDependencies <+= scalaVersion {
   case "2.8.1" | "2.8.2" =>
     "org.scalacheck" % "scalacheck_2.8.1" % "1.8" % "optional"
-  case "2.10.0-M7" =>
-    "org.scalacheck" % "scalacheck_2.10.0-M7" % "1.10.0"
+  case "2.10.0-RC3" =>
+    "org.scalacheck" % "scalacheck_2.10.0-RC3" % "1.10.0" % "optional"
   case _ =>
-    "org.scalacheck" %% "scalacheck" % "1.9" % "optional"
+    "org.scalacheck" %% "scalacheck" % "1.10.0" % "optional"
 }
 
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
