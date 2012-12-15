@@ -329,19 +329,21 @@ private[io] object JsonTokenGeneratorImpl {
     final val ReadingUnicode2 = 4
     final val ReadingUnicode3 = 5
 
-    // A "CompoundState" is [1 bit not-expecting-low-surrogate] [16 bits high surrogate] [12 bits pending unicode] [3 bits actual state]
+    // A "CompoundState" is [16 bits high surrogate] [12 bits pending unicode] [1 bit not-expecting-low-surrogate] [3 bits actual state]
     // Which means there's room for two more States!  What extravagance!
     type CompoundState = Int
-    @inline def constructCompoundState(realState: State, pendingUnicode: Int = 0, highSurrogate: Int = -1): CompoundState =
-      (highSurrogate << 15) | (pendingUnicode << 3) | realState
+    @inline def startState: CompoundState = ReadingOrdinaryCharacter | 0x00000008
     @inline def extractState(state: CompoundState): State = state & 7
     @inline def updateState(state: CompoundState, newState: State) = (state & ~7) | newState
-    @inline def extractPendingUnicode(state: CompoundState): Int = (state >> 3) & 0xfff
-    @inline def updatePendingUnicode(state: CompoundState, newPendingUnicode: Int) = (state & ~(0xfff << 3)) | (newPendingUnicode << 3)
-    @inline def expectingLowSurrogate(state: CompoundState): Boolean = (state & 0x80000000) == 0
-    @inline def extractHighSurrogate(state: CompoundState): Int = state >> 15
-    @inline def updateHighSurrogate(state: CompoundState, newHighSurrogate: Char) = (state & 0x7fff) | (newHighSurrogate.toInt << 15)
-    @inline def clearHighSurrogate(state: CompoundState) = state | 0xffff8000
+    @inline def extractPendingUnicode(state: CompoundState): Int = (state >> 4) & 0xfff
+    @inline def updatePendingUnicode(state: CompoundState, newPendingUnicode: Int) = (state & ~(0xfff << 4)) | (newPendingUnicode << 4)
+    @inline def expectingLowSurrogate(state: CompoundState): Boolean = (state & 0x00000008) == 0
+    @inline def extractHighSurrogate(state: CompoundState): Int = state >>> 16
+    // updateHighSurrogate is the reason the flag bit is "NOT expecting low surrogate"; if it were the
+    // other way around it'd have to clear the four high bits and set the flag which would take TWO
+    // operations instead of one.  Since none of the other ops really care, this wins.
+    @inline def updateHighSurrogate(state: CompoundState, newHighSurrogate: Char) = (state & 0x0000fff7) | (newHighSurrogate.toInt << 16)
+    @inline def clearHighSurrogate(state: CompoundState) = state | 0x00000008
 
     final val BadChar = 0xfffd.toChar
     @inline final def isSurrogate(c: Char) = c >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE
@@ -352,7 +354,7 @@ private[io] object JsonTokenGeneratorImpl {
       val startRow = input.nextCharRow
       val startCol = input.nextCharCol
       val boundary = input.next()
-      continueReadingString(constructCompoundState(ReadingOrdinaryCharacter), Nil, boundary, startRow, startCol, input)
+      continueReadingString(startState, Nil, boundary, startRow, startCol, input)
     }
 
     def continueReadingString(initialState: CompoundState, chunks: List[String], boundary: Char, startRow: Int, startCol: Int, input: PositionedCharExtractor): Result = {
