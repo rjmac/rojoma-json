@@ -6,7 +6,7 @@ import codec.JsonCodec
 
 class JsonGenerationException extends RuntimeException("Cannot generate JSON; this is always a logic error.  You've forgotten to bind a variable, or you've used a pattern that cannot generate.")
 
-/** Either a [[com.rojoma.json.Pattern]] or a [[com.rojoma.json.POption]]. */
+/** Either a [[com.rojoma.json.matcher.Pattern]] or a [[com.rojoma.json.matcher.POption]]. */
 sealed trait OptPattern
 
 object OptPattern {
