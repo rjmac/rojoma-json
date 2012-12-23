@@ -62,9 +62,11 @@ class JArrayProducerTest extends FunSuite with MustMatchers with PropertyChecks 
   test("Reading well-formed values") {
     forAll(splittableJson[JArray], ArbitraryValidString.arbitrary) { (jps, suffix) =>
       val (jvalue, pretty, splits) = jps
-      val s = JsonUtil.renderJson(jvalue, pretty = pretty) + suffix
+      val trueSuffix = if(jvalue.isInstanceOf[JNull] || jvalue.isInstanceOf[JBoolean] || jvalue.isInstanceOf[JNumber]) " " + suffix
+                       else suffix
+      val s = JsonUtil.renderJson(jvalue, pretty = pretty) + trueSuffix
       whenever(splits.forall(i => 0 <= i && i <= s.length)) {
-        r(jvalue.toList, splitAt(s, splits)) must equal(suffix)
+        r(jvalue.toList, splitAt(s, splits)) must equal(trueSuffix)
       }
     }
   }

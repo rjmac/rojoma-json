@@ -120,14 +120,15 @@ sealed trait JCompound extends JValue {
 
 /** A JSON array, implemented as a thin wrapper around a sequence of [[com.rojoma.json.ast.JValue]]s.
   * In many ways this can be treated as a `Seq`, but it is in fact not one. */
-case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFunction[Int, JValue] with JCompound with com.rojoma.`json-impl`.ast.JArrayShim {
+case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFunction[Int, JValue] with JCompound {
   import com.rojoma.`json-impl`.AnnoyingJArrayHack._
 
   override def size = elems.size
   def length = elems.length
+  override def toIndexedSeq[B >: JValue] = elems.toIndexedSeq[B]
   override def toList = elems.toList
   override def toStream = elems.toStream
-  override def toArray[B >: JValue : com.rojoma.`json-impl`.CM] = elems.toArray[B]
+  override def toArray[B >: JValue : ClassManifest] = elems.toArray[B]
 
   def apply(idx: Int) = elems(idx)
   def isDefinedAt(idx: Int) = elems.isDefinedAt(idx)

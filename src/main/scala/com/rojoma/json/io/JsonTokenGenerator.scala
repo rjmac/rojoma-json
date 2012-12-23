@@ -211,7 +211,7 @@ private[io] object JsonTokenGeneratorImpl {
   }
 
   object WhitespaceSkipper extends ReaderBase {
-    final type State = Int
+    type State = Int
     final val ReadingOrdinaryWhitespace = 0
     final val ReadingToEOL = 1
     final val LookingFor_* = 2
@@ -225,7 +225,7 @@ private[io] object JsonTokenGeneratorImpl {
     }
 
     def eofInWhitespace(state: State, row: Int, col: Int): EndResult = {
-      (state: Int @switch) match {
+      (state: @switch) match {
         case ReadingOrdinaryWhitespace | ReadingToEOL | Done =>
           EndOfInput(Position(row, col))
         case LookingFor_* | LookingFor_/ =>
@@ -245,7 +245,7 @@ private[io] object JsonTokenGeneratorImpl {
       try {
         var state = initialState
         while(!input.atEnd) {
-          state = (state: Int @switch) match {
+          state = (state: @switch) match {
             case ReadingOrdinaryWhitespace => readOrdinaryWhitespace(input)
             case ReadingToEOL => readToEOL(input)
             case LookingFor_* => read_*(input)
@@ -321,7 +321,7 @@ private[io] object JsonTokenGeneratorImpl {
 
   object StringReader extends ReaderBase {
     // States for string-reading
-    final type State = Int
+    type State = Int
     final val ReadingOrdinaryCharacter = 0
     final val ReadingEscape = 1
     final val ReadingUnicode0 = 2
@@ -362,7 +362,7 @@ private[io] object JsonTokenGeneratorImpl {
         val sb = new StringBuilder
         var state = initialState
         while(!input.atEnd) {
-          state = (extractState(state): Int @switch) match {
+          state = extractState(state) match {
             case ReadingOrdinaryCharacter =>
               if(input.peek() == boundary) {
                 input.next() // pass over closing quote
@@ -515,7 +515,7 @@ private[io] object JsonTokenGeneratorImpl {
   }
 
   object NumberReader extends ReaderBase {
-    final type State = Int
+    type State = Int
     final val ReadingSign = 0
     final val ReadingFirstWholePartDigit = 1
     final val ReadingWholePart = 2
@@ -532,7 +532,7 @@ private[io] object JsonTokenGeneratorImpl {
       continueReadingNumber(ReadingSign, Nil, input.nextCharRow, input.nextCharCol, input)
 
     def eofInNumber(state: State, chunks: List[String], startRow: Int, startCol: Int, row: Int, col: Int): EndResult = {
-      (state: Int @switch) match {
+      (state: @switch) match {
         case ReadingSign | ReadingFirstWholePartDigit | ReadingFirstFracPartDigit | ReadingExponentSign | ReadingFirstExponentDigit =>
           UnexpectedEndOfInput("number", Position(row, col))
         case _ =>
@@ -547,7 +547,7 @@ private[io] object JsonTokenGeneratorImpl {
         val sb = new StringBuilder
 
         while(!input.atEnd) {
-          state = (state: Int @switch) match {
+          state = (state: @switch) match {
             case ReadingSign => readSign(sb, input)
             case ReadingFirstWholePartDigit => readWholePart(sb, input, true)
             case ReadingWholePart => readWholePart(sb, input, false)

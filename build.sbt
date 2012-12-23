@@ -13,32 +13,25 @@ previousArtifact <<= scalaVersion { sv => Some("com.rojoma" % ("rojoma-json_" + 
 
 scalaVersion := "2.9.2"
 
-crossScalaVersions := Seq("2.8.1", "2.8.2", "2.9.0", "2.9.0-1", "2.9.1", "2.9.1-1", "2.9.2", "2.10.0-RC3")
+crossScalaVersions := Seq("2.8.1", "2.8.2", "2.9.0", "2.9.0-1", "2.9.1", "2.9.1-1", "2.9.2")
 
-libraryDependencies <+= scalaVersion {
-  case "2.10.0-RC3" =>
-    "org.scalatest" % "scalatest_2.10.0-RC3" % "2.0.M5-B1"
-  case _ =>
-    "org.scalatest" %% "scalatest" % "1.8" % "test"
-}
+libraryDependencies += "org.scalatest" %% "scalatest" % "1.8" % "test"
 
-libraryDependencies <+= scalaVersion {
-  case "2.8.1" | "2.8.2" =>
-    "org.scalacheck" % "scalacheck_2.8.1" % "1.8" % "optional"
-  case "2.10.0-RC3" =>
-    "org.scalacheck" % "scalacheck_2.10.0-RC3" % "1.10.0" % "optional"
-  case _ =>
-    "org.scalacheck" %% "scalacheck" % "1.10.0" % "optional"
+libraryDependencies <++= scalaVersion { sv =>
+  sv match {
+    case "2.8.1" | "2.8.2" => Seq(
+      "org.scalacheck" % "scalacheck_2.8.1" % "1.8" % "optional"
+    )
+    case "2.9.1-1" => Seq(
+      "org.scalacheck" % "scalacheck_2.9.1" % "1.9" % "optional"
+    )
+    case _ => Seq(
+      "org.scalacheck" %% "scalacheck" % "1.9" % "optional"
+      )
+  }
 }
 
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
-
-scalacOptions <++= scalaVersion map { sv =>
-  val base = Seq("-deprecation")
-  val versionSpecific = if(sv.startsWith("2.10.")) Seq("-language:_")
-                        else Nil
-  base ++ versionSpecific
-}
 
 // Include generated sources in source jar
 mappings in (Compile, packageSrc) <++= (sourceManaged in Compile, managedSources in Compile) map { (base, srcs) =>
@@ -51,10 +44,6 @@ sourceGenerators in Compile <+= (sourceManaged in Compile) map SimpleJsonCodecBu
 sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion in Compile) map DynamicJValueSupportBuilder
 
 sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion in Compile) map ValueClassSupportBuilder
-
-sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion in Compile) map PackageObjectBuilder
-
-sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion in Compile) map JArrayShimBuilder
 
 // Bit of a hack; regenerate README.markdown when version is changed
 // to a non-SNAPSHOT value.

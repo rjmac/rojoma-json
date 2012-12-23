@@ -7,12 +7,10 @@ import org.scalatest.prop.Checkers
 import org.scalacheck.Prop._
 import org.scalacheck.Arbitrary
 
-import com.rojoma.`json-impl`.CM
-
 class JsonCodecTests extends FunSuite with Checkers {
   import JsonCodec.{toJValue, fromJValue}
 
-  def doCheck[T : CM : Arbitrary : JsonCodec]() {
+  def doCheck[T : ClassManifest : Arbitrary : JsonCodec]() {
     check(forAll { x: T =>
       fromJValue[T](toJValue(x)) == Some(x)
     })

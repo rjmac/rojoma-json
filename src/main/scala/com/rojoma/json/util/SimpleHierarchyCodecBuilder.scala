@@ -5,12 +5,10 @@ import ast._
 import codec._
 
 class SimpleHierarchyCodecBuilder[Root <: AnyRef] private[util] (tagType: TagType, subcodecs: Map[String, JsonCodec[_ <: Root]], classes: Map[Class[_], String]) {
-  private def t(mfst: com.rojoma.`json-impl`.CM[_]) = com.rojoma.`json-impl`.erasureOf(mfst)
-
-  def branch[T <: Root](name: String)(implicit codec: JsonCodec[T], mfst: com.rojoma.`json-impl`.CM[T]) = {
+  def branch[T <: Root](name: String)(implicit codec: JsonCodec[T], mfst: ClassManifest[T]) = {
     if(subcodecs contains name) throw new IllegalArgumentException("Already defined a codec for branch " + name)
-    if(classes contains t(mfst)) throw new IllegalArgumentException("Already defined a codec for class " + t(mfst))
-    new SimpleHierarchyCodecBuilder[Root](tagType, subcodecs + (name -> codec), classes + (t(mfst) -> name))
+    if(classes contains mfst.erasure) throw new IllegalArgumentException("Already defined a codec for class " + mfst.erasure)
+    new SimpleHierarchyCodecBuilder[Root](tagType, subcodecs + (name -> codec), classes + (mfst.erasure -> name))
   }
 
   private def codecFor(x: Root) =
@@ -97,11 +95,9 @@ class SimpleHierarchyCodecBuilder[Root <: AnyRef] private[util] (tagType: TagTyp
 }
 
 class NoTagSimpleHierarchyCodecBuilder[Root <: AnyRef] private[util] (subcodecs: Seq[(Class[_], JsonCodec[_ <: Root])]) {
-  private def t(mfst: com.rojoma.`json-impl`.CM[_]) = com.rojoma.`json-impl`.erasureOf(mfst)
-
-  def branch[T <: Root](implicit codec: JsonCodec[T], mfst: com.rojoma.`json-impl`.CM[T]) = {
-    if(subcodecs.find(_._1 == t(mfst)).isDefined) throw new IllegalArgumentException("Already defined a codec for class " + t(mfst))
-    new NoTagSimpleHierarchyCodecBuilder[Root](subcodecs :+ (t(mfst) -> codec))
+  def branch[T <: Root](implicit codec: JsonCodec[T], mfst: ClassManifest[T]) = {
+    if(subcodecs.find(_._1 == mfst.erasure).isDefined) throw new IllegalArgumentException("Already defined a codec for class " + mfst.erasure)
+    new NoTagSimpleHierarchyCodecBuilder[Root](subcodecs :+ (mfst.erasure -> codec))
   }
 
   def build: JsonCodec[Root] = {
