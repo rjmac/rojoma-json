@@ -15,14 +15,14 @@ object GenJValue {
     x <- arbitrary[Boolean]
   } yield JBoolean(x)
 
-  private val safeFloat = for {
-    i <- arbitrary[BigInt]
-    s <- Gen.choose(Int.MinValue + 1, Int.MaxValue)
-  } yield BigDecimal(i, s, java.math.MathContext.UNLIMITED)
+  private def genFloat = for {
+    a <- arbitrary[BigInt]
+    e <- arbitrary[Short]
+  } yield  BigDecimal(a) * BigDecimal(10).pow(e)
 
   val genJNumber: Gen[JNumber] = {
     val genJInteger = arbitrary[BigInt].map(JNumber.apply)
-    val genJFloatingPoint = safeFloat.map(JNumber.apply)
+    val genJFloatingPoint = genFloat.map(JNumber.apply)
     Gen.oneOf(genJInteger, genJFloatingPoint)
   }
 

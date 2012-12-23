@@ -52,8 +52,8 @@ object JsonTokenGenerator {
   case class NumberOutOfRange(number: String, position: Position) extends Error with EndError
   case class UnexpectedEndOfInput(processing: String, position: Position) extends EndError
 
-  val newGenerator: JsonTokenGenerator = new WaitingForToken(1, 1)
-  def newPositionedGenerator(position: Position): JsonTokenGenerator = new WaitingForToken(position.row, position.column)
+  val newGenerator: JsonTokenGenerator = new WaitingForToken(Position(1, 1))
+  def newPositionedGenerator(position: Position): JsonTokenGenerator = new WaitingForToken(position)
 
   def throwError(error: AnyError): Nothing = error match {
     case UnexpectedCharacter(c, e, pos) => throw new JsonUnexpectedCharacter(c,e,pos)
@@ -64,6 +64,7 @@ object JsonTokenGenerator {
 
 private[io] object JsonTokenGeneratorImpl {
   class PositionedCharExtractor(underlying: WrappedCharArrayIterator, var nextCharRow: Int, var nextCharCol: Int) {
+    def this(underlying: WrappedCharArrayIterator, pos: Position) = this(underlying, pos.row, pos.column)
     def atEnd = !underlying.hasNext
 
     def next() = {
@@ -81,11 +82,11 @@ private[io] object JsonTokenGeneratorImpl {
   }
 
   def token(token: JsonToken, input: PositionedCharExtractor) =
-    Token(token, new WaitingForToken(input.nextCharRow, input.nextCharCol), input.freeze)
+    Token(token, new WaitingForToken(Position(input.nextCharRow, input.nextCharCol)), input.freeze)
 
-  class WaitingForToken(startingRow: Int, startingCol: Int) extends JsonTokenGenerator {
+  class WaitingForToken(startPos: Position) extends JsonTokenGenerator {
     def apply(chunk: WrappedCharArray): Result = {
-      val input = new PositionedCharExtractor(chunk.iterator, startingRow, startingCol)
+      val input = new PositionedCharExtractor(chunk.iterator, startPos)
 
       val skippingWhitespace = WhitespaceSkipper.skipWhitespace(input)
       if(skippingWhitespace != null) return skippingWhitespace
@@ -95,34 +96,33 @@ private[io] object JsonTokenGeneratorImpl {
     }
 
     def endOfInput() =
-      EndOfInput(Position(startingRow, startingCol))
+      EndOfInput(startPos)
   }
 
-  class SkippingWhitespace(state: WhitespaceSkipper.State, row: Int, col: Int) extends JsonTokenGenerator {
+  class SkippingWhitespace(state: WhitespaceSkipper.State, pos: Position) extends JsonTokenGenerator {
     def apply(chunk: WrappedCharArray): Result = {
-      val input = new PositionedCharExtractor(chunk.iterator, row, col)
+      val input = new PositionedCharExtractor(chunk.iterator, pos)
       val result = WhitespaceSkipper.continueSkippingWhitespace(state, input)
       if(result == null) readToken(input)
       else result
     }
 
     def endOfInput() =
-      WhitespaceSkipper.eofInWhitespace(state, row, col)
+      WhitespaceSkipper.eofInWhitespace(state, pos)
   }
 
-  class WantingSecondCommentCharacter(slashRow: Int, slashCol: Int) extends JsonTokenGenerator {
-    def row = slashRow
-    def col = slashCol + 1
+  class WantingSecondCommentCharacter(slashPos: Position) extends JsonTokenGenerator {
+    def position = Position(slashPos.row, slashPos.column + 1)
 
     def apply(chunk: WrappedCharArray): Result = {
       if(chunk.isEmpty) return More(this)
 
-      val input = new PositionedCharExtractor(chunk.iterator, row, col)
+      val input = new PositionedCharExtractor(chunk.iterator, position)
       val newState = try {
-        WhitespaceSkipper.readSecondCommentCharacter(input, slashRow, slashCol)
+        WhitespaceSkipper.readSecondCommentCharacter(input, slashPos)
       } catch {
-        case UnexpectedCharacterException(c, expected, row, col) =>
-          return UnexpectedCharacter(c, expected, Position(row, col))
+        case UnexpectedCharacterException(c, expected, position) =>
+          return UnexpectedCharacter(c, expected, position)
       }
       val result = WhitespaceSkipper.continueSkippingWhitespace(newState, input)
       if(result == null) readToken(input)
@@ -130,7 +130,7 @@ private[io] object JsonTokenGeneratorImpl {
     }
 
     def endOfInput() =
-      WhitespaceSkipper.eofWhileWantingSecondCommentCharacter(slashRow, slashCol, row, col)
+      WhitespaceSkipper.eofWhileWantingSecondCommentCharacter(slashPos, position)
   }
 
   def readToken(input: PositionedCharExtractor): Result =
@@ -148,8 +148,7 @@ private[io] object JsonTokenGeneratorImpl {
     }
 
   def readSingleCharToken(input: PositionedCharExtractor) = {
-    val tokenRow = input.nextCharRow
-    val tokenCol = input.nextCharCol
+    val position = Position(input.nextCharRow, input.nextCharCol)
     val positionedToken = (input.next(): @switch) match {
       case '{' => TokenOpenBrace()
       case '}' => TokenCloseBrace()
@@ -158,45 +157,43 @@ private[io] object JsonTokenGeneratorImpl {
       case ':' => TokenColon()
       case ',' => TokenComma()
     }
-    positionedToken.row = tokenRow
-    positionedToken.column = tokenCol
+    positionedToken.position = position
     token(positionedToken, input)
   }
 
-  class ReadingString(state: StringReader.CompoundState, chunks: List[String], boundary: Char, stringStartRow: Int, stringStartCol: Int, row: Int, col: Int) extends JsonTokenGenerator {
+  class ReadingString(state: StringReader.CompoundState, chunks: List[String], boundary: Char, stringStartPos: Position, pos: Position) extends JsonTokenGenerator {
     def apply(chunk: WrappedCharArray): Result =
-      StringReader.continueReadingString(state, chunks, boundary, stringStartRow, stringStartCol, new PositionedCharExtractor(chunk.iterator, row, col))
+      StringReader.continueReadingString(state, chunks, boundary, stringStartPos, new PositionedCharExtractor(chunk.iterator, pos))
 
     def endOfInput() =
-      UnexpectedEndOfInput("string", Position(row, col))
+      UnexpectedEndOfInput("string", pos)
   }
 
-  class ReadingIdentifier(chunks: List[String], startRow: Int, startCol: Int, row: Int, col: Int) extends JsonTokenGenerator {
+  class ReadingIdentifier(chunks: List[String], startPos: Position, pos: Position) extends JsonTokenGenerator {
     def apply(chunk: WrappedCharArray): Result = {
-      val input = new PositionedCharExtractor(chunk.iterator, row, col)
-      IdentifierReader.continueReadingIdentifier(chunks, startRow, startCol, input)
+      val input = new PositionedCharExtractor(chunk.iterator, pos)
+      IdentifierReader.continueReadingIdentifier(chunks, startPos, input)
     }
 
     def endOfInput(): EndResult = {
       val identToken = TokenIdentifier(chunks.reverse.mkString)
-      identToken.row = startRow
-      identToken.column = startCol
-      FinalToken(identToken, Position(row, col))
+      identToken.position = startPos
+      FinalToken(identToken, pos)
     }
   }
 
-  class ReadingNumber(state: Int, chunks: List[String], startRow: Int, startCol: Int, row: Int, col: Int) extends JsonTokenGenerator {
+  class ReadingNumber(state: Int, chunks: List[String], startPos: Position, pos: Position) extends JsonTokenGenerator {
     def apply(chunk: WrappedCharArray): Result = {
-      val input = new PositionedCharExtractor(chunk.iterator, row, col)
-      NumberReader.continueReadingNumber(state, chunks, startRow, startCol, input)
+      val input = new PositionedCharExtractor(chunk.iterator, pos)
+      NumberReader.continueReadingNumber(state, chunks, startPos, input)
     }
 
     def endOfInput(): EndResult = {
-      NumberReader.eofInNumber(state, chunks, startRow, startCol, row, col)
+      NumberReader.eofInNumber(state, chunks, startPos, pos)
     }
   }
 
-  case class UnexpectedCharacterException(c: Char, expected: String, row: Int, col: Int) extends ControlThrowable
+  case class UnexpectedCharacterException(c: Char, expected: String, position: Position) extends ControlThrowable
 
   class ReaderBase {
     def isDigit(c: Char) = c >= '0' && c <= '9'
@@ -224,22 +221,22 @@ private[io] object JsonTokenGeneratorImpl {
       continueSkippingWhitespace(ReadingOrdinaryWhitespace, input)
     }
 
-    def eofInWhitespace(state: State, row: Int, col: Int): EndResult = {
+    def eofInWhitespace(state: State, pos: Position): EndResult = {
       (state: Int @switch) match {
         case ReadingOrdinaryWhitespace | ReadingToEOL | Done =>
-          EndOfInput(Position(row, col))
+          EndOfInput(pos)
         case LookingFor_* | LookingFor_/ =>
-          UnexpectedEndOfInput("comment", Position(row, col))
+          UnexpectedEndOfInput("comment", pos)
       }
     }
 
-    def eofWhileWantingSecondCommentCharacter(slashRow: Int, slashCol: Int, row: Int, col: Int): EndResult = {
+    def eofWhileWantingSecondCommentCharacter(slashPos: Position, pos: Position): EndResult = {
       // hrmrmrmrm.  Do I report the error *here* or where the slash was?  Or to put it another way:
       // is this a stray slash or an interrupted comment?
-      UnexpectedCharacter('/', "datum", Position(slashRow, slashCol))
+      UnexpectedCharacter('/', "datum", slashPos)
     }
 
-    case class EndOfInputPreparingToReadSecondCommentCharacter(row: Int, col: Int) extends ControlThrowable
+    case class EndOfInputPreparingToReadSecondCommentCharacter(position: Position) extends ControlThrowable
 
     def continueSkippingWhitespace(initialState: State, input: PositionedCharExtractor): Result = {
       try {
@@ -254,13 +251,13 @@ private[io] object JsonTokenGeneratorImpl {
           }
         }
 
-        if(state == ReadingOrdinaryWhitespace) return More(new WaitingForToken(input.nextCharRow, input.nextCharCol))
-        else More(new SkippingWhitespace(state, input.nextCharRow, input.nextCharCol))
+        if(state == ReadingOrdinaryWhitespace) return More(new WaitingForToken(Position(input.nextCharRow, input.nextCharCol)))
+        else More(new SkippingWhitespace(state, Position(input.nextCharRow, input.nextCharCol)))
       } catch {
-        case EndOfInputPreparingToReadSecondCommentCharacter(slashRow, slashCol) =>
-          More(new WantingSecondCommentCharacter(slashRow, slashCol))
-        case UnexpectedCharacterException(c, expected, row, col) =>
-          UnexpectedCharacter(c, expected, Position(row, col))
+        case EndOfInputPreparingToReadSecondCommentCharacter(pos) =>
+          More(new WantingSecondCommentCharacter(pos))
+        case UnexpectedCharacterException(c, expected, pos) =>
+          UnexpectedCharacter(c, expected, pos)
       }
     }
 
@@ -269,17 +266,16 @@ private[io] object JsonTokenGeneratorImpl {
         val c = input.peek()
         if(Character.isWhitespace(c)) input.next()
         else if(c == '/') {
-          val slashRow = input.nextCharRow
-          val slashCol = input.nextCharCol
+          val slashPos = Position(input.nextCharRow, input.nextCharCol)
           input.next()
-          if(input.atEnd) throw EndOfInputPreparingToReadSecondCommentCharacter(slashRow, slashCol) // ick, but it should be super rare!
-          else return readSecondCommentCharacter(input, slashRow, slashCol)
+          if(input.atEnd) throw EndOfInputPreparingToReadSecondCommentCharacter(slashPos) // ick, but it should be super rare!
+          else return readSecondCommentCharacter(input, slashPos)
         } else return Done
       } while(!input.atEnd)
       ReadingOrdinaryWhitespace
     }
 
-    def readSecondCommentCharacter(input: PositionedCharExtractor, slashRow: Int, slashCol: Int): State = {
+    def readSecondCommentCharacter(input: PositionedCharExtractor, slashPos: Position): State = {
       input.next() match {
         case '*' =>
           if(input.atEnd) LookingFor_*
@@ -288,7 +284,7 @@ private[io] object JsonTokenGeneratorImpl {
           if(input.atEnd) ReadingToEOL
           else readToEOL(input)
         case _ =>
-          throw UnexpectedCharacterException('/', "start of datum", slashRow, slashCol)
+          throw UnexpectedCharacterException('/', "start of datum", slashPos)
       }
     }
 
@@ -351,13 +347,12 @@ private[io] object JsonTokenGeneratorImpl {
     @inline final def isLowSurrogate(c: Char) = Character.isLowSurrogate(c)
 
     def readString(input: PositionedCharExtractor): Result = {
-      val startRow = input.nextCharRow
-      val startCol = input.nextCharCol
+      val startPos = Position(input.nextCharRow, input.nextCharCol)
       val boundary = input.next()
-      continueReadingString(startState, Nil, boundary, startRow, startCol, input)
+      continueReadingString(startState, Nil, boundary, startPos, input)
     }
 
-    def continueReadingString(initialState: CompoundState, chunks: List[String], boundary: Char, startRow: Int, startCol: Int, input: PositionedCharExtractor): Result = {
+    def continueReadingString(initialState: CompoundState, chunks: List[String], boundary: Char, startPos: Position, input: PositionedCharExtractor): Result = {
       try {
         val sb = new StringBuilder
         var state = initialState
@@ -368,8 +363,7 @@ private[io] object JsonTokenGeneratorImpl {
                 input.next() // pass over closing quote
                 if(expectingLowSurrogate(state)) sb.append(BadChar)
                 val stringToken = TokenString(mergeChunks(sb, chunks))
-                stringToken.row = startRow
-                stringToken.column = startCol
+                stringToken.position = startPos
                 return token(stringToken, input)
               } else {
                 readOrdinaryCharacters(state, sb, input, boundary)
@@ -386,9 +380,9 @@ private[io] object JsonTokenGeneratorImpl {
               readUnicode3(state, sb, input)
           }
         }
-        More(new ReadingString(state, addChunk(sb, chunks), boundary, startRow, startCol, input.nextCharRow, input.nextCharCol))
+        More(new ReadingString(state, addChunk(sb, chunks), boundary, startPos, Position(input.nextCharRow, input.nextCharCol)))
       } catch {
-        case UnexpectedCharacterException(c, expected, row, col) => UnexpectedCharacter(c, expected, Position(row, col))
+        case UnexpectedCharacterException(c, expected, pos) => UnexpectedCharacter(c, expected, pos)
       }
     }
 
@@ -450,7 +444,7 @@ private[io] object JsonTokenGeneratorImpl {
         case 'u' =>
           if(input.atEnd) updateState(probableEndState, ReadingUnicode0)
           else readUnicode0(probableEndState, sb, input)
-        case c => throw UnexpectedCharacterException(c, "string escape character", row, col)
+        case c => throw UnexpectedCharacterException(c, "string escape character", Position(row, col))
       }
     }
 
@@ -483,32 +477,30 @@ private[io] object JsonTokenGeneratorImpl {
         case c if isDigit(c) => c.toInt - '0'.toInt
         case c if 'a' <= c && c <= 'f' => 10 + c.toInt - 'a'.toInt
         case c if 'A' <= c && c <= 'F' => 10 + c.toInt - 'A'.toInt
-        case c => throw UnexpectedCharacterException(c, "hex digit", row, col)
+        case c => throw UnexpectedCharacterException(c, "hex digit", Position(row, col))
       }
     }
   }
 
   object IdentifierReader extends ReaderBase {
     def readIdentifier(input: PositionedCharExtractor): Result = {
-      val startRow = input.nextCharRow
-      val startCol = input.nextCharCol
+      val startPos = Position(input.nextCharRow, input.nextCharCol)
       val sb = new StringBuilder
       sb.append(input.next())
-      continueReadingIdentifier2(sb, Nil, startRow, startCol, input)
+      continueReadingIdentifier2(sb, Nil, startPos, input)
     }
 
-    def continueReadingIdentifier(chunks: List[String], startRow: Int, startCol: Int, input: PositionedCharExtractor): Result =
-      continueReadingIdentifier2(new StringBuilder, chunks, startRow, startCol, input)
+    def continueReadingIdentifier(chunks: List[String], startPos: Position, input: PositionedCharExtractor): Result =
+      continueReadingIdentifier2(new StringBuilder, chunks, startPos, input)
 
-    def continueReadingIdentifier2(sb: StringBuilder, chunks: List[String], startRow: Int, startCol: Int, input: PositionedCharExtractor): Result = {
+    def continueReadingIdentifier2(sb: StringBuilder, chunks: List[String], startPos: Position, input: PositionedCharExtractor): Result = {
       while(!input.atEnd && Character.isUnicodeIdentifierPart(input.peek())) {
         sb.append(input.next())
       }
-      if(input.atEnd) More(new ReadingIdentifier(addChunk(sb, chunks), startRow, startCol, input.nextCharRow, input.nextCharCol))
+      if(input.atEnd) More(new ReadingIdentifier(addChunk(sb, chunks), startPos, Position(input.nextCharRow, input.nextCharCol)))
       else {
         val identifier = TokenIdentifier(mergeChunks(sb, chunks))
-        identifier.row = startRow
-        identifier.column = startCol
+        identifier.position = startPos
         token(identifier, input)
       }
     }
@@ -526,22 +518,22 @@ private[io] object JsonTokenGeneratorImpl {
     final val ReadingExponent = 7
     final val Done = 8
 
-    case class NumberOutOfRangeException(number: String, row: Int, col: Int) extends ControlThrowable
+    case class NumberOutOfRangeException(number: String, position: Position) extends ControlThrowable
 
     def readNumber(input: PositionedCharExtractor): Result =
-      continueReadingNumber(ReadingSign, Nil, input.nextCharRow, input.nextCharCol, input)
+      continueReadingNumber(ReadingSign, Nil, Position(input.nextCharRow, input.nextCharCol), input)
 
-    def eofInNumber(state: State, chunks: List[String], startRow: Int, startCol: Int, row: Int, col: Int): EndResult = {
+    def eofInNumber(state: State, chunks: List[String], startPos: Position, pos: Position): EndResult = {
       (state: Int @switch) match {
         case ReadingSign | ReadingFirstWholePartDigit | ReadingFirstFracPartDigit | ReadingExponentSign | ReadingFirstExponentDigit =>
-          UnexpectedEndOfInput("number", Position(row, col))
+          UnexpectedEndOfInput("number", pos)
         case _ =>
-          FinalToken(toNumberToken(chunks.reverse.mkString, startRow, startCol),
-                     Position(row, col))
+          FinalToken(toNumberToken(chunks.reverse.mkString, startPos),
+                     pos)
       }
     }
 
-    def continueReadingNumber(initialState: State, chunks: List[String], startRow: Int, startCol: Int, input: PositionedCharExtractor): Result = {
+    def continueReadingNumber(initialState: State, chunks: List[String], startPos: Position, input: PositionedCharExtractor): Result = {
       try {
         var state = initialState
         val sb = new StringBuilder
@@ -558,24 +550,23 @@ private[io] object JsonTokenGeneratorImpl {
             case ReadingExponent => readExponent(sb, input, false)
             case Done =>
               val number = mergeChunks(sb, chunks)
-              try { return token(toNumberToken(number, startRow, startCol), input) }
-              catch { case NumberOutOfRangeException(number, row, col) => return NumberOutOfRange(number, Position(row, col)) }
+              try { return token(toNumberToken(number, startPos), input) }
+              catch { case NumberOutOfRangeException(number, pos) => return NumberOutOfRange(number, pos) }
           }
         }
-        More(new ReadingNumber(state, addChunk(sb, chunks), startRow, startCol, input.nextCharRow, input.nextCharCol))
+        More(new ReadingNumber(state, addChunk(sb, chunks), startPos, Position(input.nextCharRow, input.nextCharCol)))
       } catch {
-        case UnexpectedCharacterException(c, expected, row, col) => UnexpectedCharacter(c, expected, Position(row, col))
+        case UnexpectedCharacterException(c, expected, pos) => UnexpectedCharacter(c, expected, pos)
       }
     }
 
-    def toNumberToken(text: String, startRow: Int, startCol: Int) =
+    def toNumberToken(text: String, startPos: Position) =
       try {
         val number = TokenNumber(BigDecimal(text, java.math.MathContext.UNLIMITED))
-        number.row = startRow
-        number.column = startCol
+        number.position = startPos
         number
       } catch {
-        case _: NumberFormatException => throw NumberOutOfRangeException(text, startRow, startCol)
+        case _: NumberFormatException => throw NumberOutOfRangeException(text, startPos)
       }
 
     def readSign(sb: StringBuilder, input: PositionedCharExtractor): State = {
@@ -613,7 +604,7 @@ private[io] object JsonTokenGeneratorImpl {
       val col = input.nextCharRow
       val c = input.next()
       if(isDigit(c)) sb.append(c)
-      else throw UnexpectedCharacterException(c, "digit", row, col)
+      else throw UnexpectedCharacterException(c, "digit", Position(row, col))
     }
 
     def readFracPart(sb: StringBuilder, input: PositionedCharExtractor, firstDigit: Boolean): State = {

@@ -3,6 +3,7 @@ package json
 package ast
 
 import scala.{collection => sc}
+import scala.reflect.ClassTag
 
 sealed abstract class JsonInvalidValue(msg: String) extends RuntimeException(msg) {
   def value: Any
@@ -120,24 +121,25 @@ sealed trait JCompound extends JValue {
 
 /** A JSON array, implemented as a thin wrapper around a sequence of [[com.rojoma.json.ast.JValue]]s.
   * In many ways this can be treated as a `Seq`, but it is in fact not one. */
-case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFunction[Int, JValue] with JCompound with com.rojoma.`json-impl`.ast.JArrayShim {
+case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFunction[Int, JValue] with JCompound {
   import com.rojoma.`json-impl`.AnnoyingJArrayHack._
 
   override def size = elems.size
   def length = elems.length
   override def toList = elems.toList
   override def toStream = elems.toStream
-  override def toArray[B >: JValue : com.rojoma.`json-impl`.CM] = elems.toArray[B]
+  override def toArray[B >: JValue : ClassTag] = elems.toArray[B]
 
   def apply(idx: Int) = elems(idx)
   def isDefinedAt(idx: Int) = elems.isDefinedAt(idx)
   def iterator = elems.iterator
 
   override def toSeq = elems
+  override def toIndexedSeq = elems.toIndexedSeq
 
   def forced: JArray = {
     // not just "toSeq.map(_forced)" because the seq might be a Stream or view
-    val forcedArray: Vector[JValue] = convertForForce(elems).map(_.forced)(sc.breakOut)
+    val forcedArray: Vector[JValue] = elems.map(_.forced)(sc.breakOut)
     new JArray(forcedArray) {
       override def forced = this
     }
@@ -146,7 +148,7 @@ case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFu
   override def equals(o: Any): Boolean = {
     o match {
       case that: JArray =>
-        convertForEquals(this.elems) == convertForEquals(that.elems)
+        this.elems == that.elems
       case _ =>
         false
     }

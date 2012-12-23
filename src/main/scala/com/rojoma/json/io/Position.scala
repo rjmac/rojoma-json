@@ -1,7 +1,7 @@
 package com.rojoma.json
 package io
 
-class Position(val __rowCol: Long) extends com.rojoma.`json-impl`.io.PositionSuperClassHolder.SuperClass {
+class Position(val __rowCol: Long) extends AnyVal {
   def row = (__rowCol >> 32).toInt
   def column = __rowCol.toInt
 

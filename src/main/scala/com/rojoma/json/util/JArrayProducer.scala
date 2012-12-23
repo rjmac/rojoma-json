@@ -11,10 +11,10 @@ import JArrayProducerImpl._
 
 // Incremental parsing of JSON lists
 abstract class JArrayProducer private [util] (val fieldCache: FieldCache, dummy: Int) {
-  @deprecated(message = "Use JArrayProducer.Builder")
+  @deprecated(message = "Use JArrayProducer.Builder", since="2.1.0")
   def this(fieldCache: FieldCache) = this(fieldCache, 0)
 
-  @deprecated(message = "Use JArrayProducer.Builder")
+  @deprecated(message = "Use JArrayProducer.Builder", since="2.1.0")
   def this() = this(IdentityFieldCache, 0)
 
   def apply(data: WrappedCharArray): Result
@@ -53,14 +53,14 @@ object JArrayProducer {
   case class ParserError(err: JsonEventGenerator.AnyError) extends Error with EndError
   case class UnexpectedEndOfInput(finalValue: Option[JValue], endPosition: Position) extends EndError
 
-  @deprecated(message = "use JArrayProducer.Builder")
+  @deprecated(message = "use JArrayProducer.Builder", since="2.1.0")
   def newProducerFromLexer(lexer: JsonTokenGenerator): JArrayProducer =
     new Builder().withLexer(lexer).build
 
-  @deprecated(message = "use JArrayProducer.Builder")
+  @deprecated(message = "use JArrayProducer.Builder", since="2.1.0")
   def newProducer = newProducerFromLexer(JsonTokenGenerator.newGenerator)
 
-  @deprecated(message = "use JArrayProducer.Builder")
+  @deprecated(message = "use JArrayProducer.Builder", since="2.1.0")
   def newProducerAfterStartOfList(lexer: JsonTokenGenerator): JArrayProducer =
     new Builder().withLexer(lexer).afterStartOfList.build
 

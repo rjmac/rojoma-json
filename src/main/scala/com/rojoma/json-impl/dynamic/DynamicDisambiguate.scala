@@ -1,7 +1,6 @@
 package com.rojoma.`json-impl`.dynamic
 
 sealed abstract class DynamicDisambiguate
-case object NotProvided extends DynamicDisambiguate
 case class Index(idx: Int) extends DynamicDisambiguate
 case class Field(field: String) extends DynamicDisambiguate
 

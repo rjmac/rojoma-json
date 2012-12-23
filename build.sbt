@@ -11,34 +11,16 @@ version := "2.1.0-SNAPSHOT"
 
 previousArtifact <<= scalaVersion { sv => Some("com.rojoma" % ("rojoma-json_" + sv) % "2.0.0") }
 
-scalaVersion := "2.9.2"
+scalaVersion := "2.10.0"
 
-crossScalaVersions := Seq("2.8.1", "2.8.2", "2.9.0", "2.9.0-1", "2.9.1", "2.9.1-1", "2.9.2", "2.10.0-RC3")
-
-libraryDependencies <+= scalaVersion {
-  case "2.10.0-RC3" =>
-    "org.scalatest" % "scalatest_2.10.0-RC3" % "2.0.M5-B1"
-  case _ =>
-    "org.scalatest" %% "scalatest" % "1.8" % "test"
-}
-
-libraryDependencies <+= scalaVersion {
-  case "2.8.1" | "2.8.2" =>
-    "org.scalacheck" % "scalacheck_2.8.1" % "1.8" % "optional"
-  case "2.10.0-RC3" =>
-    "org.scalacheck" % "scalacheck_2.10.0-RC3" % "1.10.0" % "optional"
-  case _ =>
-    "org.scalacheck" %% "scalacheck" % "1.10.0" % "optional"
-}
+libraryDependencies ++= Seq(
+  "org.scalatest" %% "scalatest" % "1.9.1" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.10.0" % "optional"
+)
 
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 
-scalacOptions <++= scalaVersion map { sv =>
-  val base = Seq("-deprecation")
-  val versionSpecific = if(sv.startsWith("2.10.")) Seq("-language:_")
-                        else Nil
-  base ++ versionSpecific
-}
+scalacOptions ++= Seq("-deprecation", "-language:_")
 
 // Include generated sources in source jar
 mappings in (Compile, packageSrc) <++= (sourceManaged in Compile, managedSources in Compile) map { (base, srcs) =>
@@ -47,14 +29,6 @@ mappings in (Compile, packageSrc) <++= (sourceManaged in Compile, managedSources
 }
 
 sourceGenerators in Compile <+= (sourceManaged in Compile) map SimpleJsonCodecBuilderBuilder
-
-sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion in Compile) map DynamicJValueSupportBuilder
-
-sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion in Compile) map ValueClassSupportBuilder
-
-sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion in Compile) map PackageObjectBuilder
-
-sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion in Compile) map JArrayShimBuilder
 
 // Bit of a hack; regenerate README.markdown when version is changed
 // to a non-SNAPSHOT value.

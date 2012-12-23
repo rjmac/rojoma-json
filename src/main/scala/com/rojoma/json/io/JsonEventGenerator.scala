@@ -52,8 +52,7 @@ sealed abstract class JsonEventGenerator private[io] (val fieldCache: FieldCache
   protected def locallySame(that: JsonEventGenerator): Boolean = this.getClass == that.getClass
 
   protected def event(token: JsonToken, ev: JsonEvent, newState: JsonEventGenerator): Result = {
-    ev.row = token.row
-    ev.column = token.column
+    ev.position = token.position
     val trueNewState = if(newState eq null) newGenerator(fieldCache) else newState
     Event(ev, trueNewState)
   }

@@ -1,9 +1,11 @@
 package com.rojoma.`json-impl`
 
-class DownCaster[T <: AnyRef](x : T) {
-  def cast[U <: T](implicit cm: CM[U]): Option[U] = {
-    val cls = erasureOf(cm)
-    if(cls.isInstance(x)) Some(cls.cast(x).asInstanceOf[U])
+import scala.reflect.ClassTag
+
+class DownCaster[T <: AnyRef](val `underlying-pseudoprivate` : T) extends AnyVal {
+  def cast[U <: T](implicit cm: ClassTag[U]): Option[U] = {
+    val cls = cm.runtimeClass
+    if(cls.isInstance(`underlying-pseudoprivate`)) Some(cls.cast(`underlying-pseudoprivate`).asInstanceOf[U])
     else None
   }
 }

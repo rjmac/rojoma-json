@@ -53,10 +53,9 @@ object JsonArrayIterator {
 
       def next(): T = {
         if(!hasNext) Iterator.empty.next()
-        val row = buffer.head.row
-        val col = buffer.head.column
+        val pos = buffer.head.position
         JsonCodec[T].decode(JsonReader.fromEvents(buffer)).getOrElse {
-          throw new ElementDecodeException(Position(row, col))
+          throw new ElementDecodeException(pos)
         }
       }
     }

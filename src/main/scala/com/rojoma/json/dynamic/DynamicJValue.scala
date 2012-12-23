@@ -5,19 +5,26 @@ import ast._
 
 import com.rojoma.`json-impl`.dynamic._
 
-class DynamicJValue(val static: JValue) extends DynamicJValueSuperClassHolder.SuperClass with Dynamic {
-  def applyDynamic(field: String)(arg: DynamicDisambiguate = NotProvided): DynamicJValue = {
-    val a = apply(field)
-    arg match {
-      case NotProvided => a
-      case Index(idx) => a(idx)
-      case Field(subfield) => a(subfield)
+class DynamicJValue(val static: JValue) extends AnyVal with Dynamic {
+  def applyDynamic(field: String)(subfieldOrIdx: DynamicDisambiguate): DynamicJValue =
+    static match {
+      case JObject(fields) =>
+        subfieldOrIdx match {
+          case Field(subfield) =>
+            fields(field) match {
+              case JObject(subfields) => subfields(subfield).dynamic
+              case _ => throw new InvalidDynamicJValueTypeException("Not an object")
+            }
+          case Index(elem) =>
+            fields(field) match {
+              case JArray(elems) => elems(elem).dynamic
+              case _ => throw new InvalidDynamicJValueTypeException("Not an array")
+            }
+        }
+      case _ => throw new InvalidDynamicJValueTypeException("Not an object")
     }
-  }
 
-   /** Allow names that collide with names the Scala compiler recognizes
-     * to be used with a minimum of boilerplate. */
-   def apply(field: String): DynamicJValue =
+  def selectDynamic(field: String): DynamicJValue =
     static match {
       case JObject(fields) => fields(field).dynamic
       case _ => throw new InvalidDynamicJValueTypeException("Not an object")

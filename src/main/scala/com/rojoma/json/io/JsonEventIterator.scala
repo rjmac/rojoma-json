@@ -132,8 +132,7 @@ object JsonEventIterator {
       throw new JsonUnexpectedToken(got, expected)
 
     protected def p(token: JsonToken, ev: JsonEvent) = {
-      ev.row = token.row
-      ev.column = token.column
+      ev.position = token.position
       ev
     }
 

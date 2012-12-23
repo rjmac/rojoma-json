@@ -109,8 +109,7 @@ class JsonTokenIterator(reader: Reader) extends BufferedIterator[JsonToken] {
   private def advance() {
     skipWhitespace()
     if(atEOF()) { nextToken = null; return }
-    val tokenStartRow = nextCharRow
-    val tokenStartCol = nextCharCol
+    val tokenPosition = Position(nextCharRow, nextCharCol)
     val token = (peekChar(): @switch) match {
       case '{' =>
         nextChar()
@@ -137,8 +136,7 @@ class JsonTokenIterator(reader: Reader) extends BufferedIterator[JsonToken] {
         else if(Character.isUnicodeIdentifierStart(c)) readIdentifier()
         else lexerError(c, "start of datum", nextCharRow, nextCharCol)
     }
-    token.row = tokenStartRow
-    token.column = tokenStartCol
+    token.position = tokenPosition
     nextToken = token
   }
 

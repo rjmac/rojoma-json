@@ -7,16 +7,7 @@ sealed abstract class JsonToken {
   def asFragment: String
   def asMeaning: String
 
-  // Since we don't actually have value classes yet, we'll inline this
-  // thing manually so they're only actually created if an exception
-  // is thrown.  Once we have true value classes, "row" and "column"
-  // will go away and these four lines will become just
-  //   "var position = Position.Invalid"
-  // See also JsonEvent.
-  def position = Position(row, column)
-  def position_=(position: Position) { row = position.row; column = position.column }
-  private[io] var row = Position.Invalid.row
-  private[io] var column = Position.Invalid.column
+  var position = Position.Invalid
 }
 
 sealed abstract class SimpleJsonToken(val asFragment: String, val asMeaning: String) extends JsonToken

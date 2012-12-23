@@ -117,10 +117,10 @@ object JValueProducer {
   case class ParserError(err: JsonEventGenerator.AnyError) extends Error with EndError
   case class UnexpectedEndOfInput(position: Position) extends EndError
 
-  @deprecated(message = "use JValueProducer.Builder")
+  @deprecated(message = "use JValueProducer.Builder", since="2.1.0")
   def newProducerFromLexer(lexer: JsonTokenGenerator) = new JValueProducer(lexer, JsonEventGenerator.newGenerator, JValueGenerator.newGenerator)
 
-  @deprecated(message = "use JValueProducer.Builder")
+  @deprecated(message = "use JValueProducer.Builder", since="2.1.0")
   def newProducer = newProducerFromLexer(JsonTokenGenerator.newGenerator)
 
   class Builder private (lexer: JsonTokenGenerator, fieldCache: FieldCache) {

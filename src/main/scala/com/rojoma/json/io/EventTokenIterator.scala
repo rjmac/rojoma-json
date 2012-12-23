@@ -2,7 +2,6 @@ package com.rojoma.json
 package io
 
 import com.rojoma.`json-impl`.BoundedIterator
-import com.rojoma.`json-impl`.FlatteningIterator
 
 case class MalformedEventStreamException(message: String) extends RuntimeException(message)
 
@@ -24,9 +23,9 @@ object EventTokenIterator extends (Iterator[JsonEvent] => Iterator[JsonToken]) {
 
     private def tokenizeDatum(): Iterator[JsonToken] = buffer.next() match {
       case StartOfObjectEvent() =>
-        new BoundedIterator(TokenOpenBrace(), new FlatteningIterator(iteratorForObject()), TokenCloseBrace())
+        new BoundedIterator(TokenOpenBrace(), iteratorForObject().flatten, TokenCloseBrace())
       case StartOfArrayEvent() =>
-        new BoundedIterator(TokenOpenBracket(), new FlatteningIterator(iteratorForArray()), TokenCloseBracket())
+        new BoundedIterator(TokenOpenBracket(), iteratorForArray().flatten, TokenCloseBracket())
       case IdentifierEvent(identifier) =>
         Iterator.single(TokenIdentifier(identifier))
       case NumberEvent(number) =>
