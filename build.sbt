@@ -7,7 +7,7 @@ organization := "com.rojoma"
 
 name := "rojoma-json"
 
-version := "2.1.0-SNAPSHOT"
+version := "2.1.0"
 
 previousArtifact <<= scalaVersion { sv => Some("com.rojoma" % ("rojoma-json_" + sv) % "2.0.0") }
 
