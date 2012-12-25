@@ -33,3 +33,13 @@ sourceGenerators in Compile <+= (sourceManaged in Compile) map SimpleJsonCodecBu
 // Bit of a hack; regenerate README.markdown when version is changed
 // to a non-SNAPSHOT value.
 sourceGenerators in Compile <+= (baseDirectory, version, crossScalaVersions) map READMEBuilder
+
+// macro-paradise!
+
+scalaVersion := "2.10.1-SNAPSHOT"
+
+scalaOrganization := "org.scala-lang.macro-paradise"
+
+resolvers += Resolver.sonatypeRepo("snapshots")
+
+libraryDependencies <+= (scalaVersion)("org.scala-lang.macro-paradise" % "scala-reflect" % _)
