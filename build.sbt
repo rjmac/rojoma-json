@@ -9,7 +9,7 @@ name := "rojoma-json"
 
 version := "2.1.1-SNAPSHOT"
 
-previousArtifact <<= scalaVersion { sv => Some("com.rojoma" % ("rojoma-json_" + sv) % "2.0.0") }
+previousArtifact <<= scalaBinaryVersion { sv => Some("com.rojoma" % ("rojoma-json_" + sv) % "2.1.0") }
 
 scalaVersion := "2.10.0"
 
