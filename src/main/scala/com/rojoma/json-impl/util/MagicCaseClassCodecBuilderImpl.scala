@@ -15,12 +15,12 @@ object MagicCaseClassCodecBuilderImpl {
     val Tname = TypeTree(T)
 
     def hasLazyAnnotation(param: TermSymbol) =
-      param.annotations.exists(_.tpe == typeOf[LazyCodec])
+      param.annotations.exists(_.tpe =:= typeOf[LazyCodec])
 
     def computeJsonName(param: TermSymbol): String = {
       var name = param.name.decoded
       for(ann <- param.annotations) {
-        if(ann.tpe == typeOf[JsonName]) {
+        if(ann.tpe =:= typeOf[JsonName]) {
           ann.javaArgs(TermName("value")) match {
             case LiteralArgument(Constant(s: String)) =>
               name = s
@@ -46,7 +46,7 @@ object MagicCaseClassCodecBuilderImpl {
       tpe.erasure =:= typeOf[Option[_]].erasure
     }
     def hasNullForNameAnnotation(param: TermSymbol) =
-      param.annotations.exists(_.tpe == typeOf[NullForNone])
+      param.annotations.exists(_.tpe =:= typeOf[NullForNone])
 
     case class FieldInfo(codecName: TermName, isLazy: Boolean, jsonName: String, accessorName: TermName, codecType: Type, isOption: Boolean, isNullForNone: Boolean)
 
