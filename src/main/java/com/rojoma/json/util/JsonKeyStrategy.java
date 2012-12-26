@@ -6,6 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.PARAMETER})
-public @interface LazyCodec {
+@Target({ElementType.TYPE, ElementType.PARAMETER})
+public @interface JsonKeyStrategy {
+    Strategy value();
 }

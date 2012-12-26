@@ -5,7 +5,7 @@ import scala.collection.mutable
 import scala.reflect.macros.Context
 
 import com.rojoma.json.codec.JsonCodec
-import com.rojoma.json.util.{JsonName, LazyCodec, NullForNone}
+import com.rojoma.json.util.{JsonKey, JsonKeyStrategy, Strategy, LazyCodec, NullForNone}
 
 object MagicCaseClassCodecBuilderImpl {
   def impl[T : c.WeakTypeTag](c: Context): c.Expr[JsonCodec[T]] = {
@@ -14,13 +14,32 @@ object MagicCaseClassCodecBuilderImpl {
     val T = weakTypeOf[T]
     val Tname = TypeTree(T)
 
+    def identityStrat(x: String) = x
+    def underscoreStrat(x: String) = CamelSplit(x).map(_.toLowerCase).mkString("_")
+
+    def nameStrategy(thing: Symbol, default: String => String) =
+      thing.annotations.reverse.find(_.tpe =:= typeOf[JsonKeyStrategy]) match {
+        case Some(ann) =>
+          val LiteralArgument(Constant(arg)) = ann.javaArgs(TermName("value"))
+          arg.asInstanceOf[Symbol].name.decoded match {
+            case "Identity" =>
+              identityStrat _
+            case "Underscore" =>
+              underscoreStrat _
+          }
+        case None =>
+          default
+      }
+
+    val defaultNameStrategy = nameStrategy(T.typeSymbol, identityStrat)
+
     def hasLazyAnnotation(param: TermSymbol) =
       param.annotations.exists(_.tpe =:= typeOf[LazyCodec])
 
     def computeJsonName(param: TermSymbol): String = {
-      var name = param.name.decoded
+      var name = nameStrategy(param, defaultNameStrategy)(param.name.decoded)
       for(ann <- param.annotations) {
-        if(ann.tpe =:= typeOf[JsonName]) {
+        if(ann.tpe =:= typeOf[JsonKey]) {
           ann.javaArgs(TermName("value")) match {
             case LiteralArgument(Constant(s: String)) =>
               name = s
