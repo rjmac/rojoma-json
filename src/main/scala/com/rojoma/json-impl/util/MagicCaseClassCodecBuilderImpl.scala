@@ -62,27 +62,27 @@ object MagicCaseClassCodecBuilderImpl {
           for {
             params <- mem.paramss
           } {
-            var isImplicitList = false // a little icky, but meh...
-            val fieldList =
-              for { rawParam <- params }
-              yield {
-                val param = rawParam.asTerm
-                if(param.isImplicit) isImplicitList = true
-                val name = computeJsonName(param)
-                if(seenNames(name)) {
-                  c.abort(param.pos, s"The name `$name' is already used by the codec for $Tname")
-                } else seenNames += name
-                FieldInfo(
-                  c.freshName(),
-                  hasLazyAnnotation(param),
-                  name,
-                  findAccessor(param),
-                  findCodecType(param),
-                  isOption(param),
-                  hasNullForNameAnnotation(param)
-                )
-              }
-            if(!isImplicitList) buffer += fieldList
+            if(params.isEmpty || !params.head.asTerm.isImplicit) {
+              val fieldList =
+                for { rawParam <- params }
+                yield {
+                  val param = rawParam.asTerm
+                  val name = computeJsonName(param)
+                  if(seenNames(name)) {
+                    c.abort(param.pos, s"The name `$name' is already used by the codec for $Tname")
+                  } else seenNames += name
+                  FieldInfo(
+                    c.freshName(),
+                    hasLazyAnnotation(param),
+                    name,
+                    findAccessor(param),
+                    findCodecType(param),
+                    isOption(param),
+                    hasNullForNameAnnotation(param)
+                  )
+                }
+              buffer += fieldList
+            }
           }
         }
       }
