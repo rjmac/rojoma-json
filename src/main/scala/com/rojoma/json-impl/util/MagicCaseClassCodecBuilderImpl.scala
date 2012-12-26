@@ -5,34 +5,51 @@ import scala.collection.mutable.ListBuffer
 import scala.reflect.macros.Context
 
 import com.rojoma.json.codec.JsonCodec
+import com.rojoma.json.util.{JsonName, LazyCodec, NullForNone}
 
 object MagicCaseClassCodecBuilderImpl {
   def impl[T : c.WeakTypeTag](c: Context): c.Expr[JsonCodec[T]] = {
     import c.universe._
 
     val T = weakTypeOf[T]
-    val Tname = T.typeSymbol.name
+    val Tname = TypeTree(T)
 
-    /*
-    println(T.members)
-    for {
-      member <- T.members
-      if member.isMethod && member.asMethod.isCaseAccessor
-    } {
-      println(member + " is a case accessor!")
-      val mem = member.asMethod
-      println("  Annotations: " + mem.annotations)
+    def containsLazyAnnotation(param: TermSymbol) =
+      param.annotations.exists(_.tpe == typeOf[LazyCodec])
+
+    def computeJsonName(param: TermSymbol): String = {
+      var name = param.name.decoded
+      for(ann <- param.annotations) {
+        if(ann.tpe == typeOf[JsonName]) {
+          ann.javaArgs(TermName("value")) match {
+            case LiteralArgument(Constant(s: String)) =>
+              name = s
+          }
+          println("Name! " + ann)
+        }
+      }
+      name
     }
-    */
+    def findAccessor(param: TermSymbol) =
+      param.name.asInstanceOf[TermName]
 
-    def containsLazyAnnotation(param: Symbol) = false
-    def computeJsonName(param: Symbol) = "gnu"
-    def findAccessor(param: Symbol) = c.freshName()
-    def findCodecType(param: Symbol) = c.freshName()
-    def isOption(param: Symbol) = false
-    def containsNullForNameAnnotation(param: Symbol) = false
+    def findCodecType(param: TermSymbol) = {
+      val tpe = param.typeSignature
+      if(tpe.erasure =:= typeOf[Option[_]].erasure) {
+        val TypeRef(_, _, c) = tpe
+        c.head
+      } else {
+        tpe
+      }.asSeenFrom(T, T.typeSymbol)
+    }
+    def isOption(param: TermSymbol) = {
+      val tpe = param.typeSignature
+      tpe.erasure =:= typeOf[Option[_]].erasure
+    }
+    def containsNullForNameAnnotation(param: TermSymbol) =
+      param.annotations.exists(_.tpe == typeOf[NullForNone])
 
-    case class FieldInfo(codecName: TermName, isLazy: Boolean, jsonName: String, accessorName: TermName, codecType: TypeName, isOption: Boolean, isNullForNone: Boolean)
+    case class FieldInfo(codecName: TermName, isLazy: Boolean, jsonName: String, accessorName: TermName, codecType: Type, isOption: Boolean, isNullForNone: Boolean)
 
     val fieldss = locally {
       val buffer = new ListBuffer[List[FieldInfo]]
@@ -42,13 +59,17 @@ object MagicCaseClassCodecBuilderImpl {
       } {
         println(member + " is the primary ctor!")
         val mem = member.asMethod
+        mem.asInstanceOf[MethodSymbol]
         if(mem.owner == T.typeSymbol) {
           for {
             params <- mem.paramss
           } {
+            var isImplicitList = false // a little icky, but meh...
             val fieldList =
-              for { param <- params }
+              for { rawParam <- params }
               yield {
+                val param = rawParam.asTerm
+                if(param.isImplicit) isImplicitList = true
                 FieldInfo(
                   c.freshName(),
                   containsLazyAnnotation(param),
@@ -59,7 +80,7 @@ object MagicCaseClassCodecBuilderImpl {
                   containsNullForNameAnnotation(param)
                 )
               }
-            buffer += fieldList
+            if(!isImplicitList) buffer += fieldList
           }
         }
       }
@@ -70,9 +91,9 @@ object MagicCaseClassCodecBuilderImpl {
     val codecs = fields.map { fi =>
       // TODO: figure out how to add the "lazy" modifier after the fact
       if(fi.isLazy) {
-        q"lazy val ${fi.codecName} = implicitly[com.rojoma.json.codec.JsonCodec[${fi.codecType}]]"
+        q"lazy val ${fi.codecName} = _root_.scala.Predef.implicitly[_root_.com.rojoma.json.codec.JsonCodec[${TypeTree(fi.codecType)}]]"
       } else {
-        q"val ${fi.codecName} = implicitly[com.rojoma.json.codec.JsonCodec[${fi.codecType}]]"
+        q"val ${fi.codecName} = _root_.scala.Predef.implicitly[_root_.com.rojoma.json.codec.JsonCodec[${TypeTree(fi.codecType)}]]"
       }
     }
 
@@ -82,62 +103,66 @@ object MagicCaseClassCodecBuilderImpl {
       if(fi.isOption) {
         val tmp: TermName = c.freshName()
         if(fi.isNullForNone) {
-          q"""${encoderMap}(${fi.jsonName}) = ${param}.${fi.accessorName} match {
-                case Some(${tmp}) => ${fi.codecName}.encode(${tmp})
-                case None => com.rojoma.json.JNull
+          q"""$encoderMap(${fi.jsonName}) = {
+                // Hm, doesn't look like q can generate a match statement with holes yet
+                // (it looks like it always tries to use the variables as constants)
+                val $tmp = $param.${fi.accessorName}
+                if($tmp.isDefined) ${fi.codecName}.encode($tmp.get)
+                else com.rojoma.json.ast.JNull
               }"""
         } else {
-          q"""${param}.${fi.accessorName} match {
-                case Some(${tmp}) => ${encoderMap}(${fi.jsonName}) = ${fi.codecName}.encode(${tmp})
-                case None => /* pass */
+          q"""{
+                val $tmp = $param.${fi.accessorName}
+                if($tmp.isDefined) $encoderMap(${fi.jsonName}) = ${fi.codecName}.encode($tmp.get)
               }"""
         }
       } else {
-        q"${encoderMap}(${fi.jsonName}) = ${fi.codecName}.encode(${param}.${fi.accessorName})"
+        q"$encoderMap(${fi.jsonName}) = ${fi.codecName}.encode($param.${fi.accessorName})"
       }
     }
-    val encoder = q"""def encoder(${param}: ${Tname}) = {
-                        val ${encoderMap} = new scala.collection.mutable.LinkedHashMap[String, com.rojoma.json.JValue]
-                        ..${encoderMapUpdates}
-                        com.rojoma.json.JObject(${encoderMap})
+    val encoder = q"""def encode($param: $Tname) = {
+                        val $encoderMap = new _root_.scala.collection.mutable.LinkedHashMap[_root_.scala.Predef.String, _root_.com.rojoma.json.ast.JValue]
+                        ..$encoderMapUpdates
+                        _root_.com.rojoma.json.ast.JObject($encoderMap)
                       }"""
 
     val obj: TermName = c.freshName()
     val tmps = fieldss.map { _.map { _ => TermName(c.freshName()) } }
+    val tmp2: TermName = c.freshName()
+    val tmp3: TermName = c.freshName()
     val decoderMapExtractions: List[ValDef] = for((fi,tmp) <- fields.zip(tmps.flatten)) yield {
-      val tmp2: TermName = c.freshName()
-      val value: TermName = c.freshName()
       if(fi.isOption) {
-        val tmp3: TermName = c.freshName()
-        q"""val $tmp = ${obj}.get(${fi.jsonName}) match {
-              case Some($tmp2) =>
-                ${fi.codecName}.decode($tmp2) match {
-                  case Some($tmp3) => Some($tmp3)
-                  case None => if($tmp2 == com.rojoma.json.ast.JNull) None else return None
-                }
-              case None =>
-                None
+        q"""val $tmp = {
+              val $tmp2 = $obj.get(${fi.jsonName})
+              if($tmp2.isDefined) {
+                val $tmp3 = ${fi.codecName}.decode($tmp2.get)
+                if($tmp3.isDefined) $tmp3
+                else if($tmp2.get == _root_.com.rojoma.json.ast.JNull) _root_.scala.None else return _root_.scala.None
+              } else _root_.scala.None
             }"""
       } else {
-        q"""val $tmp = ${obj}.get(${fi.jsonName}) match {
-              case Some($tmp2) =>
-                ${fi.codecName}.decode($tmp2) match {
-                  case Some(value) => value
-                  case None => return None
-                }
-              case None => return None
+        q"""val $tmp = {
+              val $tmp2 = ${obj}.get(${fi.jsonName})
+              if($tmp2.isDefined) {
+                val $tmp3 = ${fi.codecName}.decode($tmp2.get)
+                if($tmp3.isDefined) $tmp3.get
+                else return _root_.scala.None
+              } else return _root_.scala.None
             }"""
       }
     }
-    val create = q"new ${Tname}(${param},${param},${param})"
-    val c2 = q"new Blah(a,b)(c,d)"
-    println(c2);
-    val decoder = q"""def decoder(${param}: com.rojoma.json.ast.JValue): Option[${Tname}] = ${param} match {
-                        case com.rojoma.json.ast.JObject(${obj}) =>
-                          ..${decoderMapExtractions}
-                          $create
-                        case _ => None
-                      }"""
+    val create = // not sure how to do this with quasiquote...
+      tmps.foldLeft(Select(New(TypeTree(T)), TermName("<init>")) : Tree) { (seed, arglist) =>
+        Apply(seed, arglist.map(Ident(_)))
+      }
+    val decoder = q"""def decode($param: _root_.com.rojoma.json.ast.JValue): _root_.scala.Option[$Tname] =
+                        if($param.isInstanceOf[_root_.com.rojoma.json.ast.JObject]) {
+                          val $obj = $param.asInstanceOf[_root_.com.rojoma.json.ast.JObject].fields
+                          ..$decoderMapExtractions
+                          _root_.scala.Some($create)
+                        } else {
+                          _root_.scala.None
+                        }"""
 
     // Ok, what we need:
     //  1. Find the primary ctor and its parameters and their annotations
@@ -160,10 +185,10 @@ object MagicCaseClassCodecBuilderImpl {
     //     the decoder...
 
     val tree =
-      q"""new com.rojoma.json.codec.JsonCodec[${Tname}] {
-            ..${codecs}
-            ${encoder}
-            ${decoder}
+      q"""new _root_.com.rojoma.json.codec.JsonCodec[$Tname] {
+            ..$codecs
+            $encoder
+            $decoder
           }"""
 
     println(tree)
