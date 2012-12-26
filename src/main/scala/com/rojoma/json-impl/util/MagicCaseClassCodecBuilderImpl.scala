@@ -180,11 +180,11 @@ object MagicCaseClassCodecBuilderImpl {
                         }"""
 
     val tree =
-      q"""new _root_.com.rojoma.json.codec.JsonCodec[$Tname] {
+      q"""(new _root_.com.rojoma.json.codec.JsonCodec[$Tname] {
             ..$codecs
             $encoder
             $decoder
-          }"""
+          }) : _root_.com.rojoma.json.codec.JsonCodec[$Tname]"""
 
     c.Expr[JsonCodec[T]](tree)
   }
