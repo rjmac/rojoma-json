@@ -1,6 +1,6 @@
 package com.rojoma.`json-impl`.util
 
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable
 
 import scala.reflect.macros.Context
 
@@ -50,8 +50,9 @@ object MagicCaseClassCodecBuilderImpl {
 
     case class FieldInfo(codecName: TermName, isLazy: Boolean, jsonName: String, accessorName: TermName, codecType: Type, isOption: Boolean, isNullForNone: Boolean)
 
+    val seenNames = new mutable.HashSet[String]
     val fieldss = locally {
-      val buffer = new ListBuffer[List[FieldInfo]]
+      val buffer = new mutable.ListBuffer[List[FieldInfo]]
       for {
         member <- T.members
         if member.isMethod && member.asMethod.isPrimaryConstructor
@@ -67,10 +68,14 @@ object MagicCaseClassCodecBuilderImpl {
               yield {
                 val param = rawParam.asTerm
                 if(param.isImplicit) isImplicitList = true
+                val name = computeJsonName(param)
+                if(seenNames(name)) {
+                  c.abort(param.pos, s"The name `$name' is already used by the codec for $Tname")
+                } else seenNames += name
                 FieldInfo(
                   c.freshName(),
                   hasLazyAnnotation(param),
-                  computeJsonName(param),
+                  name,
                   findAccessor(param),
                   findCodecType(param),
                   isOption(param),
