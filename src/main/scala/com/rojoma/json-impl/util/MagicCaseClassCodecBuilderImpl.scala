@@ -14,7 +14,7 @@ object MagicCaseClassCodecBuilderImpl {
     val T = weakTypeOf[T]
     val Tname = TypeTree(T)
 
-    def containsLazyAnnotation(param: TermSymbol) =
+    def hasLazyAnnotation(param: TermSymbol) =
       param.annotations.exists(_.tpe == typeOf[LazyCodec])
 
     def computeJsonName(param: TermSymbol): String = {
@@ -25,7 +25,6 @@ object MagicCaseClassCodecBuilderImpl {
             case LiteralArgument(Constant(s: String)) =>
               name = s
           }
-          println("Name! " + ann)
         }
       }
       name
@@ -46,7 +45,7 @@ object MagicCaseClassCodecBuilderImpl {
       val tpe = param.typeSignature
       tpe.erasure =:= typeOf[Option[_]].erasure
     }
-    def containsNullForNameAnnotation(param: TermSymbol) =
+    def hasNullForNameAnnotation(param: TermSymbol) =
       param.annotations.exists(_.tpe == typeOf[NullForNone])
 
     case class FieldInfo(codecName: TermName, isLazy: Boolean, jsonName: String, accessorName: TermName, codecType: Type, isOption: Boolean, isNullForNone: Boolean)
@@ -57,9 +56,7 @@ object MagicCaseClassCodecBuilderImpl {
         member <- T.members
         if member.isMethod && member.asMethod.isPrimaryConstructor
       } {
-        println(member + " is the primary ctor!")
         val mem = member.asMethod
-        mem.asInstanceOf[MethodSymbol]
         if(mem.owner == T.typeSymbol) {
           for {
             params <- mem.paramss
@@ -72,12 +69,12 @@ object MagicCaseClassCodecBuilderImpl {
                 if(param.isImplicit) isImplicitList = true
                 FieldInfo(
                   c.freshName(),
-                  containsLazyAnnotation(param),
+                  hasLazyAnnotation(param),
                   computeJsonName(param),
                   findAccessor(param),
                   findCodecType(param),
                   isOption(param),
-                  containsNullForNameAnnotation(param)
+                  hasNullForNameAnnotation(param)
                 )
               }
             if(!isImplicitList) buffer += fieldList
@@ -90,18 +87,19 @@ object MagicCaseClassCodecBuilderImpl {
 
     val codecs = fields.map { fi =>
       // TODO: figure out how to add the "lazy" modifier after the fact
-      if(fi.isLazy) {
-        q"lazy val ${fi.codecName} = _root_.scala.Predef.implicitly[_root_.com.rojoma.json.codec.JsonCodec[${TypeTree(fi.codecType)}]]"
-      } else {
-        q"val ${fi.codecName} = _root_.scala.Predef.implicitly[_root_.com.rojoma.json.codec.JsonCodec[${TypeTree(fi.codecType)}]]"
-      }
+      val codec = q"_root_.scala.Predef.implicitly[_root_.com.rojoma.json.codec.JsonCodec[${TypeTree(fi.codecType)}]]"
+      if(fi.isLazy) q"lazy val ${fi.codecName} = $codec"
+      else q"val ${fi.codecName} = $codec"
     }
+
+    val tmp: TermName = c.freshName()
+    val tmp2: TermName = c.freshName()
+    val tmp3: TermName = c.freshName()
 
     val param: TermName = c.freshName()
     val encoderMap: TermName = c.freshName()
     val encoderMapUpdates = for(fi <- fields) yield {
       if(fi.isOption) {
-        val tmp: TermName = c.freshName()
         if(fi.isNullForNone) {
           q"""$encoderMap(${fi.jsonName}) = {
                 // Hm, doesn't look like q can generate a match statement with holes yet
@@ -111,10 +109,8 @@ object MagicCaseClassCodecBuilderImpl {
                 else com.rojoma.json.ast.JNull
               }"""
         } else {
-          q"""{
-                val $tmp = $param.${fi.accessorName}
-                if($tmp.isDefined) $encoderMap(${fi.jsonName}) = ${fi.codecName}.encode($tmp.get)
-              }"""
+          q"""val $tmp = $param.${fi.accessorName}
+              if($tmp.isDefined) $encoderMap(${fi.jsonName}) = ${fi.codecName}.encode($tmp.get)"""
         }
       } else {
         q"$encoderMap(${fi.jsonName}) = ${fi.codecName}.encode($param.${fi.accessorName})"
@@ -128,28 +124,23 @@ object MagicCaseClassCodecBuilderImpl {
 
     val obj: TermName = c.freshName()
     val tmps = fieldss.map { _.map { _ => TermName(c.freshName()) } }
-    val tmp2: TermName = c.freshName()
-    val tmp3: TermName = c.freshName()
     val decoderMapExtractions: List[ValDef] = for((fi,tmp) <- fields.zip(tmps.flatten)) yield {
-      if(fi.isOption) {
-        q"""val $tmp = {
-              val $tmp2 = $obj.get(${fi.jsonName})
-              if($tmp2.isDefined) {
-                val $tmp3 = ${fi.codecName}.decode($tmp2.get)
-                if($tmp3.isDefined) $tmp3
-                else if($tmp2.get == _root_.com.rojoma.json.ast.JNull) _root_.scala.None else return _root_.scala.None
-              } else _root_.scala.None
-            }"""
+      val expr = if(fi.isOption) {
+        q"""val $tmp2 = $obj.get(${fi.jsonName})
+            if($tmp2.isDefined) {
+              val $tmp3 = ${fi.codecName}.decode($tmp2.get)
+              if($tmp3.isDefined) $tmp3
+              else if($tmp2.get == _root_.com.rojoma.json.ast.JNull) _root_.scala.None else return _root_.scala.None
+            } else _root_.scala.None"""
       } else {
-        q"""val $tmp = {
-              val $tmp2 = ${obj}.get(${fi.jsonName})
-              if($tmp2.isDefined) {
-                val $tmp3 = ${fi.codecName}.decode($tmp2.get)
-                if($tmp3.isDefined) $tmp3.get
-                else return _root_.scala.None
-              } else return _root_.scala.None
-            }"""
+        q"""val $tmp2 = ${obj}.get(${fi.jsonName})
+            if($tmp2.isDefined) {
+              val $tmp3 = ${fi.codecName}.decode($tmp2.get)
+              if($tmp3.isDefined) $tmp3.get
+              else return _root_.scala.None
+            } else return _root_.scala.None"""
       }
+      q"val $tmp = $expr"
     }
     val create = // not sure how to do this with quasiquote...
       tmps.foldLeft(Select(New(TypeTree(T)), TermName("<init>")) : Tree) { (seed, arglist) =>
@@ -164,34 +155,12 @@ object MagicCaseClassCodecBuilderImpl {
                           _root_.scala.None
                         }"""
 
-    // Ok, what we need:
-    //  1. Find the primary ctor and its parameters and their annotations
-    //  2. Create local (non-implicit, field) references to the appropriate
-    //     sub-Codecs.  TODO: recursive class hierarchies.  These can obviously
-    //     be broken by making the fields "lazy vals" but that's an expensive
-    //     thing for a rare case... maybe require a @LazyCodec annotation on
-    //     the parameter for that.
-    //
-    //     ...actually, it should use the Pattern machinery, just like the
-    //     SimpleJsonCodecBuilder.
-    //  2. The encoder should build a map from either the Scala name or, if
-    //     @JsonName is present on the constructor parameter, from that value.
-    //     If the value is of type Option[T] it should eliminate `None`s unless
-    //     @NullForNone is set on the parameter.
-    //  3. The decoder should do the reverse.
-    //     To think about: parameters with default values.  It sorta feels like
-    //     they should be allowed to be missing in the JSON, but unfortunately
-    //     I think that'd lead to a combinatorial explosion of code-paths in
-    //     the decoder...
-
     val tree =
       q"""new _root_.com.rojoma.json.codec.JsonCodec[$Tname] {
             ..$codecs
             $encoder
             $decoder
           }"""
-
-    println(tree)
 
     c.Expr[JsonCodec[T]](tree)
   }
