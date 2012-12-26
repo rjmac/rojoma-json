@@ -33,16 +33,16 @@ object MagicCaseClassCodecBuilderImpl {
       param.name.asInstanceOf[TermName]
 
     def findCodecType(param: TermSymbol) = {
-      val tpe = param.typeSignature
+      val tpe = param.typeSignature.asSeenFrom(T, T.typeSymbol)
       if(tpe.erasure =:= typeOf[Option[_]].erasure) {
         val TypeRef(_, _, c) = tpe
         c.head
       } else {
         tpe
-      }.asSeenFrom(T, T.typeSymbol)
+      }
     }
     def isOption(param: TermSymbol) = {
-      val tpe = param.typeSignature
+      val tpe = param.typeSignature.asSeenFrom(T, T.typeSymbol)
       tpe.erasure =:= typeOf[Option[_]].erasure
     }
     def hasNullForNameAnnotation(param: TermSymbol) =
