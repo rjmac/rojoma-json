@@ -7,7 +7,7 @@ import scala.reflect.macros.Context
 import com.rojoma.json.codec.JsonCodec
 import com.rojoma.json.util.{JsonKey, JsonKeyStrategy, Strategy, LazyCodec, NullForNone}
 
-object MagicCaseClassCodecBuilderImpl {
+object AutomaticJsonCodecBuilderImpl {
   def impl[T : c.WeakTypeTag](c: Context): c.Expr[JsonCodec[T]] = {
     import c.universe._
 
