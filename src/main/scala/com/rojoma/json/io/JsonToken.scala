@@ -7,6 +7,9 @@ sealed abstract class JsonToken {
   def asFragment: String
   def asMeaning: String
 
+  // I don't think it can happen until 3.0 now, but this should have
+  // been immutable, with a secondary parameter list on the case
+  // classes' constructors to set it.
   var position = Position.Invalid
 }
 
