@@ -13,11 +13,12 @@ previousArtifact <<= scalaBinaryVersion { sv => Some("com.rojoma" % ("rojoma-jso
 
 scalaVersion := "2.10.0"
 
-// test-libraries not built for 2.11 yet, of course...
-// libraryDependencies ++= Seq(
-//   "org.scalatest" %% "scalatest" % "1.9.1" % "test",
-//   "org.scalacheck" %% "scalacheck" % "1.10.0" % "optional"
-// )
+libraryDependencies ++= Seq(
+  "org.scalatest" %% "scalatest" % "1.9.1" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.10.0" % "optional"
+)
+
+libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _)
 
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 
@@ -34,19 +35,3 @@ sourceGenerators in Compile <+= (sourceManaged in Compile) map SimpleJsonCodecBu
 // Bit of a hack; regenerate README.markdown when version is changed
 // to a non-SNAPSHOT value.
 sourceGenerators in Compile <+= (baseDirectory, version, crossScalaVersions) map READMEBuilder
-
-// macro-paradise!
-
-scalaVersion := "2.11.0-SNAPSHOT"
-
-// FIXME: remove once these are published for 2.11...
-libraryDependencies ++= Seq(
-  "org.scalatest" % "scalatest_2.10" % "1.9.1" % "test",
-  "org.scalacheck" % "scalacheck_2.10" % "1.10.0" % "optional"
-)
-
-scalaOrganization := "org.scala-lang.macro-paradise"
-
-resolvers += Resolver.sonatypeRepo("snapshots")
-
-libraryDependencies <+= (scalaVersion)("org.scala-lang.macro-paradise" % "scala-reflect" % _)
