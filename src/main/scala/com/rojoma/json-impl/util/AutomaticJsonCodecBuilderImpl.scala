@@ -17,35 +17,50 @@ object AutomaticJsonCodecBuilderImpl {
     def identityStrat(x: String) = x
     def underscoreStrat(x: String) = CamelSplit(x).map(_.toLowerCase).mkString("_")
 
-    def nameStrategy(thing: Symbol, default: String => String) =
-      thing.annotations.reverse.find(_.tpe =:= typeOf[JsonKeyStrategy]) match {
+    def isType(t: Type, w: Type) =
+      // There HAS to be a better way to do this.
+      // t MAY be <error>.  w must not be!
+      // since <error> =:= any type, reject if it looks "impossible".
+      t =:= w && !(t =:= typeOf[String] && t =:= typeOf[Map[_,_]])
+
+    def nameStrategy(thing: Symbol, default: String => String) = {
+      thing.annotations.reverse.find { ann => isType(ann.tpe, typeOf[JsonKeyStrategy]) } match {
         case Some(ann) =>
-          val LiteralArgument(Constant(arg)) = ann.javaArgs(newTermName("value"))
-          arg.asInstanceOf[Symbol].name.decoded match {
-            case "Identity" =>
-              identityStrat _
-            case "Underscore" =>
-              underscoreStrat _
+          ann.javaArgs.get(newTermName("value")) match {
+            case Some(LiteralArgument(Constant(arg : Symbol))) =>
+              try {
+                Strategy.valueOf(arg.name.decoded) match {
+                  case Strategy.Identity =>
+                    identityStrat _
+                  case Strategy.Underscore =>
+                    underscoreStrat _
+                }
+              } catch {
+                case _: IllegalArgumentException =>
+                  default
+              }
+            case _ =>
+              default
           }
         case None =>
           default
       }
+    }
 
     val defaultNameStrategy = nameStrategy(T.typeSymbol, identityStrat)
 
     def hasLazyAnnotation(param: TermSymbol) =
-      param.annotations.exists(_.tpe =:= typeOf[LazyCodec])
+      param.annotations.exists { ann => isType(ann.tpe, typeOf[LazyCodec]) }
 
     def computeJsonName(param: TermSymbol): String = {
       var name = nameStrategy(param, defaultNameStrategy)(param.name.decoded)
-      for(ann <- param.annotations) {
-        if(ann.tpe =:= typeOf[JsonKey]) {
-          ann.javaArgs(newTermName("value")) match {
-            case LiteralArgument(Constant(s: String)) =>
-              name = s
-          }
+      for(ann <- param.annotations if isType(ann.tpe, typeOf[JsonKey]))
+        ann.javaArgs.get(newTermName("value")) match {
+          case Some(LiteralArgument(Constant(s: String))) =>
+            name = s
+          case _ =>
+            // pass
         }
-      }
       name
     }
     def findAccessor(param: TermSymbol) =
@@ -53,7 +68,7 @@ object AutomaticJsonCodecBuilderImpl {
 
     def findCodecType(param: TermSymbol) = {
       val tpe = param.typeSignature.asSeenFrom(T, T.typeSymbol)
-      if(tpe.erasure =:= typeOf[Option[_]].erasure) {
+      if(isType(tpe.erasure, typeOf[Option[_]].erasure)) {
         val TypeRef(_, _, c) = tpe
         c.head
       } else {
@@ -62,10 +77,10 @@ object AutomaticJsonCodecBuilderImpl {
     }
     def isOption(param: TermSymbol) = {
       val tpe = param.typeSignature.asSeenFrom(T, T.typeSymbol)
-      tpe.erasure =:= typeOf[Option[_]].erasure
+      isType(tpe.erasure, typeOf[Option[_]].erasure)
     }
     def hasNullForNameAnnotation(param: TermSymbol) =
-      param.annotations.exists(_.tpe =:= typeOf[NullForNone])
+      param.annotations.exists(ann => isType(ann.tpe, typeOf[NullForNone]))
 
     case class FieldInfo(codecName: TermName, isLazy: Boolean, jsonName: String, accessorName: TermName, codecType: Type, isOption: Boolean, isNullForNone: Boolean)
 
