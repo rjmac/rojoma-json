@@ -18,6 +18,8 @@ libraryDependencies ++= Seq(
   "org.scalacheck" %% "scalacheck" % "1.10.0" % "optional"
 )
 
+libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _)
+
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 
 scalacOptions ++= Seq("-deprecation", "-language:_")
