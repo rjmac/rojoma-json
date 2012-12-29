@@ -1,6 +1,9 @@
 package com.rojoma.json
 package io
 
+import scala.collection.immutable.VectorBuilder
+import scala.collection.mutable
+
 import java.io.Reader
 
 import ast._
@@ -59,7 +62,7 @@ class JsonReader(input: Iterator[JsonEvent]) {
   private def readObject() = {
     // It's bad practice to rely on this, but we'll preserve the order
     // of elements as they're read (barring duplication).
-    val result = new scala.collection.mutable.LinkedHashMap[String, JValue]
+    val result = new mutable.LinkedHashMap[String, JValue]
 
     while(!hopeFor(JsonReader.EoOEvent)) {
       lexer.next() match {
@@ -74,13 +77,13 @@ class JsonReader(input: Iterator[JsonEvent]) {
     JObject(result)
   }
 
-  private def readArray() = {
-    val builder = IndexedSeq.newBuilder[JValue]
-
-    while(!hopeFor(JsonReader.EoAEvent)) {
+  private def atEndOfArray = hopeFor(JsonReader.EoAEvent)
+  private def readArray(): JArray = {
+    if(atEndOfArray) return JsonReader.emptyJArray
+    val builder = new VectorBuilder[JValue]
+    do {
       builder += read()
-    }
-
+    } while(!atEndOfArray)
     JArray(builder.result())
   }
 }
@@ -129,4 +132,5 @@ object JsonReader {
   private val jfalse = JBoolean(false)
   private val EoAEvent = EndOfArrayEvent()
   private val EoOEvent = EndOfObjectEvent()
+  private val emptyJArray = new JArray(Vector.empty)
 }
