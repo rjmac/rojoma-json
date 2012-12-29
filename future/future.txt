@@ -1,0 +1,6 @@
+For the next break in binary compatibility (3.0):
+  * Specialize JObject/JArray for small objects and arrays (if this
+    can be done without breaking scalac's exhaustivity checking in
+    pattern matching)
+  * Make tokens and events take their positions in a secondary parameter
+    list so that their Position fields can be immutable.

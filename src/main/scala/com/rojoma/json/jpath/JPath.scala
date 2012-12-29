@@ -109,12 +109,12 @@ class JPath private (cursors: Stream[JsonZipper]) {
   def up = step(upOp)
 
   /** Move to the next sibling.  Any points that were at the end
-   * already, or which were not children of [[com.rojoma.json.ast.JArrays]]s,
+   * already, or which were not children of [[com.rojoma.json.ast.JArray]]s,
    * will be dropped. */
   def next = step(nextOp)
 
   /** Move to the previous sibling.  Any points that were at the start
-   * already, or which were not children of [[com.rojoma.json.ast.JArrays]]s,
+   * already, or which were not children of [[com.rojoma.json.ast.JArray]]s,
    * will be dropped. */
   def prev = step(prevOp)
 }
