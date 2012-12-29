@@ -308,7 +308,7 @@ The two defined strategies are `Strategy.Identity` (the default) and
 `Strategy.Underscore` (which converts camel-case names to lower-case,
 underscore-separated names).  The `@JsonKeyStrategy` annotation can
 also be used on the class level to set the default strategy for all
-fields.  If two names map to the smae JSON identifier (whether
+fields.  If two names map to the same JSON identifier (whether
 automatically or through use of `@JsonKey`) a compiler error occurs.
 
 ## Future paths
