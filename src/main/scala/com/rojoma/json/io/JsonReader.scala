@@ -61,7 +61,6 @@ class JsonReader(input: Iterator[JsonEvent]) {
     // of elements as they're read (barring duplication).
     val result = new scala.collection.mutable.LinkedHashMap[String, JValue]
 
-    var didOne = false
     while(!hopeFor(JsonReader.EoOEvent)) {
       lexer.next() match {
         case FieldEvent(field) =>
@@ -78,7 +77,6 @@ class JsonReader(input: Iterator[JsonEvent]) {
   private def readArray() = {
     val builder = IndexedSeq.newBuilder[JValue]
 
-    var didOne = false
     while(!hopeFor(JsonReader.EoAEvent)) {
       builder += read()
     }
