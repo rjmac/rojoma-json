@@ -4,3 +4,5 @@ For the next break in binary compatibility (3.0):
     pattern matching)
   * Make tokens and events take their positions in a secondary parameter
     list so that their Position fields can be immutable.
+  * JsonCodec.apply[T] can probably be made a macro.  see:
+      http://permalink.gmane.org/gmane.comp.lang.scala.internals/15258
