@@ -1,6 +1,8 @@
 package com.rojoma.json
 package matcher
 
+import scala.language.implicitConversions
+
 import ast._
 import codec.JsonCodec
 

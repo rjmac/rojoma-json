@@ -1,6 +1,8 @@
 package com.rojoma.json
 package dynamic
 
+import scala.language.dynamics
+
 import ast._
 
 import com.rojoma.`json-impl`.dynamic._

@@ -2,6 +2,8 @@ package com.rojoma
 package json
 package ast
 
+import scala.language.implicitConversions
+
 import scala.{collection => sc}
 import scala.reflect.ClassTag
 

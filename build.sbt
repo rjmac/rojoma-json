@@ -22,7 +22,7 @@ libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _)
 
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 
-scalacOptions ++= Seq("-deprecation", "-language:_")
+scalacOptions ++= Seq("-deprecation","-feature")
 
 // Include generated sources in source jar
 mappings in (Compile, packageSrc) <++= (sourceManaged in Compile, managedSources in Compile) map { (base, srcs) =>

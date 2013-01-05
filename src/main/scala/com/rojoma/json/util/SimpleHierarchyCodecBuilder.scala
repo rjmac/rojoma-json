@@ -1,6 +1,7 @@
 package com.rojoma.json
 package util
 
+import scala.language.existentials
 import scala.reflect.ClassTag
 
 import ast._

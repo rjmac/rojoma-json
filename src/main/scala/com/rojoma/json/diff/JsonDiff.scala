@@ -57,6 +57,7 @@ object JsonDiff extends Function2[JValue, JValue, Option[JsonDiff]] {
   type JavaPrinter = { def println(thing: Any); def print(thing: Any) }
   private[diff] def write(writer: JavaPrinter, diff: InnerJsonDiff, indent: Int = 0) {
     def p(x: Any) {
+      import scala.language.reflectiveCalls
       writer.print(" " * indent)
       writer.println(x)
     }

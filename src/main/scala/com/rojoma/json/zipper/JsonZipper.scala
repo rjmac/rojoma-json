@@ -1,6 +1,7 @@
 package com.rojoma.json
 package zipper
 
+import scala.language.implicitConversions
 import scala.annotation.tailrec
 
 import ast._
