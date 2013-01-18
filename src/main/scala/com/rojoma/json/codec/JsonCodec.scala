@@ -265,4 +265,19 @@ object JsonCodec {
           }
       }
   }
+
+  implicit def jlEnumCodec[T <: java.lang.Enum[T]](implicit tag: ClassTag[T]) = new JsonCodec[T] {
+    def encode(x: T) = JString(x.name)
+    def decode(x: JValue) = x match {
+      case JString(s) =>
+        try {
+          Some(java.lang.Enum.valueOf[T](tag.runtimeClass.asInstanceOf[Class[T]], s))
+        } catch {
+          case _: IllegalArgumentException =>
+            None
+        }
+      case _ =>
+        None
+    }
+  }
 }
