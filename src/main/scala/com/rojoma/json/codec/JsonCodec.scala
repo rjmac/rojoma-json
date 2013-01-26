@@ -20,7 +20,7 @@ private[codec] object CBHolder {
 }
 
 /** Generally-useful json implicits. */
-object JsonCodec {
+object JsonCodec extends com.rojoma.`json-impl`.codec.TupleCodecs {
   import CBHolder._
 
   def apply[T](implicit a: JsonCodec[T]) = a
@@ -278,6 +278,15 @@ object JsonCodec {
         }
       case _ =>
         None
+    }
+  }
+
+  implicit object UnitCodec extends JsonCodec[Unit] {
+    val empty = io.JsonReader("[]").read()
+    def encode(x: Unit) = empty
+    def decode(x: JValue) = x match {
+      case JArray(Seq()) => Some(())
+      case _ => None
     }
   }
 }
