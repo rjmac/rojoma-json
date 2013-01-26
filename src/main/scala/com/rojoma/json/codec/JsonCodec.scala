@@ -36,7 +36,7 @@ object JsonCodec extends com.rojoma.`json-impl`.codec.TupleCodecs {
       if(x.nonEmpty)
         JArray(x.view.map(tCodec.encode))
       else
-        JArray(Nil)
+        JArray.canonicalEmpty
     }
 
     def decode(xs: JValue): Option[S[T]] = xs match {
@@ -61,7 +61,7 @@ object JsonCodec extends com.rojoma.`json-impl`.codec.TupleCodecs {
       if(x.length > 0)
         JArray(x.view.map(JsonCodec[T].encode))
       else
-        JArray(Nil)
+        JArray.canonicalEmpty
 
     def decode(xs: JValue): Option[Array[T]] = xs match {
       case JArray(jElems) =>
@@ -86,7 +86,7 @@ object JsonCodec extends com.rojoma.`json-impl`.codec.TupleCodecs {
       if(!x.isEmpty)
         JArray(x.view.map(JsonCodec[T].encode))
       else
-        JArray(Nil)
+        JArray.canonicalEmpty
     }
 
     def decode(xs: JValue): Option[ju.List[T]] = xs match {
@@ -116,7 +116,9 @@ object JsonCodec extends com.rojoma.`json-impl`.codec.TupleCodecs {
   }
 
   implicit object boolCodec extends JsonCodec[Boolean] {
-    def encode(x: Boolean) = JBoolean(x)
+    private val jtrue = JBoolean.canonicalTrue
+    private val jfalse = JBoolean.canonicalFalse
+    def encode(x: Boolean) = if(x) jtrue else jfalse
     def decode(x: JValue) = x match {
       case JBoolean(b) => Some(b)
       case _ => None
@@ -210,7 +212,8 @@ object JsonCodec extends com.rojoma.`json-impl`.codec.TupleCodecs {
 
   implicit def mapCodec[T, M[U, V] <: sc.Map[U, V]](implicit tCodec: JsonCodec[T], buildFactory: CB[(String, T), M[String, T]]) = new JsonCodec[M[String, T]] {
     def encode(x: M[String, T]) =
-      JObject(x.mapValues(tCodec.encode))
+      if(x.nonEmpty) JObject(x.mapValues(tCodec.encode))
+      else JObject.canonicalEmpty
 
     def decode(x: JValue): Option[M[String, T]] = x match {
       case JObject(fields) =>
@@ -229,7 +232,8 @@ object JsonCodec extends com.rojoma.`json-impl`.codec.TupleCodecs {
 
   implicit def juMapCodec[T: JsonCodec] = new JsonCodec[ju.Map[String, T]] {
     def encode(x: ju.Map[String, T]) =
-      JObject(x.mapValues(JsonCodec[T].encode))
+      if(!x.isEmpty) JObject(x.mapValues(JsonCodec[T].encode))
+      else JObject.canonicalEmpty
 
     def decode(x: JValue): Option[ju.Map[String, T]] = x match {
       case JObject(fields) =>
@@ -282,10 +286,10 @@ object JsonCodec extends com.rojoma.`json-impl`.codec.TupleCodecs {
   }
 
   implicit object UnitCodec extends JsonCodec[Unit] {
-    val empty = io.JsonReader("[]").read()
+    val empty = JArray.canonicalEmpty
     def encode(x: Unit) = empty
     def decode(x: JValue) = x match {
-      case JArray(Seq()) => Some(())
+      case JArray(xs) if xs.isEmpty => Some(())
       case _ => None
     }
   }

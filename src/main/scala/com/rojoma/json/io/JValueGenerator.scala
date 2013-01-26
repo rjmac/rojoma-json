@@ -28,8 +28,8 @@ object JValueGenerator {
 private[io] object JValueGeneratorImpl {
   final case class Field(key: String, value: JValue)
 
-  val jtrue = JBoolean(true)
-  val jfalse = JBoolean(false)
+  val jtrue = JBoolean.canonicalTrue
+  val jfalse = JBoolean.canonicalFalse
 
   sealed abstract class ChildState extends JValueGenerator {
     protected def parent: ParentState

@@ -36,8 +36,8 @@ class JsonReader(input: Iterator[JsonEvent]) {
       case StartOfArrayEvent() => readArray()
       case StringEvent(s) => JString(s)
       case NumberEvent(n) => JNumber(n)
-      case IdentifierEvent("true") => JsonReader.jtrue
-      case IdentifierEvent("false") => JsonReader.jfalse
+      case IdentifierEvent("true") => JBoolean.canonicalTrue
+      case IdentifierEvent("false") => JBoolean.canonicalFalse
       case IdentifierEvent("null") => JNull
       case i@IdentifierEvent(_) => throw new JsonUnknownIdentifier(i)
       case e@(EndOfObjectEvent() | EndOfArrayEvent() | FieldEvent(_)) =>
@@ -59,12 +59,14 @@ class JsonReader(input: Iterator[JsonEvent]) {
     }
   }
 
-  private def readObject() = {
+  private def atEndOfObject = hopeFor(JsonReader.EoOEvent)
+  private def readObject(): JObject = {
+    if(atEndOfObject) return JObject.canonicalEmpty
+
     // It's bad practice to rely on this, but we'll preserve the order
     // of elements as they're read (barring duplication).
     val result = new mutable.LinkedHashMap[String, JValue]
-
-    while(!hopeFor(JsonReader.EoOEvent)) {
+    do {
       lexer.next() match {
         case FieldEvent(field) =>
           val value = read()
@@ -72,14 +74,13 @@ class JsonReader(input: Iterator[JsonEvent]) {
         case event =>
           throw new JsonBadParse(event)
       }
-    }
-
+    } while(!atEndOfObject)
     JObject(result)
   }
 
   private def atEndOfArray = hopeFor(JsonReader.EoAEvent)
   private def readArray(): JArray = {
-    if(atEndOfArray) return JsonReader.emptyJArray
+    if(atEndOfArray) return JArray.canonicalEmpty
     val builder = new VectorBuilder[JValue]
     do {
       builder += read()
@@ -128,9 +129,6 @@ object JsonReader {
   @throws(classOf[JsonReaderException])
   def fromEvents(it: Iterator[JsonEvent]) = new JsonReader(it).read()
 
-  private val jtrue = JBoolean(true)
-  private val jfalse = JBoolean(false)
   private val EoAEvent = EndOfArrayEvent()
   private val EoOEvent = EndOfObjectEvent()
-  private val emptyJArray = new JArray(Vector.empty)
 }

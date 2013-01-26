@@ -111,6 +111,15 @@ case class JString(string: String) extends JAtom
 /** A boolean */
 case class JBoolean(boolean: Boolean) extends JAtom
 
+object JBoolean extends scala.runtime.AbstractFunction1[Boolean, JBoolean] {
+  // wish I could override apply(Boolean) to use these.  At least
+  // JsonReader will, though.
+  val canonicalTrue = JBoolean(true)
+  val canonicalFalse = JBoolean(false)
+
+  override final def toString = "JBoolean"
+}
+
 /** Null. */
 sealed abstract class JNull extends JAtom // so the object has a nameable type
 case object JNull extends JNull
@@ -157,6 +166,11 @@ case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFu
   }
 }
 
+object JArray extends scala.runtime.AbstractFunction1[sc.Seq[JValue], JArray] {
+  val canonicalEmpty = JArray(Vector.empty) // Vector because JsonReader is guaranteed to return JArrays which contain Vectors.
+  override final def toString = "JArray"
+}
+
 /** A JSON object, implemented as a thin wrapper around a map from `String` to [[com.rojoma.json.ast.JValue]].
   * In many ways this can be treated as a `Map`, but it is in fact not one. */
 case class JObject(val fields: sc.Map[String, JValue]) extends Iterable[(String, JValue)] with PartialFunction[String, JValue] with JCompound {
@@ -190,4 +204,9 @@ case class JObject(val fields: sc.Map[String, JValue]) extends Iterable[(String,
       override def forced = this
     }
   }
+}
+
+object JObject extends scala.runtime.AbstractFunction1[sc.Map[String, JValue], JObject] {
+  val canonicalEmpty = JObject(Map.empty) // _Not_ LinkedHashMap because all JsonReader guarantees is ordering of elements, which this satisfies.
+  override final def toString = "JObject"
 }
