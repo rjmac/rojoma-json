@@ -126,9 +126,9 @@ object AutomaticJsonCodecBuilderImpl {
 
     val codecs = fields.map { fi =>
       // TODO: figure out how to add the "lazy" modifier after the fact
-      val codec = q"_root_.scala.Predef.implicitly[_root_.com.rojoma.json.codec.JsonCodec[${TypeTree(fi.codecType)}]]"
-      if(fi.isLazy) q"lazy val ${fi.codecName} = $codec"
-      else q"val ${fi.codecName} = $codec"
+      val codec = q"_root_.com.rojoma.json.codec.JsonCodec[${TypeTree(fi.codecType)}]"
+      if(fi.isLazy) q"private[this] lazy val ${fi.codecName} = $codec"
+      else q"private[this] val ${fi.codecName} = $codec"
     }
 
     val tmp: TermName = c.freshName()
