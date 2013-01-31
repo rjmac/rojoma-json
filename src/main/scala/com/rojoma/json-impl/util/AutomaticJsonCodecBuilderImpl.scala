@@ -127,8 +127,8 @@ object AutomaticJsonCodecBuilderImpl {
     val codecs = fields.map { fi =>
       // TODO: figure out how to add the "lazy" modifier after the fact
 
-      val codec = TypeApply(Select(Select(Select(Ident(nme.ROOTPKG), newTermName("scala")), newTermName("Predef")), newTermName("implicitly")), List(AppliedTypeTree(Select(Select(Select(Select(Select(Ident(nme.ROOTPKG), newTermName("com")), newTermName("rojoma")), newTermName("json")), newTermName("codec")), newTypeName("JsonCodec")), List(TypeTree(fi.codecType)))))
-      // val codec = q"_root_.scala.Predef.implicitly[_root_.com.rojoma.json.codec.JsonCodec[${TypeTree(fi.codecType)}]]"
+      val codec = TypeApply(Select(Select(Select(Select(Select(Ident(nme.ROOTPKG), newTermName("com")), newTermName("rojoma")), newTermName("json")), newTermName("codec")), newTermName("JsonCodec")), List(TypeTree(fi.codecType)))
+      // val codec = q"_root_.com.rojoma.json.codec.JsonCodec[${TypeTree(fi.codecType)}]"
 
       if(fi.isLazy) {
         ValDef(Modifiers(Flag.LAZY), fi.codecName, TypeTree(), codec)

@@ -23,7 +23,7 @@ private[codec] object CBHolder {
 object JsonCodec extends com.rojoma.`json-impl`.codec.TupleCodecs {
   import CBHolder._
 
-  def apply[T](implicit a: JsonCodec[T]) = a
+  def apply[T](implicit a: JsonCodec[T]): a.type = a
   def toJValue[T : JsonCodec](x: T) = JsonCodec[T].encode(x)
   def fromJValue[T : JsonCodec](x: JValue) = JsonCodec[T].decode(x)
 
