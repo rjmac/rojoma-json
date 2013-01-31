@@ -286,7 +286,7 @@ object JsonCodec extends com.rojoma.`json-impl`.codec.TupleCodecs {
   }
 
   implicit object UnitCodec extends JsonCodec[Unit] {
-    val empty = JArray.canonicalEmpty
+    private val empty = JArray.canonicalEmpty
     def encode(x: Unit) = empty
     def decode(x: JValue) = x match {
       case JArray(xs) if xs.isEmpty => Some(())
