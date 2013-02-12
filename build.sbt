@@ -3,6 +3,8 @@ import com.typesafe.tools.mima.plugin.MimaKeys.previousArtifact
 
 mimaDefaultSettings
 
+net.virtualvoid.sbt.graph.Plugin.graphSettings
+
 organization := "com.rojoma"
 
 name := "rojoma-json"
