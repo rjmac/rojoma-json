@@ -24,6 +24,13 @@ class JsonEventIteratorTests extends FunSuite with MustMatchers {
     evaluating { e(",") } must produce [JsonUnexpectedToken]
   }
 
+  test("Calling next() on an event iterator reads no more than is necessary") {
+    val reader = new java.io.BufferedReader(r("1 2"))
+    val it = new JsonEventIterator(reader)
+    it.next()
+    reader.readLine() must equal ("2")
+  }
+
   test("skipRestOfCompound() before calling next() does nothing") {
     i("[1,2,3]").skipRestOfCompound().next() must equal (StartOfArrayEvent())
   }

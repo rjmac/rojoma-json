@@ -35,7 +35,7 @@ class JsonEventIterator(input: Iterator[JsonToken], fieldCache: FieldCache) exte
       true
     } else {
       atTop = parser.atTopLevel
-      while(underlying.hasNext && available == null) {
+      while(available == null && underlying.hasNext) {
         val token = underlying.next()
         parser.parse(token) match {
           case JsonEventGenerator.Event(ev, newParser) =>
