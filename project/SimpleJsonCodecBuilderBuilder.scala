@@ -37,7 +37,7 @@ object SimpleJsonCodecBuilder {
       val varA = Variable[o.RealType]()(o.codec)
       val assignA = (varA :=? _).asInstanceOf[Any => Pattern.Results => Pattern.Results]
       val retrieveA = varA.get(_: Pattern.Results).asInstanceOf[AnyRef]
-      (assignA, retrieveA, POption(varA))
+      (assignA, retrieveA, POption(varA).orNull)
   }
 
   class FixedSimpleJsonCodecBuilder[TT: ClassTag] {
