@@ -4,23 +4,20 @@ name := "rojoma-json"
 
 version := "2.0.0"
 
-scalaVersion := "2.9.2"
+scalaVersion := "2.9.3"
 
-crossScalaVersions := Seq("2.8.1", "2.8.2", "2.9.0", "2.9.0-1", "2.9.1", "2.9.1-1", "2.9.2")
-
-libraryDependencies += "org.scalatest" %% "scalatest" % "1.8" % "test"
+crossScalaVersions := Seq("2.8.1", "2.8.2", "2.9.0", "2.9.0-1", "2.9.1", "2.9.1-1", "2.9.2", "2.9.3")
 
 libraryDependencies <++= scalaVersion { sv =>
   sv match {
     case "2.8.1" | "2.8.2" => Seq(
-      "org.scalacheck" % "scalacheck_2.8.1" % "1.8" % "optional"
-    )
-    case "2.9.1-1" => Seq(
-      "org.scalacheck" % "scalacheck_2.9.1" % "1.9" % "optional"
+      "org.scalacheck" % "scalacheck_2.8.1" % "1.8" % "optional",
+      "org.scalatest" %% "scalatest" % "1.8" % "test"
     )
     case _ => Seq(
-      "org.scalacheck" %% "scalacheck" % "1.9" % "optional"
-      )
+      "org.scalacheck" %% "scalacheck" % "1.10.1" % "optional",
+      "org.scalatest" %% "scalatest" % "1.9.1" % "test"
+    )
   }
 }
 
