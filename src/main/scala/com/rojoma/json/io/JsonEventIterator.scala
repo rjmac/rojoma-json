@@ -14,6 +14,7 @@ import java.io.Reader
  * As an extension, this class allows unquoted identifiers to be used
  * as object keys.
  *
+ * @see [[com.rojoma.json.io.FusedBlockJsonEventIterator]]
  * @see [[com.rojoma.json.io.JsonEventGenerator]]
  * @see [[com.rojoma.json.io.JsonEvent]]
  */

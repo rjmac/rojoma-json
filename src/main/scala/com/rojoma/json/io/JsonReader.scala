@@ -13,7 +13,7 @@ import ast._
 class JsonReader(input: Iterator[JsonEvent]) {
   def this(tokens: Iterator[JsonToken], fieldCache: FieldCache) = this(new JsonEventIterator(tokens, fieldCache))
   def this(reader: Reader, fieldCache: FieldCache) = this(new JsonEventIterator(reader, fieldCache))
-  def this(text: String, fieldCache: FieldCache) = this(new JsonEventIterator(text, fieldCache))
+  def this(text: String, fieldCache: FieldCache) = this(new FusedBlockJsonEventIterator(new java.io.StringReader(text), fieldCache))
 
   // binary-compatibility is a pain.
   def this(tokens: Iterator[JsonToken])(implicit dummy: com.rojoma.`json-impl`.StupidErasure = null) = this(tokens, new HashMapFieldCache)
