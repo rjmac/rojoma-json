@@ -9,7 +9,7 @@ import java.io.Reader
  * A `FusedBlockJsonEventIterator` checks a character stream for syntactic correctness
  * and produces events that reflect the syntax of JSON.
  *
- * As an extension, this class allows unquoted identifiers to be used
+ * As extension, this class allows comments and for unquoted identifiers to be used
  * as object keys.
  *
  * @see [[com.rojoma.json.io.JsonEventIterator]]
@@ -54,9 +54,6 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   // Note that the new value after finishing a datum is
   // always the same: it's always 1.
   private var compoundReadState: Int = _
-
-  private var isPeeked: Boolean = false
-  private var peeked: Char = _
 
   private var nextCharRow = 1 // This is the position of the next char returned from "nextChar()" or "peekChar()"
   private var nextCharCol = 1
