@@ -6,3 +6,11 @@ For the next break in binary compatibility (3.0):
     list so that their Position fields can be immutable.
   * JsonCodec.apply[T] can probably be made a macro.  see:
       http://permalink.gmane.org/gmane.comp.lang.scala.internals/15258
+  * FieldCache should take the current parse-depth as a parameter
+  * JsonCodec#decode should return a Validation-ish result instead of
+      an Option
+  * It'd be nice to have "streaming codecs" that work on Event iterators
+      too.
+  * Ideally event iterators would do as little work as possible in hasNext
+      (this is certainly possible for the fused block iterator, which needs
+      only to skip whitespace; not sure about the others)
