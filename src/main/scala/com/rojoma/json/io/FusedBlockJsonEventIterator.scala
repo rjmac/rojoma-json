@@ -19,7 +19,7 @@ import java.io.Reader
 class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = IdentityFieldCache, blockSize: Int = 1024) extends BufferedIterator[JsonEvent] {
   def this(text: String) = this(new java.io.StringReader(text))
 
-  private val block = new Array[Char](1024)
+  private val block = new Array[Char](blockSize)
   private var pos = 0
   private var end = 0
 
