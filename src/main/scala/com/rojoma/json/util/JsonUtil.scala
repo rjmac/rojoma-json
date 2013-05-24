@@ -12,9 +12,10 @@ object JsonUtil {
   @throws(classOf[IOException])
   @throws(classOf[JsonParseException])
   def readJson[T : JsonCodec](reader: Reader, buffer: Boolean = false) = {
-    val finalReader = if(buffer) new BufferedReader(reader)
-                      else reader
-    JsonCodec.fromJValue[T](JsonReader.fromReader(finalReader))
+    val jvalue =
+      if(buffer) JsonReader.fromEvents(new FusedBlockJsonEventIterator(reader))
+      else JsonReader.fromReader(reader)
+    JsonCodec.fromJValue[T](jvalue)
   }
 
   @throws(classOf[IOException])
