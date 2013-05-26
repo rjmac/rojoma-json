@@ -436,7 +436,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   private def readNumberEvent(): JsonEvent = {
     val row = nextCharRow
     val col = nextCharCol
-    finishDatum(NumberEvent(readNumber), row, col)
+    finishDatum(NumberEvent(readNumber()), row, col)
   }
 
   private def readNumber(): BigDecimal = {
