@@ -99,7 +99,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     result
   }
 
-  private def skipToEndOfLine() = while(!atEOF() && peekChar() != '\n') nextChar()
+  private def skipToEndOfLine() = while(!atEOF() && peekChar() != '\n') skipChar()
 
   private def skipBlockComment() {
     var last = nextChar()
@@ -339,7 +339,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     while(peekChar() != Boundary) {
       readPotentialSurrogatePairInto(sb, readChar(), Boundary)
     }
-    nextChar() // skip closing character
+    skipChar() // skip closing quote
     sb.toString
   }
 
@@ -463,7 +463,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     if(hasExponent) {
       sb += nextChar() // skip e/E
       if(peekChar() == '-') sb += nextChar()
-      else if(peekChar() == '+') nextChar() // just skip it
+      else if(peekChar() == '+') skipChar()
       do { sb += readDigit() } while(!atEOF() && isDigit(peekChar()))
     }
 
