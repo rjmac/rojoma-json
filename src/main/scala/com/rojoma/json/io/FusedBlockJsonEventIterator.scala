@@ -19,15 +19,15 @@ import java.io.Reader
 class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = IdentityFieldCache, blockSize: Int = 1024) extends BufferedIterator[JsonEvent] {
   def this(text: String) = this(new java.io.StringReader(text))
 
-  private val block = new Array[Char](blockSize)
-  private var pos = 0
-  private var end = 0
+  private [this] val block = new Array[Char](blockSize)
+  private [this] var pos = 0
+  private [this] var end = 0
 
-  private var atTop = true // this is the value BEFORE "available" was last set
-  private var available: JsonEvent = null
+  private [this] var atTop = true // this is the value BEFORE "available" was last set
+  private [this] var available: JsonEvent = null
 
-  private var stack = new Array[Boolean](16) // values are true for "parsing array" and false for "parsing object"
-  private var stackPtr = -1
+  private [this] var stack = new Array[Boolean](16) // values are true for "parsing array" and false for "parsing object"
+  private [this] var stackPtr = -1
 
   private def push(intoArray: Boolean) {
     def growStack() {
@@ -53,10 +53,10 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   //     1 => awating datum preceded by comma, or ]
   // Note that the new value after finishing a datum is
   // always the same: it's always 1.
-  private var compoundReadState: Int = _
+  private [this] var compoundReadState: Int = _
 
-  private var nextCharRow = 1 // This is the position of the next char returned from "nextChar()" or "peekChar()"
-  private var nextCharCol = 1
+  private [this] var nextCharRow = 1 // This is the position of the next char returned from "nextChar()" or "peekChar()"
+  private [this] var nextCharCol = 1
 
   private def lexerError(receivedChar: Char, expected: String, row: Int, col: Int): Nothing = {
     throw new JsonUnexpectedCharacter(receivedChar, expected, Position(row, col))
