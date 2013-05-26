@@ -165,7 +165,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
       case '-' => readNumberEvent()
       case c =>
         if(isDigit(c)) readNumberEvent()
-        else if(Character.isJavaIdentifierStart(c)) readIdentifierEvent()
+        else if(Character.isUnicodeIdentifierStart(c)) readIdentifierEvent()
         else badToken(expected)
     }
   }
@@ -182,7 +182,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
       case ':' => TokenColon()
       case '"' | '\'' => TokenString(readString())
       case c if isDigit(c) || c == '-' => TokenNumber(readNumber())
-      case c if Character.isJavaIdentifierStart(c) => TokenIdentifier(readIdentifier())
+      case c if Character.isUnicodeIdentifierStart(c) => TokenIdentifier(readIdentifier())
       case c => lexerError(c, expected, nextCharRow, nextCharCol)
     }
     throw new JsonUnexpectedToken(p(unpositionedToken, row, col), expected)
@@ -249,7 +249,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     val col = nextCharCol
     val field = peekChar() match {
       case '"' | '\'' => readString()
-      case c if Character.isJavaIdentifierStart(c) => readIdentifier()
+      case c if Character.isUnicodeIdentifierStart(c) => readIdentifier()
       case _ => badToken(expected)
     }
     nonDatum(FieldEvent(fieldCache(field)), row, col)
