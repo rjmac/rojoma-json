@@ -170,29 +170,23 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     }
   }
 
-  private def badToken(expected: String): Nothing =
-    peekChar() match {
-      case '{' => throw new JsonUnexpectedToken(p(TokenOpenBrace(), nextCharRow, nextCharCol), expected)
-      case '}' => throw new JsonUnexpectedToken(p(TokenCloseBrace(), nextCharRow, nextCharCol), expected)
-      case '[' => throw new JsonUnexpectedToken(p(TokenOpenBracket(), nextCharRow, nextCharCol), expected)
-      case ']' => throw new JsonUnexpectedToken(p(TokenCloseBracket(), nextCharRow, nextCharCol), expected)
-      case ',' => throw new JsonUnexpectedToken(p(TokenComma(), nextCharRow, nextCharCol), expected)
-      case ':' => throw new JsonUnexpectedToken(p(TokenColon(), nextCharRow, nextCharCol), expected)
-      case '"' | '\'' =>
-        val row = nextCharRow
-        val col = nextCharCol
-        throw new JsonUnexpectedToken(p(TokenString(readString()), row, col), expected)
-      case c if isDigit(c) || c == '-' =>
-        val row = nextCharRow
-        val col = nextCharCol
-        throw new JsonUnexpectedToken(p(TokenNumber(readNumber()), row, col), expected)
-      case c if Character.isJavaIdentifierStart(c) =>
-        val row = nextCharRow
-        val col = nextCharCol
-        throw new JsonUnexpectedToken(p(TokenIdentifier(readIdentifier()), row, col), expected)
-      case c =>
-        lexerError(c, expected, nextCharRow, nextCharCol)
+  private def badToken(expected: String): Nothing = {
+    val row = nextCharRow
+    val col = nextCharCol
+    val unpositionedToken = peekChar() match {
+      case '{' => TokenOpenBrace()
+      case '}' => TokenCloseBrace()
+      case '[' => TokenOpenBracket()
+      case ']' => TokenCloseBracket()
+      case ',' => TokenComma()
+      case ':' => TokenColon()
+      case '"' | '\'' => TokenString(readString())
+      case c if isDigit(c) || c == '-' => TokenNumber(readNumber())
+      case c if Character.isJavaIdentifierStart(c) => TokenIdentifier(readIdentifier())
+      case c => lexerError(c, expected, nextCharRow, nextCharCol)
     }
+    throw new JsonUnexpectedToken(p(unpositionedToken, row, col), expected)
+  }
 
   private def readObjectEvent(): JsonEvent =
     compoundReadState match {
