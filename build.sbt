@@ -13,7 +13,7 @@ version := "2.4.1-SNAPSHOT"
 
 previousArtifact <<= scalaBinaryVersion { sv => Some("com.rojoma" % ("rojoma-json_" + sv) % "2.4.0") }
 
-scalaVersion := "2.10.0"
+scalaVersion := "2.10.2"
 
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "1.9.1" % "test",
@@ -39,3 +39,8 @@ sourceGenerators in Compile <+= (sourceManaged in Compile) map TupleCodecBuilder
 // Bit of a hack; regenerate README.markdown when version is changed
 // to a non-SNAPSHOT value.
 sourceGenerators in Compile <+= (baseDirectory, version, crossScalaVersions) map READMEBuilder
+
+
+resolvers += Resolver.sonatypeRepo("snapshots")
+
+addCompilerPlugin("org.scala-lang.plugins" % "macro-paradise_2.10.2" % "2.0.0-SNAPSHOT")
