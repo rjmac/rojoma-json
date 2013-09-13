@@ -7,11 +7,13 @@ import scala.reflect.ClassTag
 import ast._
 import codec._
 
-class SimpleHierarchyCodecBuilder[Root <: AnyRef] private[util] (tagType: TagType, subcodecs: Map[String, JsonCodec[_ <: Root]], classes: Map[Class[_], String]) {
+import com.rojoma.`json-impl`.ClassAwareMap
+
+class SimpleHierarchyCodecBuilder[Root <: AnyRef] private[util] (tagType: TagType, subcodecs: Map[String, JsonCodec[_ <: Root]], classes: ClassAwareMap[String]) {
   def branch[T <: Root](name: String)(implicit codec: JsonCodec[T], mfst: ClassTag[T]) = {
     val cls = mfst.runtimeClass
     if(subcodecs contains name) throw new IllegalArgumentException("Already defined a codec for branch " + name)
-    if(classes contains cls) throw new IllegalArgumentException("Already defined a codec for class " + cls)
+    if(classes containsExact cls) throw new IllegalArgumentException("Already defined a codec for class " + cls)
     new SimpleHierarchyCodecBuilder[Root](tagType, subcodecs + (name -> codec), classes + (cls -> name))
   }
 
@@ -108,7 +110,7 @@ class NoTagSimpleHierarchyCodecBuilder[Root <: AnyRef] private[util] (subcodecs:
   def build: JsonCodec[Root] = {
     if(subcodecs.isEmpty) throw new IllegalStateException("No branches defined")
     new JsonCodec[Root] {
-      val codecsMap = subcodecs.toMap
+      val codecsMap = subcodecs.foldLeft(ClassAwareMap.empty[JsonCodec[_ <: Root]])(_ + _)
 
       private def codecFor(x: Root) =
         codecsMap.get(x.getClass) match {
@@ -234,6 +236,6 @@ sealed abstract class NoTag
 case object NoTag extends NoTag
 
 object SimpleHierarchyCodecBuilder {
-  def apply[Root <: AnyRef](tagType: TagType) = new SimpleHierarchyCodecBuilder[Root](tagType, Map.empty, Map.empty)
+  def apply[Root <: AnyRef](tagType: TagType) = new SimpleHierarchyCodecBuilder[Root](tagType, Map.empty, ClassAwareMap.empty)
   def apply[Root <: AnyRef](tagType: NoTag) = new NoTagSimpleHierarchyCodecBuilder[Root](Vector.empty)
 }

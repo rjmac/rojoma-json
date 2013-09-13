@@ -14,3 +14,4 @@ For the next break in binary compatibility (3.0):
   * Ideally event iterators would do as little work as possible in hasNext
       (this is certainly possible for the fused block iterator, which needs
       only to skip whitespace; not sure about the others)
+  * Split JsonCodec into JsonEncoder and JsonDecoder for variance reasons
