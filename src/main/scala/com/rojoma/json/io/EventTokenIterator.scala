@@ -1,7 +1,9 @@
 package com.rojoma.json
 package io
 
-import com.rojoma.`json-impl`.BoundedIterator
+import com.rojoma.`json-impl`.AbstractIterator
+import com.rojoma.`json-impl`.FlatteningIterator
+import com.rojoma.`json-impl`.FlatteningIteratorUtils._
 
 case class MalformedEventStreamException(message: String) extends RuntimeException(message)
 
@@ -12,7 +14,7 @@ case class MalformedEventStreamException(message: String) extends RuntimeExcepti
  * @throws MalformedEventStreamException if the event stream is not well-formed
  */
 object EventTokenIterator extends (Iterator[JsonEvent] => Iterator[JsonToken]) {
-  def apply(input: Iterator[JsonEvent]): Iterator[JsonToken] = new Iterator[JsonToken] {
+  def apply(input: Iterator[JsonEvent]): Iterator[JsonToken] = new AbstractIterator[JsonToken] {
     private val buffer = input.buffered
     private var nextObject: Iterator[JsonToken] = Iterator.empty
     def hasNext = nextObject.hasNext || buffer.hasNext
@@ -23,9 +25,9 @@ object EventTokenIterator extends (Iterator[JsonEvent] => Iterator[JsonToken]) {
 
     private def tokenizeDatum(): Iterator[JsonToken] = buffer.next() match {
       case StartOfObjectEvent() =>
-        new BoundedIterator(TokenOpenBrace(), iteratorForObject().flatten, TokenCloseBrace())
+        Iterator.single(TokenOpenBrace()) ** iteratorForObject().flatify ** Iterator.single(TokenCloseBrace())
       case StartOfArrayEvent() =>
-        new BoundedIterator(TokenOpenBracket(), iteratorForArray().flatten, TokenCloseBracket())
+        Iterator.single(TokenOpenBracket()) ** iteratorForArray().flatify ** Iterator.single(TokenCloseBracket())
       case IdentifierEvent(identifier) =>
         Iterator.single(TokenIdentifier(identifier))
       case NumberEvent(number) =>
@@ -40,7 +42,7 @@ object EventTokenIterator extends (Iterator[JsonEvent] => Iterator[JsonToken]) {
         throw MalformedEventStreamException("Expected datum: recevied EndOfArrayEvent")
     }
 
-    private def iteratorForArray() = new Iterator[Iterator[JsonToken]] { outer =>
+    private def iteratorForArray() = new AbstractIterator[Iterator[JsonToken]] { outer =>
       private var done = false
 
       def hasNext =
@@ -58,7 +60,7 @@ object EventTokenIterator extends (Iterator[JsonEvent] => Iterator[JsonToken]) {
 
       def next() = {
         if(!hasNext) Iterator.empty.next()
-        tokenizeDatum() ++ new Iterator[JsonToken] {
+        tokenizeDatum() ** new AbstractIterator[JsonToken] {
           private var emittedComma = false
           def hasNext =
             if(emittedComma) false
@@ -72,7 +74,7 @@ object EventTokenIterator extends (Iterator[JsonEvent] => Iterator[JsonToken]) {
       }
     }
 
-    private def iteratorForObject() = new Iterator[Iterator[JsonToken]] { outer =>
+    private def iteratorForObject() = new AbstractIterator[Iterator[JsonToken]] { outer =>
       private var done = false
 
       def hasNext =
@@ -92,7 +94,7 @@ object EventTokenIterator extends (Iterator[JsonEvent] => Iterator[JsonToken]) {
         if(!hasNext) Iterator.empty.next()
         buffer.next() match {
           case FieldEvent(field) =>
-            Iterator(TokenString(field), TokenColon()) ++ tokenizeDatum() ++ new Iterator[JsonToken] {
+            Iterator(TokenString(field), TokenColon()) ** tokenizeDatum() ** new AbstractIterator[JsonToken] {
               private var emittedComma = false
               def hasNext =
                 if(emittedComma) false

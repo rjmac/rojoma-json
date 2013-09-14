@@ -4,6 +4,8 @@ package util
 import java.lang.reflect.{Array => _, _}
 import java.nio.CharBuffer
 
+import com.rojoma.`json-impl`.AbstractBufferedIterator
+
 /** A container for a slice of an `Array[Char]` which promises to allow only read-only
  * access to that array.  Note it does not itself copy the array, so if there is another
  * reference the data can be mutated by other operations.  This is used for copyless
@@ -201,7 +203,7 @@ object WrappedCharArray {
   private final val FromReadOnlyCharBuffer = 2
 }
 
-class WrappedCharArrayIterator private[util] (chars: Array[Char], private[this] var offset: Int, limit: Int, from: Int) extends BufferedIterator[Char] {
+class WrappedCharArrayIterator private[util] (chars: Array[Char], private[this] var offset: Int, limit: Int, from: Int) extends AbstractBufferedIterator[Char] {
   def hasNext = offset != limit
 
   def next() = {

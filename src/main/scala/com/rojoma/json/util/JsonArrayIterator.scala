@@ -4,6 +4,8 @@ package util
 import codec.JsonCodec
 import io._
 
+import com.rojoma.`json-impl`.AbstractIterator
+
 /** Helper for reading lazily reading objects out of a source of
  * `JsonEvent`s representing a JSON array.  Calling `hasNext` can throw
  * any `JsonLexException`.  Calling `next()` can throw any JSON lex or parse
@@ -32,7 +34,7 @@ object JsonArrayIterator {
       if(!next.isInstanceOf[StartOfArrayEvent]) throw new JsonBadParse(next)
     }
 
-    new Iterator[T] {
+    new AbstractIterator[T] {
       private var done = false
 
       def hasNext: Boolean = {

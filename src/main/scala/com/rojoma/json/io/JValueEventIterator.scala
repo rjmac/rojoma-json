@@ -1,7 +1,8 @@
 package com.rojoma.json
 package io
 
-import com.rojoma.`json-impl`.BoundedIterator
+import com.rojoma.`json-impl`.FlatteningIterator
+import com.rojoma.`json-impl`.FlatteningIteratorUtils._
 
 import ast._
 
@@ -14,9 +15,9 @@ object JValueEventIterator extends (JValue => Iterator[JsonEvent]) {
   def apply(value: JValue): Iterator[JsonEvent] =
     value match {
       case JObject(fields) =>
-        new BoundedIterator(StartOfObjectEvent(), fields.iterator.flatMap { case (k,v) => Iterator.single(FieldEvent(k)) ++ apply(v) }, EndOfObjectEvent())
+        Iterator.single(StartOfObjectEvent()) ** fields.iterator.map { case (k,v) => Iterator.single(FieldEvent(k)) ** apply(v) }.flatify ** Iterator.single(EndOfObjectEvent())
       case JArray(elems) =>
-        new BoundedIterator(StartOfArrayEvent(), elems.iterator.flatMap(apply), EndOfArrayEvent())
+        Iterator.single(StartOfArrayEvent()) ** elems.iterator.map(apply).flatify ++ Iterator.single(EndOfArrayEvent())
       case JString(string) =>
         Iterator.single(StringEvent(string))
       case JNumber(number) =>

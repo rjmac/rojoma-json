@@ -5,6 +5,8 @@ import java.io.Reader
 
 import scala.annotation.switch
 
+import com.rojoma.`json-impl`.AbstractBufferedIterator
+
 /** Convert a character-stream into a token-stream.
   *
   * This is guaranteed to read no more than necessary to ensure it has
@@ -25,7 +27,7 @@ import scala.annotation.switch
   * @see [[com.rojoma.json.io.JsonTokenGenerator]]
   * @see [[com.rojoma.json.io.JsonToken]]
   */
-class JsonTokenIterator(reader: Reader) extends BufferedIterator[JsonToken] {
+class JsonTokenIterator(reader: Reader) extends AbstractBufferedIterator[JsonToken] {
   private var isPeeked: Boolean = false
   private var peeked: Char = _
 

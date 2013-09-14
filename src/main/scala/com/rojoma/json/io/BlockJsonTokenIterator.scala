@@ -5,6 +5,8 @@ import scala.annotation.tailrec
 
 import java.io.Reader
 
+import com.rojoma.`json-impl`.AbstractBufferedIterator
+
 import util.WrappedCharArray
 
 /** Convert a character-stream into a token-stream.
@@ -21,7 +23,7 @@ import util.WrappedCharArray
   * @see [[com.rojoma.json.io.JsonTokenGenerator]]
   * @see [[com.rojoma.json.io.JsonToken]]
   */
-class BlockJsonTokenIterator private (private var remaining: WrappedCharArray, reader: Reader, buf: Array[Char]) extends BufferedIterator[JsonToken] {
+class BlockJsonTokenIterator private (private var remaining: WrappedCharArray, reader: Reader, buf: Array[Char]) extends AbstractBufferedIterator[JsonToken] {
   def this(reader: Reader, blockSize: Int = 1024) = this(null, reader, new Array[Char](blockSize))
   def this(text: String) = this(WrappedCharArray(text), BlockJsonTokenIterator.emptyReader, null)
 

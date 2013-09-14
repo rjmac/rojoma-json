@@ -3,6 +3,8 @@ package io
 
 import java.io.Reader
 
+import com.rojoma.`json-impl`.AbstractBufferedIterator
+
 /** Turns a raw character-stream into an event stream, checking for JSON
  * well-formedness.
  *
@@ -16,7 +18,7 @@ import java.io.Reader
  * @see [[com.rojoma.json.io.JsonEventGenerator]]
  * @see [[com.rojoma.json.io.JsonEvent]]
  */
-class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = IdentityFieldCache, blockSize: Int = 1024) extends BufferedIterator[JsonEvent] {
+class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = IdentityFieldCache, blockSize: Int = 1024) extends AbstractBufferedIterator[JsonEvent] {
   def this(text: String) = this(new java.io.StringReader(text))
 
   private [this] val block = new Array[Char](blockSize)
