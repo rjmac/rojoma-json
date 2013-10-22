@@ -314,8 +314,8 @@ automatically or through use of `@JsonKey`) a compiler error occurs.
 ## Future paths
 
 I'm looking forward to [string
-interpolation](rojoma-json/blob/master/future/StringInterpolation.scala).
-In addition, there are [other planned improvements](rojoma-json/blob/master/future/future.txt)
+interpolation](future/StringInterpolation.scala).
+In addition, there are [other planned improvements](future/future.txt)
 which would break binary compatibility, for version 3.0.
 
 ## Incompatible changes from rojoma-json 1
