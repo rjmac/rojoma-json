@@ -6,7 +6,7 @@ Starting with version 2.0.0, rojoma-json is published on Maven
 central, so setting up SBT is as simple as
 
 ```scala
-libraryDependencies += "com.rojoma" %% "rojoma-json" % "2.4.0"
+libraryDependencies += "com.rojoma" %% "rojoma-json" % "2.4.1"
 ```
 
 While for Maven, the pom snippet is:
@@ -16,7 +16,7 @@ While for Maven, the pom snippet is:
   <dependency>
     <groupId>com.rojoma</groupId>
     <artifactId>rojoma-json_${scala.version}</artifactId>
-    <version>2.4.0</version>
+    <version>2.4.1</version>
   </dependency>
 </dependencies>
 ```
