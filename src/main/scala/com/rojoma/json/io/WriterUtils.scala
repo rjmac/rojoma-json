@@ -12,10 +12,21 @@ private[io] object WriterUtils {
 
   def writeString(s: String, output: Writer) {
     output.write('"')
-    var i = 0
+    val fastEnd = gallop(s, 0)
+    if(fastEnd == s.length) {
+      output.write(s)
+    } else {
+      slowPath(s, fastEnd, output: Writer)
+    }
+    output.write('"')
+  }
+
+  private def slowPath(s: String, endOfFastPrefix: Int, output: Writer) {
+    if(endOfFastPrefix != 0) output.write(s, 0, endOfFastPrefix)
+    var i = endOfFastPrefix
     val len = s.length
-    while(i < len) {
-      val c = s.charAt(i); i += 1
+    do {
+      val c = s.charAt(i)
 
       c match {
         case '"' => output.write("\\\"")
@@ -25,13 +36,27 @@ private[io] object WriterUtils {
         case '\n' => output.write("\\n")
         case '\r' => output.write("\\r")
         case '\t' => output.write("\\t")
+        case _ if shouldEscape(c) => unicode(c, output)
+        case _ if fastCopy(c) =>
+          val end = gallop(s, i + 1)
+          output.write(s, i, end - i)
+          i = end - 1
         case _ =>
-          if(shouldEscape(c)) unicode(c, output)
-          else output.write(c)
+          output.write(c)
       }
-    }
-    output.write('"')
+
+      i += 1
+    } while(i != len)
   }
+
+  private def gallop(s: String, start: Int): Int = {
+    var i = start
+    val end = s.length
+    while(i != end && fastCopy(s.charAt(i))) i += 1
+    i
+  }
+
+  private def fastCopy(c: Char): Boolean = c >= ' ' && c <= '~' && c != '"' && c != '\\'
 
   def shouldEscape(c: Char): Boolean = {
     val t = Character.getType(c)
