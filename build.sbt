@@ -11,9 +11,13 @@ name := "rojoma-json"
 
 version := "2.4.2-SNAPSHOT"
 
+crossVersion := CrossVersion.full
+
 previousArtifact <<= scalaBinaryVersion { sv => Some("com.rojoma" % ("rojoma-json_" + sv) % "2.4.0") }
 
 scalaVersion := "2.10.2"
+
+crossScalaVersions := Seq("2.10.2", "2.10.3", "2.10.4")
 
 libraryDependencies ++= Seq(
   "org.scalamacros" %% "quasiquotes" % "2.0.0-M3" cross CrossVersion.full,
