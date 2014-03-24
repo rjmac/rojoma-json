@@ -16,6 +16,7 @@ previousArtifact <<= scalaBinaryVersion { sv => Some("com.rojoma" % ("rojoma-jso
 scalaVersion := "2.10.2"
 
 libraryDependencies ++= Seq(
+  "org.scalamacros" %% "quasiquotes" % "2.0.0-M3" cross CrossVersion.full,
   "org.scalatest" %% "scalatest" % "1.9.1" % "test",
   "org.scalacheck" %% "scalacheck" % "1.10.0" % "optional"
 )
@@ -43,4 +44,4 @@ sourceGenerators in Compile <+= (baseDirectory, version, crossScalaVersions) map
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 
-addCompilerPlugin("org.scala-lang.plugins" % "macro-paradise_2.10.2" % "2.0.0-SNAPSHOT")
+addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0-M3" cross CrossVersion.full)
