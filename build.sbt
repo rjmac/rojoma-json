@@ -9,7 +9,7 @@ organization := "com.rojoma"
 
 name := "rojoma-json"
 
-version := "2.4.2-SNAPSHOT"
+version := "2.4.2"
 
 crossVersion := CrossVersion.full
 
