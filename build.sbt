@@ -11,8 +11,6 @@ name := "rojoma-json"
 
 version := "2.4.3-SNAPSHOT"
 
-crossVersion := CrossVersion.full
-
 previousArtifact <<= scalaBinaryVersion { sv => Some("com.rojoma" % ("rojoma-json_" + sv) % "2.4.0") }
 
 scalaVersion := "2.10.2"
@@ -20,7 +18,7 @@ scalaVersion := "2.10.2"
 crossScalaVersions := Seq("2.10.2", "2.10.3", "2.10.4")
 
 libraryDependencies ++= Seq(
-  "org.scalamacros" %% "quasiquotes" % "2.0.0-M3" cross CrossVersion.full,
+  "org.scalamacros" %% "quasiquotes" % "2.0.0-M7",
   "org.scalatest" %% "scalatest" % "1.9.1" % "test",
   "org.scalacheck" %% "scalacheck" % "1.10.0" % "optional"
 )
@@ -48,4 +46,4 @@ sourceGenerators in Compile <+= (baseDirectory, version, crossScalaVersions) map
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 
-addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0-M3" cross CrossVersion.full)
+addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0-M7" cross CrossVersion.full)
