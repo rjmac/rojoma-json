@@ -1,7 +1,6 @@
 package com.rojoma.json.util
 
-import org.scalatest.{FunSuite, OptionValues}
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.{FunSuite, MustMatchers, OptionValues}
 
 import com.rojoma.json.ast._
 import com.rojoma.json.codec.JsonCodec

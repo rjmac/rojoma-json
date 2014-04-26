@@ -3,9 +3,8 @@ package io
 
 import scala.reflect.ClassTag
 
-import org.scalatest.FunSuite
+import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatest.prop.PropertyChecks
-import org.scalatest.matchers.MustMatchers
 
 import ast.JValue
 import testsupport.ArbitraryJValue.ArbitraryJValue

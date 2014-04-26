@@ -1,9 +1,8 @@
 package com.rojoma.json
 package io
 
-import org.scalatest.FunSuite
+import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatest.prop.PropertyChecks
-import org.scalatest.matchers.MustMatchers
 
 import org.scalacheck.Gen
 import org.scalacheck.Arbitrary
@@ -22,41 +21,61 @@ class EventTokenIteratorTest extends FunSuite with MustMatchers with PropertyChe
   }
 
   test("next() on an empty EventTokenIterator produces NoSuchElementException") {
-    evaluating(EventTokenIterator(Iterator.empty).next()) must produce[NoSuchElementException]
+    a [NoSuchElementException] must be thrownBy {
+      EventTokenIterator(Iterator.empty).next()
+    }
   }
 
   test("End-of-input inside an array open produces a MalformedEventStreamException") {
     forAll(shortList[JValue]) { xs =>
-      evaluating(EventTokenIterator(Iterator(StartOfArrayEvent()) ++ xs.iterator.flatMap(JValueEventIterator)).toList) must produce[MalformedEventStreamException]
+      a [MalformedEventStreamException] must be thrownBy {
+        EventTokenIterator(Iterator(StartOfArrayEvent()) ++ xs.iterator.flatMap(JValueEventIterator)).toList
+      }
     }
   }
 
   test("End-of-input inside an object open produces a MalformedEventStreamException") {
     forAll(shortList[(String, JValue)]) { xs =>
-      evaluating(EventTokenIterator(Iterator(StartOfObjectEvent()) ++ xs.iterator.flatMap { case (k,v) => Iterator(FieldEvent(k)) ++ JValueEventIterator(v) }).toList) must produce[MalformedEventStreamException]
+      a [MalformedEventStreamException] must be thrownBy {
+        EventTokenIterator(Iterator(StartOfObjectEvent()) ++ xs.iterator.flatMap { case (k,v) => Iterator(FieldEvent(k)) ++ JValueEventIterator(v) }).toList
+      }
     }
   }
 
   test("A top-level FieldEvent must produce a MalformedEventStreamException") {
-    evaluating(EventTokenIterator(Iterator(FieldEvent("whatever"))).next()) must produce[MalformedEventStreamException]
+    a [MalformedEventStreamException] must be thrownBy {
+      EventTokenIterator(Iterator(FieldEvent("whatever"))).next()
+    }
   }
 
   test("A top-level EndOfArrayEvent must produce a MalformedEventStreamException") {
-    evaluating(EventTokenIterator(Iterator(EndOfArrayEvent())).next()) must produce[MalformedEventStreamException]
+    a [MalformedEventStreamException] must be thrownBy {
+      EventTokenIterator(Iterator(EndOfArrayEvent())).next()
+    }
   }
 
   test("A top-level EndOfObjectEvent must produce a MalformedEventStreamException") {
-    evaluating(EventTokenIterator(Iterator(EndOfObjectEvent())).next()) must produce[MalformedEventStreamException]
+    a [MalformedEventStreamException] must be thrownBy {
+      EventTokenIterator(Iterator(EndOfObjectEvent())).next()
+    }
   }
 
   test("Two FieldEvents in a row must produce a MalformedEventStreamException") {
-    evaluating(EventTokenIterator(Iterator(StartOfObjectEvent(), FieldEvent("a"), FieldEvent("b"), EndOfObjectEvent())).toList) must produce[MalformedEventStreamException]
-    evaluating(EventTokenIterator(Iterator(StartOfObjectEvent(), FieldEvent("a"), FieldEvent("b"), StringEvent("c"), EndOfObjectEvent())).toList) must produce[MalformedEventStreamException]
+    a [MalformedEventStreamException] must be thrownBy {
+      EventTokenIterator(Iterator(StartOfObjectEvent(), FieldEvent("a"), FieldEvent("b"), EndOfObjectEvent())).toList
+    }
+    a [MalformedEventStreamException] must be thrownBy {
+      EventTokenIterator(Iterator(StartOfObjectEvent(), FieldEvent("a"), FieldEvent("b"), StringEvent("c"), EndOfObjectEvent())).toList
+    }
   }
 
   test("A FieldEvent in an array must produce a MalformedStreamException") {
-    evaluating(EventTokenIterator(Iterator(StartOfArrayEvent(), StringEvent("x"), FieldEvent("a"), EndOfArrayEvent())).toList) must produce[MalformedEventStreamException]
-    evaluating(EventTokenIterator(Iterator(StartOfArrayEvent(), StringEvent("x"), FieldEvent("a"), StringEvent("y"), EndOfArrayEvent())).toList) must produce[MalformedEventStreamException]
+    a [MalformedEventStreamException] must be thrownBy {
+      EventTokenIterator(Iterator(StartOfArrayEvent(), StringEvent("x"), FieldEvent("a"), EndOfArrayEvent())).toList
+    }
+    a [MalformedEventStreamException] must be thrownBy {
+      EventTokenIterator(Iterator(StartOfArrayEvent(), StringEvent("x"), FieldEvent("a"), StringEvent("y"), EndOfArrayEvent())).toList
+    }
   }
 
   test("Roundtripping a valid event-stream to tokens must produce the same event-stream") {

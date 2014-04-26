@@ -5,8 +5,7 @@ import ast._
 import testsupport.ArbitraryJValue._
 import testsupport.ArbitraryValidString._
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatest.prop.PropertyChecks
 
 import org.scalacheck.{Gen, Arbitrary}
@@ -42,7 +41,7 @@ class JArrayProducerTest extends FunSuite with MustMatchers with PropertyChecks 
           }
       }
     }
-    loop(JArrayProducer.newProducer, targets, s.map(WrappedCharArray(_)))
+    loop(new JArrayProducer.Builder().build, targets, s.map(WrappedCharArray(_)))
   }
 
   def withSplitString(s: String)(f: List[String] => Unit) {
@@ -55,7 +54,7 @@ class JArrayProducerTest extends FunSuite with MustMatchers with PropertyChecks 
 
   def badRead[T: Manifest](expected: List[JValue], s: String) {
     withSplitString(s) { ss =>
-      evaluating(r(expected, ss)) must produce[T]
+      a [T] must be thrownBy { r(expected, ss) }
     }
   }
 

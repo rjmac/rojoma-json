@@ -7,8 +7,7 @@ import testsupport.ArbitraryValidString._
 
 import org.scalacheck.{Gen, Arbitrary}
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatest.prop.PropertyChecks
 
 import io.JsonTokenGeneratorTests._
@@ -28,7 +27,7 @@ class JValueProducerTest extends FunSuite with MustMatchers with PropertyChecks 
           }
       }
     }
-    loop(JValueProducer.newProducer, s.map(WrappedCharArray(_)))
+    loop(new JValueProducer.Builder().build, s.map(WrappedCharArray(_)))
   }
 
   def withSplitString(s: String)(f: List[String] => Unit) {
@@ -41,7 +40,7 @@ class JValueProducerTest extends FunSuite with MustMatchers with PropertyChecks 
 
   def badRead[T: Manifest](s: String) {
     withSplitString(s) { ss =>
-      evaluating(r(ss)) must produce[T]
+      a [T] must be thrownBy { r(ss) }
     }
   }
 

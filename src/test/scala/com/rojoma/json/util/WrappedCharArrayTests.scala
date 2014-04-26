@@ -3,8 +3,7 @@ package util
 
 import java.nio.CharBuffer
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatest.prop.PropertyChecks
 
 import org.scalacheck.{Gen, Arbitrary}
@@ -73,10 +72,10 @@ class WrappedCharArrayTests extends FunSuite with MustMatchers with PropertyChec
   }
 
   test("Bounds-checking on a slice works") {
-    evaluating { WrappedCharArray("hello there".toCharArray, -1, 5) } must produce[IndexOutOfBoundsException]
-    evaluating { WrappedCharArray("hello there".toCharArray, 3, -1) } must produce[IndexOutOfBoundsException]
-    evaluating { WrappedCharArray("hello there".toCharArray, 3, 9) } must produce[IndexOutOfBoundsException]
-    evaluating { WrappedCharArray("hello there".toCharArray, 0, Int.MaxValue) } must produce[IndexOutOfBoundsException]
+    an [IndexOutOfBoundsException] must be thrownBy { WrappedCharArray("hello there".toCharArray, -1, 5) }
+    an [IndexOutOfBoundsException] must be thrownBy { WrappedCharArray("hello there".toCharArray, 3, -1) }
+    an [IndexOutOfBoundsException] must be thrownBy { WrappedCharArray("hello there".toCharArray, 3, 9) }
+    an [IndexOutOfBoundsException] must be thrownBy { WrappedCharArray("hello there".toCharArray, 0, Int.MaxValue) }
   }
 
   test("Extracting an iterator works") {

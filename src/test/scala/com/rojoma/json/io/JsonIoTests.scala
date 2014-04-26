@@ -1,9 +1,8 @@
 package com.rojoma.json
 package io
 
-import org.scalatest.FunSuite
+import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatest.prop.Checkers
-import org.scalatest.matchers.MustMatchers
 
 import org.scalacheck.Arbitrary
 import org.scalacheck.Gen
@@ -51,17 +50,16 @@ class JsonIoTests extends FunSuite with Checkers with MustMatchers {
       val r = new JsonReader(new JsonTokenIterator(new java.io.StringReader(x.toString + " " + y.toString)))
       val newX = r.read()
       val newY = r.read()
-      evaluating(r.read()) must produce[JsonEOF]
+      a [JsonEOF] must be thrownBy { r.read() }
       newX == x && newY == y
     })
   }
 
   test("reading a partial object throws JsonEOF") {
-    evaluating(JsonReader.fromString("[1,2,3")) must produce [JsonEOF]
+    a [JsonEOF] must be thrownBy { JsonReader.fromString("[1,2,3") }
   }
 
   test("reading a partial string throws JsonEOF") {
-    evaluating(JsonReader.fromString("'")) must produce [JsonEOF]
+    a [JsonEOF] must be thrownBy { JsonReader.fromString("'") }
   }
 }
-

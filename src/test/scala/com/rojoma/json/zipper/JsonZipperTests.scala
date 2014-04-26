@@ -3,8 +3,7 @@ package zipper
 
 import ast._
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.{FunSuite, MustMatchers}
 
 class JsonZipperTests extends FunSuite with MustMatchers {
   def r[T : codec.JsonCodec](s: String) = util.JsonUtil.parseJson[T](s).get
@@ -53,7 +52,7 @@ class JsonZipperTests extends FunSuite with MustMatchers {
   }
 
   test("Going up from the top cause a NoSuchElementException") {
-    evaluating { JsonZipper(JNull).up_! } must produce [NoSuchElementException]
+    a [NoSuchElementException] must be thrownBy { JsonZipper(JNull).up_! }
   }
 
   test("Trying to go up from the top must return None") {
@@ -102,7 +101,7 @@ class JsonZipperTests extends FunSuite with MustMatchers {
   }
 
   test("Removing the top object and then invoking top_! must throw" ){
-    evaluating { JsonZipper(JNull).remove.top_! } must produce [NoSuchElementException]
+    a [NoSuchElementException] must be thrownBy { JsonZipper(JNull).remove.top_! }
   }
 
   test("Can iterate over the elements of an array") {
@@ -127,23 +126,23 @@ class JsonZipperTests extends FunSuite with MustMatchers {
   }
 
   test("prev_! and next_! at the toplevel throw NoSuchElementException") {
-    evaluating { JsonZipper(JNull).prev_! } must produce [NoSuchElementException]
-    evaluating { JsonZipper(JNull).next_! } must produce [NoSuchElementException]
+    a [NoSuchElementException] must be thrownBy { JsonZipper(JNull).prev_! }
+    a [NoSuchElementException] must be thrownBy { JsonZipper(JNull).next_! }
   }
 
   test("sibling_! at the toplevel throws NoSuchElementException") {
-    evaluating { JsonZipper(JNull).sibling_!("gnu") } must produce [NoSuchElementException]
+    a [NoSuchElementException] must be thrownBy { JsonZipper(JNull).sibling_!("gnu") }
   }
 
   test("prev_! and next_! in an object throw NoSuchElementException") {
     val z = JsonZipper(r[JObject]("{a:1,b:2,c:3}")).down_!("b")
-    evaluating { z.prev_! } must produce [NoSuchElementException]
-    evaluating { z.next_! } must produce [NoSuchElementException]
+    a [NoSuchElementException] must be thrownBy { z.prev_! }
+    a [NoSuchElementException] must be thrownBy { z.next_! }
   }
 
   test("sibling_! in an array throws NoSuchElementException") {
     val z = JsonZipper(r[JArray]("[1,2,3]")).down_!(1)
-    evaluating { z.sibling_!("gnu") } must produce [NoSuchElementException]
+    a [NoSuchElementException] must be thrownBy { z.sibling_!("gnu") }
   }
 
   test("prev_! and next_! at the ends of arrays throw NoSuchElementException") {
@@ -151,20 +150,20 @@ class JsonZipperTests extends FunSuite with MustMatchers {
     val first = z.down_!(0)
     val last = z.down_!(2)
 
-    evaluating { first.prev_! } must produce [NoSuchElementException]
-    evaluating { last.next_! } must produce [NoSuchElementException]
+    a [NoSuchElementException] must be thrownBy { first.prev_! }
+    a [NoSuchElementException] must be thrownBy { last.next_! }
   }
 
   test("sibling_! for a nonexistant field throws NoSuchElementException") {
     val z = JsonZipper(r[JObject]("{a:1,b:2,c:3}")).down_!("a")
 
-    evaluating { z.sibling_!("gnu") } must produce [NoSuchElementException]
+    a [NoSuchElementException] must be thrownBy { z.sibling_!("gnu") }
   }
 
   test("down_! out of bounds of an array throws IndexOutOfBoundsException") {
     val z = JsonZipper(r[JArray]("[1,2,3]"))
-    evaluating { z.down_!(-1) } must produce [IndexOutOfBoundsException]
-    evaluating { z.down_!(4) } must produce [IndexOutOfBoundsException]
+    an [IndexOutOfBoundsException] must be thrownBy { z.down_!(-1) }
+    an [IndexOutOfBoundsException] must be thrownBy { z.down_!(4) }
   }
 
   test("Remove-and-replace on an array works") {

@@ -8,8 +8,7 @@ import testsupport.ArbitraryValidString._
 import util.JsonUtil.renderJson
 import util.WrappedCharArray
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatest.prop.PropertyChecks
 
 import org.scalacheck.{Gen, Arbitrary}
@@ -73,13 +72,13 @@ class JsonTokenGeneratorTests extends FunSuite with MustMatchers with PropertyCh
 
   test("EOF is allowed inside a line comment") {
     withSplitString("// eof here --->") { fragments =>
-      evaluating { firstToken(fragments) } must produce [NoSuchTokenException]
+      a [NoSuchTokenException] must be thrownBy { firstToken(fragments) }
     }
   }
 
   test("EOF is not allowed inside a block comment") {
     withSplitString("/* eof here --->") { fragments =>
-      evaluating { firstToken(fragments) } must produce [JsonEOF]
+      a [JsonEOF] must be thrownBy { firstToken(fragments) }
     }
   }
 

@@ -1,9 +1,8 @@
 package com.rojoma.json
 package diff
 
-import org.scalatest.FunSuite
+import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatest.prop.Checkers
-import org.scalatest.matchers.MustMatchers
 
 import org.scalacheck.Prop._
 import org.scalacheck.Arbitrary.arbitrary

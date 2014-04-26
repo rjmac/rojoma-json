@@ -3,8 +3,7 @@ package jpath
 
 import ast._
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.{FunSuite, MustMatchers}
 
 class JPathTests extends FunSuite with MustMatchers {
   def j(s: String) = io.JsonReader.fromString(s)

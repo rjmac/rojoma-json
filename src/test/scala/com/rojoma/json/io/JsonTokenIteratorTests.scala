@@ -1,8 +1,7 @@
 package com.rojoma.json
 package io
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.{FunSuite, MustMatchers}
 
 class JsonTokenIteratorTests extends FunSuite with MustMatchers {
   def r(s: String) = new java.io.StringReader(s)
@@ -40,17 +39,17 @@ class JsonTokenIteratorTests extends FunSuite with MustMatchers {
   }
 
   test("EOF is allowed inside a line comment") {
-    evaluating(t("// eof here --->")) must produce [NoSuchTokenException]
+    a [NoSuchTokenException] must be thrownBy { t("// eof here --->") }
   }
 
   test("EOF is not allowed inside a block comment") {
-    evaluating { t("/* eof here --->") } must produce [JsonEOF]
-    evaluating { t("/* eof here --->") } must produce [JsonLexException]
+    a [JsonEOF] must be thrownBy { t("/* eof here --->") }
+    a [JsonLexException] must be thrownBy { t("/* eof here --->") }
   }
 
   test("EOF is not allowed inside a string") {
-    evaluating { t("'eof here --->") } must produce [JsonEOF]
-    evaluating { t("'eof here --->") } must produce [JsonLexException]
+    a [JsonEOF] must be thrownBy { t("'eof here --->") }
+    a [JsonLexException] must be thrownBy { t("'eof here --->") }
   }
 
   test("multiple tokens can be read without any intervening space") {

@@ -5,8 +5,7 @@ import ast.JValue
 import testsupport.ArbitraryJValue._
 import testsupport.ArbitraryValidString._
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatest.prop.PropertyChecks
 
 class JsonEventGeneratorTests extends FunSuite with MustMatchers with PropertyChecks {
@@ -41,10 +40,10 @@ class JsonEventGeneratorTests extends FunSuite with MustMatchers with PropertyCh
   }
 
   test("reading non start-of-datum tokens fails") {
-    evaluating { e("]") } must produce [JsonUnexpectedToken]
-    evaluating { e("}") } must produce [JsonUnexpectedToken]
-    evaluating { e(":") } must produce [JsonUnexpectedToken]
-    evaluating { e(",") } must produce [JsonUnexpectedToken]
+    a [JsonUnexpectedToken] must be thrownBy { e("]") }
+    a [JsonUnexpectedToken] must be thrownBy { e("}") }
+    a [JsonUnexpectedToken] must be thrownBy { e(":") }
+    a [JsonUnexpectedToken] must be thrownBy { e(",") }
   }
 
   test("Parsing list") {
@@ -65,30 +64,30 @@ class JsonEventGeneratorTests extends FunSuite with MustMatchers with PropertyCh
   test("A field must be a string or identifier") {
     parseAll("{'a'")
     parseAll("{a")
-    evaluating { parseAll("{5") } must produce [JsonUnexpectedToken]
-    evaluating { parseAll("{[") } must produce [JsonUnexpectedToken]
-    evaluating { parseAll("{{") } must produce [JsonUnexpectedToken]
+    a [JsonUnexpectedToken] must be thrownBy { parseAll("{5") }
+    a [JsonUnexpectedToken] must be thrownBy { parseAll("{[") }
+    a [JsonUnexpectedToken] must be thrownBy { parseAll("{{") }
   }
 
   test("A field must be followed by a colon") {
     parseAll("{'a':")
     parseAll("{a:")
-    evaluating { parseAll("{'a' 'a'") } must produce [JsonUnexpectedToken]
-    evaluating { parseAll("{'a' a") } must produce [JsonUnexpectedToken]
-    evaluating { parseAll("{'a' ,") } must produce [JsonUnexpectedToken]
-    evaluating { parseAll("{'a' 5") } must produce [JsonUnexpectedToken]
-    evaluating { parseAll("{'a' {") } must produce [JsonUnexpectedToken]
-    evaluating { parseAll("{'a' [") } must produce [JsonUnexpectedToken]
+    a [JsonUnexpectedToken] must be thrownBy { parseAll("{'a' 'a'") }
+    a [JsonUnexpectedToken] must be thrownBy { parseAll("{'a' a") }
+    a [JsonUnexpectedToken] must be thrownBy { parseAll("{'a' ,") }
+    a [JsonUnexpectedToken] must be thrownBy { parseAll("{'a' 5") }
+    a [JsonUnexpectedToken] must be thrownBy { parseAll("{'a' {") }
+    a [JsonUnexpectedToken] must be thrownBy { parseAll("{'a' [") }
   }
 
   test("Array items must be separated by commas") {
     parseAll("[1,2")
-    evaluating { parseAll("[1 2") } must produce [JsonUnexpectedToken]
+    a [JsonUnexpectedToken] must be thrownBy { parseAll("[1 2") }
   }
 
   test("Object fields must be separated by commas") {
     parseAll("{'a':1,'b':2")
-    evaluating { parseAll("{'a':1 'b':2") } must produce [JsonUnexpectedToken]
+   a [JsonUnexpectedToken] must be thrownBy { parseAll("{'a':1 'b':2") }
   }
 
   test("A brand-new parser must be at toplevel") {

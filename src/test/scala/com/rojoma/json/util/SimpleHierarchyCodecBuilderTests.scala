@@ -1,8 +1,7 @@
 package com.rojoma.json
 package util
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.{FunSuite, MustMatchers}
 
 import ast._
 import io._
@@ -130,88 +129,88 @@ class SimpleHierarchyCodecBuilderTests extends FunSuite with MustMatchers {
   }
 
   test("Trying to use the same name for both the type and value fields fails") {
-    evaluating {
+    an [IllegalArgumentException] must be thrownBy {
       SimpleHierarchyCodecBuilder[Base](TagAndValue("a", "a"))
-    } must produce [IllegalArgumentException]
+    }
   }
 
   test("Trying to give the same name to two branches fails for tag-and-value") {
-    evaluating {
+    an [IllegalArgumentException] must be thrownBy {
       SimpleHierarchyCodecBuilder[Base](TagAndValue("type", "value")).
         branch[A]("a").
         branch[B]("a")
-    } must produce [IllegalArgumentException]
+    }
   }
 
   test("Trying to give the same name to two branches fails for tag-to-value") {
-    evaluating {
+    an [IllegalArgumentException] must be thrownBy {
       SimpleHierarchyCodecBuilder[Base](TagToValue).
         branch[A]("a").
         branch[B]("a")
-    } must produce [IllegalArgumentException]
+    }
   }
 
   test("Trying to give the same name to two branches fails for internal-tag") {
-    evaluating {
+    an [IllegalArgumentException] must be thrownBy {
       SimpleHierarchyCodecBuilder[Base](InternalTag("t")).
         branch[A]("a").
         branch[B]("a")
-    } must produce [IllegalArgumentException]
+    }
   }
 
   test("Trying to give the same type two different names fails for tag-and-value") {
-    evaluating {
+    an [IllegalArgumentException] must be thrownBy {
       SimpleHierarchyCodecBuilder[Base](TagAndValue("type", "value")).
         branch[A]("a").
         branch[A]("b")
-    } must produce [IllegalArgumentException]
+    }
   }
 
   test("Trying to give the same type two different names fails for tag-to-value") {
-    evaluating {
+    an [IllegalArgumentException] must be thrownBy {
       SimpleHierarchyCodecBuilder[Base](TagToValue).
         branch[A]("a").
         branch[A]("b")
-    } must produce [IllegalArgumentException]
+    }
   }
 
   test("Trying to give the same type two different names fails for internal-tag") {
-    evaluating {
+    an [IllegalArgumentException] must be thrownBy {
       SimpleHierarchyCodecBuilder[Base](InternalTag("t")).
         branch[A]("a").
         branch[A]("b")
-    } must produce [IllegalArgumentException]
+    }
   }
 
   test("Trying to give the same type two different names fails for no-tag") {
-    evaluating {
+    an [IllegalArgumentException] must be thrownBy {
       SimpleHierarchyCodecBuilder[Base](NoTag).
         branch[A].
         branch[A]
-    } must produce [IllegalArgumentException]
+    }
   }
 
   test("Defining no branches fails for tag-and-value") {
-    evaluating {
+    an [IllegalStateException] must be thrownBy {
       SimpleHierarchyCodecBuilder[Base](TagAndValue("type", "value")).build
-    } must produce [IllegalStateException]
+    }
   }
 
   test("Defining no branches fails for tag-to-value") {
-    evaluating {
+    an [IllegalStateException] must be thrownBy {
       SimpleHierarchyCodecBuilder[Base](TagToValue).build
-    } must produce [IllegalStateException]
+    }
   }
 
   test("Defining no branches fails for internal-tag") {
-    evaluating {
+    an [IllegalStateException] must be thrownBy {
       SimpleHierarchyCodecBuilder[Base](InternalTag("x")).build
-    } must produce [IllegalStateException]
+    }
   }
 
   test("Defining no branches fails for no-tag") {
-    evaluating {
+    an [IllegalStateException] must be thrownBy {
       SimpleHierarchyCodecBuilder[Base](NoTag).build
-    } must produce [IllegalStateException]
+    }
   }
 }

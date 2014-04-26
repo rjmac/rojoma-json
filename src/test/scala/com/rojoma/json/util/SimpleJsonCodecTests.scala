@@ -4,8 +4,7 @@ package util
 import ast._
 import codec.JsonCodec.toJValue
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.{FunSuite, MustMatchers}
 
 case class Foo(a: Int, b: Option[String])
 

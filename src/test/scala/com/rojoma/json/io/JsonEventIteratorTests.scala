@@ -1,8 +1,7 @@
 package com.rojoma.json
 package io
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.{FunSuite, MustMatchers}
 
 class JsonEventIteratorTests extends FunSuite with MustMatchers {
   def r(s: String) = new java.io.StringReader(s)
@@ -18,10 +17,10 @@ class JsonEventIteratorTests extends FunSuite with MustMatchers {
   }
 
   test("reading non start-of-datum tokens fails") {
-    evaluating { e("]") } must produce [JsonUnexpectedToken]
-    evaluating { e("}") } must produce [JsonUnexpectedToken]
-    evaluating { e(":") } must produce [JsonUnexpectedToken]
-    evaluating { e(",") } must produce [JsonUnexpectedToken]
+    a [JsonUnexpectedToken] must be thrownBy { e("]") }
+    a [JsonUnexpectedToken] must be thrownBy { e("}") }
+    a [JsonUnexpectedToken] must be thrownBy { e(":") }
+    a [JsonUnexpectedToken] must be thrownBy { e(",") }
   }
 
   test("Calling next() on an event iterator reads no more than is necessary") {
@@ -84,18 +83,18 @@ class JsonEventIteratorTests extends FunSuite with MustMatchers {
   test("skipRestOfCompound() in an incomplete object raises JsonEOF") {
     var it = i("[1,2,3")
     it.next()
-    evaluating(it.skipRestOfCompound()) must produce[JsonEOF]
+    a [JsonEOF] must be thrownBy { it.skipRestOfCompound() }
   }
 
   test("skipRestOfCompound() in an incomplete object raises a parse exception") {
     var it = i("[1,2,3")
     it.next()
-    evaluating(it.skipRestOfCompound()) must produce[JsonParseException]
+    a [JsonParseException] must be thrownBy { it.skipRestOfCompound() }
   }
 
   test("skipNextDatum() at EOF produces NoSuchElementException") {
     var it = i("")
-    evaluating(it.skipNextDatum()) must produce[NoSuchElementException]
+    a [NoSuchElementException] must be thrownBy { it.skipNextDatum() }
   }
 
   test("skipNextDatum() at the top level reads a whole object") {
@@ -105,12 +104,12 @@ class JsonEventIteratorTests extends FunSuite with MustMatchers {
 
   test("skipNextDatum() of an incomplete object raises JsonEOF") {
     var it = i("[1,2,3")
-    evaluating(it.skipNextDatum()) must produce[JsonEOF]
+    a [JsonEOF] must be thrownBy { it.skipNextDatum() }
   }
 
   test("skipNextDatum() of an incomplete object raises a parse eception") {
     var it = i("[1,2,3")
-    evaluating(it.skipNextDatum()) must produce[JsonParseException]
+    a [JsonParseException] must be thrownBy { it.skipNextDatum() }
   }
 
   test("skipNextDatum() within an array skips one item") {

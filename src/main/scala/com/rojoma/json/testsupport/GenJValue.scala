@@ -30,7 +30,7 @@ object GenJValue {
     x <- ArbitraryValidString.arbitrary
   } yield JString(x)
 
-  val genJNull: Gen[JNull] = Gen.value(JNull) // Just for completeness' sake
+  val genJNull: Gen[JNull] = Gen.const(JNull) // Just for completeness' sake
 
   def genJAtom: Gen[JAtom] =
     Gen.oneOf(genJNull, genJBoolean, genJNumber, genJString)

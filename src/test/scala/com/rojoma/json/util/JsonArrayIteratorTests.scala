@@ -7,9 +7,8 @@ import io._
 
 import testsupport.ArbitraryJValue._
 
-import org.scalatest.FunSuite
+import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatest.prop.PropertyChecks
-import org.scalatest.matchers.MustMatchers
 
 class JsonArrayIteratorTests extends FunSuite with MustMatchers with PropertyChecks {
   test("Eventifying an array and decoding it with a JsonArrayIterator is an identity operation") {
@@ -19,20 +18,20 @@ class JsonArrayIteratorTests extends FunSuite with MustMatchers with PropertyChe
   }
 
   test("Giving JsonArrayIterator an empty input fails with JsonEOF") {
-    evaluating { JsonArrayIterator[String](Iterator.empty) } must produce[JsonEOF]
+    a [JsonEOF] must be thrownBy { JsonArrayIterator[String](Iterator.empty) }
   }
 
   test("Giving JsonArrayIterator a non-array input fails with JsonBadParse") {
     forAll() { x: JValue =>
       whenever(!x.isInstanceOf[JArray]) {
-        evaluating { JsonArrayIterator[String](JValueEventIterator(x)) } must produce [JsonBadParse]
+        a [JsonBadParse] must be thrownBy { JsonArrayIterator[String](JValueEventIterator(x)) }
       }
     }
   }
 
   test("Giving JsonArrayIterator an incomplete array eventually throws JsonEOF") {
     forAll() { x: JArray =>
-      evaluating { JsonArrayIterator[JValue](JValueEventIterator(x).toSeq.dropRight(1).iterator).toList } must produce [JsonEOF]
+    a [JsonEOF] must be thrownBy { JsonArrayIterator[JValue](JValueEventIterator(x).toSeq.dropRight(1).iterator).toList } 
     }
   }
 
@@ -41,7 +40,7 @@ class JsonArrayIteratorTests extends FunSuite with MustMatchers with PropertyChe
     it.next() must equal ("hello")
     it.next() must equal ("world")
     it.hasNext must be (true)
-    evaluating { it.next() } must produce[JsonArrayIterator.ElementDecodeException]
+    a [JsonArrayIterator.ElementDecodeException] must be thrownBy { it.next() }
   }
 
   test("After throwing an ElementDecodeException, the iterator is positioned after the bad element") {
@@ -49,7 +48,7 @@ class JsonArrayIteratorTests extends FunSuite with MustMatchers with PropertyChe
     it.next() must equal ("hello")
     it.next() must equal ("world")
     it.hasNext must be (true)
-    evaluating { it.next() } must produce[JsonArrayIterator.ElementDecodeException]
+    a [JsonArrayIterator.ElementDecodeException] must be thrownBy { it.next() }
     it.next() must equal ("gnu")
     it.hasNext must be (false)
   }

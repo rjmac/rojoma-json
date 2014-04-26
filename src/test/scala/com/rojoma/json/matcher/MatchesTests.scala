@@ -3,8 +3,7 @@ package matcher
 
 import ast._
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.{FunSuite, MustMatchers}
 
 class MatchesTests extends FunSuite with MustMatchers {
   def j(s: String) = io.JsonReader.fromString(s)
@@ -159,9 +158,9 @@ class MatchesTests extends FunSuite with MustMatchers {
   }
 
   test("variables look up failure") {
-    val a = Variable[JValue]()
+    val v = Variable[JValue]()
     val results: Pattern.Results = Map.empty
-    evaluating { a(results) } must produce [NoSuchElementException]
+    a [NoSuchElementException] must be thrownBy { v(results) }
   }
 
   test("variables can match the same thing twice") {
@@ -230,14 +229,14 @@ class MatchesTests extends FunSuite with MustMatchers {
   }
 
   test("non-optional fields throw an exception") {
-    val a = Variable[Int]()
-    val pattern = PObject("hello" -> a)
-    evaluating(pattern.generate()) must produce [JsonGenerationException]
+    val v = Variable[Int]()
+    val pattern = PObject("hello" -> v)
+    a [JsonGenerationException] must be thrownBy { pattern.generate() }
   }
 
   test("generating from AllOf throws an exception") {
     val pattern = AllOf("hello", "world")
-    evaluating(pattern.generate()) must produce [JsonGenerationException]
+    a [JsonGenerationException] must be thrownBy { pattern.generate() }
   }
 
   test("generating from FirstOf produces the first option that can be generated") {

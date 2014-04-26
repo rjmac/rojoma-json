@@ -1,9 +1,8 @@
 package com.rojoma.json
 package io
 
-import org.scalatest.FunSuite
+import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatest.prop.PropertyChecks
-import org.scalatest.matchers.MustMatchers
 
 import testsupport.ArbitraryJValue.ArbitraryJValue
 import ast.JValue
