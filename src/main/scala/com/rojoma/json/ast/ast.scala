@@ -96,7 +96,7 @@ object JNumber {
 
   def apply(f: Float): JNumber = {
     if(f.isNaN || f.isInfinite) throw JsonInvalidFloat(f)
-    new JNumber(BigDecimal(f))
+    new JNumber(BigDecimal(f.toDouble))
   }
   def apply(d: Double): JNumber = {
     if(d.isNaN || d.isInfinite) throw JsonInvalidDouble(d)
