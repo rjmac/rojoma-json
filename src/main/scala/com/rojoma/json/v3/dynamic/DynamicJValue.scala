@@ -21,7 +21,7 @@ class DynamicJValue(val staticOpt: Option[JValue]) extends AnyVal with Dynamic {
           case Some(item) =>
             item match {
               case obj: JObject if ev.isField =>
-                obj.dynamic.selectDynamic(ev.asField(subfieldOrIdx))
+                obj.dynamic(ev.asField(subfieldOrIdx))
               case arr: JArray if !ev.isField =>
                 arr.dynamic(ev.asIndex(subfieldOrIdx))
               case _=>
@@ -35,17 +35,20 @@ class DynamicJValue(val staticOpt: Option[JValue]) extends AnyVal with Dynamic {
     }
 
   def selectDynamic(field: String): DynamicJValue =
-    staticOpt match {
-      case Some(obj: JObject) =>
-        new DynamicJValue(obj.get(field))
-      case _ =>
-        new DynamicJValue(None)
-    }
+    apply(field)
 
   def apply(idx: Int): DynamicJValue =
     staticOpt match {
       case Some(arr: JArray) if arr.isDefinedAt(idx) =>
         arr(idx).dynamic
+      case _ =>
+        new DynamicJValue(None)
+    }
+
+  def apply(field: String): DynamicJValue =
+    staticOpt match {
+      case Some(obj: JObject) =>
+        new DynamicJValue(obj.get(field))
       case _ =>
         new DynamicJValue(None)
     }
