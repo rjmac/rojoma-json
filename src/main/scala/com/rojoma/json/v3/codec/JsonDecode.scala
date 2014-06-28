@@ -20,13 +20,33 @@ sealed trait DecodeError {
 }
 
 object DecodeError {
+  /** There were several choices and they all failed. */
   case class Multiple(choices: Iterable[DecodeError], path: Path) extends DecodeError {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
   }
+
+  /** A value was found in the correct position but of the wrong type. */
   case class InvalidType(expected: JsonType, got: JsonType, path: Path) extends DecodeError {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
   }
-  case class InvalidValue(got: JValue, path: Path) extends DecodeError {
+
+  /** A value of the correct JSON type was found but it held undecodable value. */
+  case class InvalidValue(got: JAtom, path: Path) extends DecodeError {
+    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
+  }
+
+  /** A required field was missing. */
+  case class MissingField(field: String, path: Path) extends DecodeError {
+    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
+  }
+
+  /** An unknown field was present. */
+  case class UnknownField(field: String, path: Path) extends DecodeError {
+    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
+  }
+
+  /** An array with the wrong number of elements was found. */
+  case class WrongNumberOfElements(expected: Int, got: Int, path: Path) extends DecodeError {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
   }
 }
@@ -248,12 +268,12 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
 
   implicit def jlEnumDecode[T <: java.lang.Enum[T]](implicit tag: ClassTag[T]) = new JsonDecode[T] {
     def decode(x: JValue) = x match {
-      case JString(s) =>
+      case str@JString(s) =>
         try {
           Right(java.lang.Enum.valueOf[T](tag.runtimeClass.asInstanceOf[Class[T]], s))
         } catch {
           case _: IllegalArgumentException =>
-            Left(DecodeError.InvalidValue(x, Path.empty))
+            Left(DecodeError.InvalidValue(str, Path.empty))
         }
       case other =>
         Left(DecodeError.InvalidType(JString, other.jsonType, Path.empty))
@@ -263,7 +283,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
   implicit object UnitDecode extends JsonDecode[Unit] {
     def decode(x: JValue) = x match {
       case JArray(xs) if xs.isEmpty => Right(())
-      case nonEmpty: JArray => Left(DecodeError.InvalidValue(nonEmpty, Path.empty))
+      case nonEmpty: JArray => Left(DecodeError.WrongNumberOfElements(0, nonEmpty.length, Path.empty))
       case other => Left(DecodeError.InvalidType(JArray, other.jsonType, Path.empty))
     }
   }
