@@ -1,5 +1,5 @@
 package com.rojoma.json.v3
-package `-impl`.ast.conversions
+package `-impl`.conversions.v2
 
 import com.rojoma.json.{ast => v2}
 import com.rojoma.json.v3.{ast => v3}
