@@ -14,10 +14,6 @@ trait JsonDecode[T] {
   def decode(x: JValue): JsonDecode.DecodeResult[T]
 }
 
-private[codec] object CBHolder {
-  type CB[A, B] = sc.generic.CanBuild[A, B]
-}
-
 sealed trait DecodeError {
   def path: Path
   def augment(parent: Path.Entry): DecodeError
@@ -37,8 +33,7 @@ object DecodeError {
 
 /** Generally-useful json implicits. */
 object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
-  import CBHolder._
-
+  private type CB[A, B] = sc.generic.CanBuild[A, B]
   type DecodeResult[T] = Either[DecodeError, T]
 
   def apply[T](implicit a: JsonDecode[T]): a.type = a
