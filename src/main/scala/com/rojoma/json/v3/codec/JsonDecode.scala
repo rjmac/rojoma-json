@@ -44,8 +44,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
   def apply[T](implicit a: JsonDecode[T]): a.type = a
   def fromJValue[T : JsonDecode](x: JValue) = JsonDecode[T].decode(x)
 
-  implicit def seqDecode[T, S[X] <: sc.Seq[X]](implicit tDecode: JsonDecode[T], buildFactory: CB[T, S[T]]) = new JsonDecode[S[T]] {
-    def decode(xs: JValue): DecodeResult[S[T]] = xs match {
+  private class IterableDecode[T, S](tDecode: JsonDecode[T], buildFactory: CB[T, S]) extends JsonDecode[S] {
+    def decode(xs: JValue): DecodeResult[S] = xs match {
       case JArray(jElems) =>
         val builder = buildFactory()
         for ((jElem, idx) <- jElems.iterator.zipWithIndex) {
@@ -62,29 +62,38 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
-  implicit def arrayDecode[T: JsonDecode: ClassTag] = new JsonDecode[Array[T]] {
-    def decode(xs: JValue): DecodeResult[Array[T]] = xs match {
-      case JArray(jElems) =>
-        val builder = scm.ArrayBuilder.make[T]()
-        val subDecode = JsonDecode[T]
-        for((jElem, idx) <- jElems.iterator.zipWithIndex) {
-          subDecode.decode(jElem) match {
-            case Right(elem) =>
-              builder += elem
-            case Left(err) =>
-              return Left(err.augment(Path.Index(idx)))
-          }
-        }
-        Right(builder.result())
-      case other =>
-        Left(DecodeError.InvalidType(JArray, other.jsonType, Path.empty))
-    }
-  }
+  implicit def seqDecode[T, S[X] <: sc.Seq[X]](implicit tDecode: JsonDecode[T], buildFactory: CB[T, S[T]]): JsonDecode[S[T]] =
+    new IterableDecode(tDecode, buildFactory)
+
+  implicit def arrayDecode[T](implicit tDecode: JsonDecode[T], ct: ClassTag[T]): JsonDecode[Array[T]] =
+    new IterableDecode(tDecode, implicitly[CB[T, Array[T]]])
+
+  implicit def setDecode[T, S[U] <: sc.Set[U]](implicit tCodec: JsonDecode[T], buildFactory: CB[T, S[T]]): JsonDecode[S[T]] =
+    new IterableDecode(tCodec, buildFactory)
 
   implicit def juListDecode[T: JsonDecode] = new JsonDecode[ju.List[T]] {
     def decode(xs: JValue): DecodeResult[ju.List[T]] = xs match {
       case JArray(jElems) =>
         val result = new ju.ArrayList[T](jElems.length)
+        val subDecode = JsonDecode[T]
+        for((jElem, idx) <- jElems.iterator.zipWithIndex) {
+          subDecode.decode(jElem) match {
+            case Right(elem) =>
+              result.add(elem)
+            case Left(err) =>
+              return Left(err.augment(Path.Index(idx)))
+          }
+        }
+        Right(result)
+      case other =>
+        Left(DecodeError.InvalidType(JArray, other.jsonType, Path.empty))
+    }
+  }
+
+  implicit def juSetDecode[T : JsonDecode] = new JsonDecode[ju.Set[T]] {
+    def decode(xs: JValue): DecodeResult[ju.Set[T]] = xs match {
+      case JArray(jElems) =>
+        val result = new ju.LinkedHashSet[T]
         val subDecode = JsonDecode[T]
         for((jElem, idx) <- jElems.iterator.zipWithIndex) {
           subDecode.decode(jElem) match {

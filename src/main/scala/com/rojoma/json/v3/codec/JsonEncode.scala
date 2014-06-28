@@ -36,10 +36,28 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
         JArray.canonicalEmpty
   }
 
+  implicit def setEncode[T, S[X] <: sc.Set[X]](implicit tEncode: JsonEncode[T]) = new JsonEncode[S[T]] {
+    def encode(x: S[T]): JValue = {
+      if(x.nonEmpty)
+        JArray(x.toSeq.view.map(tEncode.encode))
+      else
+        JArray.canonicalEmpty
+    }
+  }
+
   implicit def juListEncode[T: JsonEncode] = new JsonEncode[ju.List[T]] {
     def encode(x: ju.List[T]): JValue = {
       if(!x.isEmpty)
         JArray(x.asScala.view.map(JsonEncode[T].encode))
+      else
+        JArray.canonicalEmpty
+    }
+  }
+
+  implicit def juSetEncode[T: JsonEncode] = new JsonEncode[ju.Set[T]] {
+    def encode(x: ju.Set[T]): JValue = {
+      if(!x.isEmpty)
+        JArray(x.asScala.toSeq.view.map(JsonEncode[T].encode))
       else
         JArray.canonicalEmpty
     }
