@@ -9,7 +9,7 @@ import ast.JString
 class Path(val toList: List[Path.Entry]) extends AnyVal {
   override def toString = Path.asString(toList)
 
-  def prepend(entry: Path.Entry) = new Path(entry :: toList)
+  def prepend(prefix: Path) = new Path(prefix.toList ++ toList)
 }
 
 object Path {

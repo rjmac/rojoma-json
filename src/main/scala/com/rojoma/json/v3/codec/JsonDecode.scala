@@ -17,38 +17,45 @@ trait JsonDecode[T] {
 
 sealed trait DecodeError {
   def path: Path
-  def augment(parent: Path.Entry): DecodeError
+  def augment(parent: Path.Entry): DecodeError = augment(new Path(parent :: Nil))
+  def augment(parents: Path): DecodeError
+  def simplify: Iterable[DecodeError.Simple]
 }
 
 object DecodeError {
   /** There were several choices and they all failed. */
   case class Multiple(choices: Iterable[DecodeError], path: Path) extends DecodeError {
-    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
+    def augment(parents: Path) = copy(path = path.prepend(parents))
+    def simplify = choices.flatMap(_.augment(path).simplify)
+  }
+
+  sealed abstract class Simple extends DecodeError {
+    def simplify = Seq(this)
   }
 
   /** A value was found in the correct position but of the wrong type. */
-  case class InvalidType(expected: JsonType, got: JsonType, path: Path) extends DecodeError {
-    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
+  case class InvalidType(expected: JsonType, got: JsonType, path: Path) extends Simple {
+    def augment(parents: Path) = copy(path = path.prepend(parents))
   }
 
   /** A value of the correct JSON type was found but it held undecodable value. */
-  case class InvalidValue(got: JValue, path: Path) extends DecodeError {
-    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
+  case class InvalidValue(got: JValue, path: Path) extends Simple {
+    def augment(parents: Path) = copy(path = path.prepend(parents))
   }
 
   /** A required field was missing. */
-  case class MissingField(field: String, path: Path) extends DecodeError {
-    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
+  case class MissingField(field: String, path: Path) extends Simple {
+    def augment(parents: Path) = copy(path = path.prepend(parents))
   }
 
   /** An unknown field was present. */
-  case class InvalidField(field: String, path: Path) extends DecodeError {
-    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
+  case class InvalidField(field: String, path: Path) extends Simple {
+    def augment(parents: Path) = copy(path = path.prepend(parents))
   }
 
   /** An array with the wrong number of elements was found. */
-  case class InvalidLength(expected: Int, got: Int, path: Path) extends DecodeError {
-    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
+  case class InvalidLength(expected: Int, got: Int, path: Path) extends Simple {
+    def augment(parents: Path) = copy(path = path.prepend(parents))
   }
 }
 
