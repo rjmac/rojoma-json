@@ -1,7 +1,7 @@
 package com.rojoma.json.v3
 package util
 
-import com.rojoma.`json-impl`.AbstractBufferedIterator
+import `-impl`.util.AbstractBufferedIterator
 
 import java.nio.CharBuffer
 

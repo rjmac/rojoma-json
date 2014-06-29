@@ -320,7 +320,7 @@ object JCompound {
 /** A JSON array, implemented as a thin wrapper around a sequence of [[com.rojoma.json.v3.ast.JValue]]s.
   * In many ways this can be treated as a `Seq`, but it is in fact not one. */
 case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFunction[Int, JValue] with JCompound {
-  import com.rojoma.`json-impl`.AnnoyingJArrayHack._
+  import `-impl`.ast.AnnoyingJArrayHack._
 
   override def size = elems.size
   def length = elems.length
