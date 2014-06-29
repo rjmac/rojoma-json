@@ -15,8 +15,7 @@ trait ReallyDecode[T] extends FLiteral {
       case l@Left(err) =>
         val choices = decode.acceptTypes
         if(choices(x.jsonType)) l
-        else if(choices.size == 1)  Left(DecodeError.InvalidType(choices.iterator.next(), x.jsonType, Path.empty))
-        else Left(DecodeError.Multiple(choices.toSeq.map(DecodeError.InvalidType(_, x.jsonType, Path.empty)), Path.empty))
+        else Left(DecodeError.join(choices.map(DecodeError.InvalidType(_, x.jsonType, Path.empty))))
     }
 }
 

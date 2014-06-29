@@ -16,46 +16,54 @@ trait JsonDecode[T] {
 }
 
 sealed trait DecodeError {
-  def path: Path
-  def augment(parent: Path.Entry): DecodeError = augment(new Path(parent :: Nil))
-  def augment(parents: Path): DecodeError
-  def simplify: Iterable[DecodeError.Simple]
+  def augment(parent: Path.Entry): DecodeError
 }
 
 object DecodeError {
   /** There were several choices and they all failed. */
-  case class Multiple(choices: Iterable[DecodeError], path: Path) extends DecodeError {
-    def augment(parents: Path) = copy(path = path.prepend(parents))
-    def simplify = choices.flatMap(_.augment(path).simplify)
+  case class Multiple(choices: Seq[Simple]) extends DecodeError {
+    def augment(parent: Path.Entry) = copy(choices = choices.map(_.augment(parent)))
+  }
+
+  def join(choices: Iterable[DecodeError]): DecodeError = {
+    val deduped =
+      if(choices.isInstanceOf[sc.Set[_]]) choices
+      else new sc.mutable.LinkedHashSet ++ choices
+    if(deduped.size == 1) choices.iterator.next()
+    else Multiple(deduped.toSeq.flatMap {
+                    case Multiple(subchoices) => subchoices
+                    case simple: Simple => Seq(simple)
+                  })
   }
 
   sealed abstract class Simple extends DecodeError {
-    def simplify = Seq(this)
+    val path: Path
+    def augment(parent: Path.Entry): Simple
   }
 
   /** A value was found in the correct position but of the wrong type. */
   case class InvalidType(expected: JsonType, got: JsonType, path: Path) extends Simple {
-    def augment(parents: Path) = copy(path = path.prepend(parents))
+    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
   }
 
   /** A value of the correct JSON type was found but it held undecodable value. */
   case class InvalidValue(got: JValue, path: Path) extends Simple {
-    def augment(parents: Path) = copy(path = path.prepend(parents))
+    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
   }
 
   /** A required field was missing. */
   case class MissingField(field: String, path: Path) extends Simple {
-    def augment(parents: Path) = copy(path = path.prepend(parents))
+    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
   }
 
   /** An unknown field was present. */
   case class InvalidField(field: String, path: Path) extends Simple {
-    def augment(parents: Path) = copy(path = path.prepend(parents))
+    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
   }
 
   /** An array with the wrong number of elements was found. */
   case class InvalidLength(expected: Int, got: Int, path: Path) extends Simple {
-    def augment(parents: Path) = copy(path = path.prepend(parents))
+    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
   }
 }
 
@@ -253,11 +261,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
         Right(j)
       case None =>
         val choices = implicitly[Json[T]].jsonTypes
-        if(choices.size == 1) {
-          Left(DecodeError.InvalidType(choices.iterator.next(), x.jsonType, Path.empty))
-        } else {
-          Left(DecodeError.Multiple(choices.toSeq.map(DecodeError.InvalidType(_, x.jsonType, Path.empty)), Path.empty))
-        }
+        Left(DecodeError.join(choices.map(DecodeError.InvalidType(_, x.jsonType, Path.empty))))
     }
 
     def acceptTypes = implicitly[Json[T]].jsonTypes
@@ -310,8 +314,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
           JsonDecode[L].decode(x) match {
             case Right(left) => Right(Left(left))
             case Left(err2) =>
-              if(err1 == err2) Left(err1)
-              else Left(DecodeError.Multiple(Seq(err1, err2), Path.empty))
+              Left(DecodeError.join(Seq(err1, err2)))
           }
       }
 

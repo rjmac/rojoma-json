@@ -390,7 +390,7 @@ case class FirstOf(subPatterns: Pattern*) extends Pattern {
   def evaluate(x: JValue, environment: Pattern.Results) = {
     val it = subPatterns.iterator
     def loop(fails: List[DecodeError]): Either[DecodeError, Pattern.Results] = {
-      if(!it.hasNext) Left(DecodeError.Multiple(fails.reverse, Path.empty))
+      if(!it.hasNext) Left(DecodeError.join(fails.reverse))
       else it.next().evaluate(x, environment) match {
         case Right(res) => Right(res)
         case Left(err) => loop(err :: fails)
