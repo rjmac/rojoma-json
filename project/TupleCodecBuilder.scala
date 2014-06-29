@@ -111,7 +111,7 @@ class TupleDecode {
     }
     sb.append("        Right((").append(decodedNames.mkString(",")).append("))\n")
     sb.append("      case arr: JArray =>\n")
-    sb.append("        Left(DecodeError.WrongNumberOfElements(").append(n).append(", arr.length, Path.empty))\n")
+    sb.append("        Left(DecodeError.InvalidLength(").append(n).append(", arr.length, Path.empty))\n")
     sb.append("      case other =>\n")
     sb.append("        Left(DecodeError.InvalidType(JArray, other.jsonType, Path.empty))\n")
     sb.append("    }\n")

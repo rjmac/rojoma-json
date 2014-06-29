@@ -31,7 +31,7 @@ object DecodeError {
   }
 
   /** A value of the correct JSON type was found but it held undecodable value. */
-  case class InvalidValue(got: JAtom, path: Path) extends DecodeError {
+  case class InvalidValue(got: JValue, path: Path) extends DecodeError {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
   }
 
@@ -41,12 +41,12 @@ object DecodeError {
   }
 
   /** An unknown field was present. */
-  case class UnknownField(field: String, path: Path) extends DecodeError {
+  case class InvalidField(field: String, path: Path) extends DecodeError {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
   }
 
   /** An array with the wrong number of elements was found. */
-  case class WrongNumberOfElements(expected: Int, got: Int, path: Path) extends DecodeError {
+  case class InvalidLength(expected: Int, got: Int, path: Path) extends DecodeError {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
   }
 }
@@ -215,7 +215,11 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
         Right(j)
       case None =>
         val choices = implicitly[Json[T]].jsonTypes
-        Left(DecodeError.Multiple(choices.toSeq.map(DecodeError.InvalidType(_, x.jsonType, Path.empty)), Path.empty))
+        if(choices.size == 1) {
+          Left(DecodeError.InvalidType(choices.iterator.next(), x.jsonType, Path.empty))
+        } else {
+          Left(DecodeError.Multiple(choices.toSeq.map(DecodeError.InvalidType(_, x.jsonType, Path.empty)), Path.empty))
+        }
     }
   }
 
@@ -261,7 +265,9 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
         case Left(err1) =>
           JsonDecode[L].decode(x) match {
             case Right(left) => Right(Left(left))
-            case Left(err2) => Left(DecodeError.Multiple(Seq(err1, err2), Path.empty))
+            case Left(err2) =>
+              if(err1 == err2) Left(err1)
+              else Left(DecodeError.Multiple(Seq(err1, err2), Path.empty))
           }
       }
   }
@@ -283,7 +289,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
   implicit object UnitDecode extends JsonDecode[Unit] {
     def decode(x: JValue) = x match {
       case JArray(xs) if xs.isEmpty => Right(())
-      case nonEmpty: JArray => Left(DecodeError.WrongNumberOfElements(0, nonEmpty.length, Path.empty))
+      case nonEmpty: JArray => Left(DecodeError.InvalidLength(0, nonEmpty.length, Path.empty))
       case other => Left(DecodeError.InvalidType(JArray, other.jsonType, Path.empty))
     }
   }
