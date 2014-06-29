@@ -18,7 +18,7 @@ import `-impl`.util.AbstractBufferedIterator
   * A `JsonTokenIterator` does many small reads; it may be a good idea
   * to wrap the input `Reader` into a `BufferedReader`.  If you do not
   * need to read non-JSON out of the underlying `Reader` afterward, a
-  * [[com.rojoma.json.io.BlockJsonTokenIterator]] maybe be faster.
+  * [[com.rojoma.json.v3.io.BlockJsonTokenIterator]] maybe be faster.
   *
   * As extensions to standard JSON, this reader supports single-quoted
   * strings and Javascript-style comments.

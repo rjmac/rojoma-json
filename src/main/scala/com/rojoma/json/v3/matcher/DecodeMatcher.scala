@@ -4,7 +4,7 @@ package matcher
 import ast._
 import codec._
 
-/** Simple class to turn a [[com.rojoma.json.v3.codec.JsonDeocde]] into something
+/** Simple class to turn a [[com.rojoma.json.v3.codec.JsonDecode]] into something
  * that can be used for pattern-matching.
  *
  * @example {{{

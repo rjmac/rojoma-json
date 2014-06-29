@@ -14,9 +14,9 @@ import `-impl`.util.AbstractBufferedIterator
  * As extension, this class allows comments and for unquoted identifiers to be used
  * as object keys.
  *
- * @see [[com.rojoma.json.io.JsonEventIterator]]
- * @see [[com.rojoma.json.io.JsonEventGenerator]]
- * @see [[com.rojoma.json.io.JsonEvent]]
+ * @see [[com.rojoma.json.v3.io.JsonEventIterator]]
+ * @see [[com.rojoma.json.v3.io.JsonEventGenerator]]
+ * @see [[com.rojoma.json.v3.io.JsonEvent]]
  */
 class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = IdentityFieldCache, blockSize: Int = 1024) extends AbstractBufferedIterator[JsonEvent] {
   def this(text: String) = this(new java.io.StringReader(text))

@@ -28,7 +28,7 @@ sealed trait JValue {
 
   /** Forces this [[com.rojoma.json.v3.ast.JValue]] to be fully
     * evaluated.  In particular, the compound
-    * [[com.rojoma.json.codec.JsonCodec]]s will produce views of their
+    * [[com.rojoma.json.v3.codec.JsonEncode]]s will produce views of their
     * inputs instead of fully-evaluated
     * [[com.rojoma.json.v3.ast.JValue]]s.  This can be problematic if
     * the underlying structure can be mutated before this object is
@@ -43,10 +43,10 @@ sealed trait JValue {
   /** Produces a dynamically typed view of this `JValue` which can be
     * descended using dot-notation for field names or apply-type
     * syntax for arrays.  It can be turned back into a `JValue` with
-    * the `static` or `staticOpt` methods.
+    * the `!` or `?` methods.
     *
     * Note that certain field-names (the names common to all objects
-    * plus `static`, `apply`, and `applyDynamic` cannot be accessed
+    * plus `apply`, `applyDynamic`, and `selectDynamic` cannot be accessed
     * with simple field-notation.  Instead, pass them as strings to
     * the `apply` method. */
   def dynamic = new com.rojoma.json.v3.dynamic.DynamicJValue(Some(this))

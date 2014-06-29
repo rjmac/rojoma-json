@@ -12,7 +12,7 @@ import util.WrappedCharArray
   *
   * This reads characters in blocks of size `blockSize`, so if the
   * underlying `Reader` is to be re-used for other non-JSON purposes
-  * after finishing reading, a [[com.rojoma.json.io.JsonTokenIterator]]
+  * after finishing reading, a [[com.rojoma.json.v3.io.JsonTokenIterator]]
   * should be used instead.
   *
   * As extensions to standard JSON, this reader supports single-quoted
