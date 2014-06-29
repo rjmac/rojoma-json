@@ -12,6 +12,7 @@ import ast._
 
 trait JsonDecode[T] {
   def decode(x: JValue): JsonDecode.DecodeResult[T]
+  def acceptTypes: Set[JsonType]
 }
 
 sealed trait DecodeError {
@@ -75,6 +76,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case other =>
         Left(DecodeError.InvalidType(JArray, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JArray)
   }
 
   implicit def seqDecode[T, S[X] <: sc.Seq[X]](implicit tDecode: JsonDecode[T], buildFactory: CB[T, S[T]]): JsonDecode[S[T]] =
@@ -103,6 +106,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case other =>
         Left(DecodeError.InvalidType(JArray, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JArray)
   }
 
   implicit def juSetDecode[T : JsonDecode] = new JsonDecode[ju.Set[T]] {
@@ -122,6 +127,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case other =>
         Left(DecodeError.InvalidType(JArray, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JArray)
   }
 
   implicit object stringDecode extends JsonDecode[String] {
@@ -129,6 +136,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case JString(s) => Right(s)
       case other => Left(DecodeError.InvalidType(JString, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JString)
   }
 
   implicit object boolDecode extends JsonDecode[Boolean] {
@@ -136,6 +145,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case JBoolean(b) => Right(b)
       case other => Left(DecodeError.InvalidType(JBoolean, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JBoolean)
   }
 
   implicit object byteDecode extends JsonDecode[Byte] {
@@ -143,6 +154,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case num: JNumber => Right(num.toByte)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JNumber)
   }
 
   implicit object shortDecode extends JsonDecode[Short] {
@@ -150,6 +163,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case num: JNumber => Right(num.toShort)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JNumber)
   }
 
   implicit object intDecode extends JsonDecode[Int] {
@@ -157,6 +172,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case num: JNumber => Right(num.toInt)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JNumber)
   }
 
   implicit object longDecode extends JsonDecode[Long] {
@@ -164,6 +181,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case num: JNumber => Right(num.toLong)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JNumber)
   }
 
   implicit object bigintDecode extends JsonDecode[BigInt] {
@@ -172,6 +191,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case num: JNumber => Right(num.toBigInt)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JNumber)
   }
 
   implicit object bigintegerDecode extends JsonDecode[java.math.BigInteger] {
@@ -179,6 +200,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case num: JNumber => Right(num.toBigInt.underlying)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JNumber)
   }
 
   implicit object floatDecode extends JsonDecode[Float] {
@@ -186,6 +209,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case num: JNumber => Right(num.toFloat)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JNumber)
   }
 
   implicit object doubleDecode extends JsonDecode[Double] {
@@ -193,6 +218,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case num: JNumber => Right(num.toDouble)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JNumber)
   }
 
   implicit object bigdecimalDecode extends JsonDecode[BigDecimal] {
@@ -200,6 +227,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case num: JNumber => Right(num.toBigDecimal)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JNumber)
   }
 
   implicit object jbigdecimalDecode extends JsonDecode[java.math.BigDecimal] {
@@ -207,6 +236,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case num: JNumber => Right(num.toBigDecimal.underlying)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JNumber)
   }
 
   implicit def jvalueDecode[T <: JValue : Json] = new JsonDecode[T] {
@@ -221,6 +252,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
           Left(DecodeError.Multiple(choices.toSeq.map(DecodeError.InvalidType(_, x.jsonType, Path.empty)), Path.empty))
         }
     }
+
+    def acceptTypes = implicitly[Json[T]].jsonTypes
   }
 
   implicit def mapDecode[T, M[U, V] <: sc.Map[U, V]](implicit tDecode: JsonDecode[T], buildFactory: CB[(String, T), M[String, T]]) = new JsonDecode[M[String, T]] {
@@ -237,6 +270,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case other =>
         Left(DecodeError.InvalidType(JObject, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JObject)
   }
 
   implicit def juMapDecode[T: JsonDecode] = new JsonDecode[ju.Map[String, T]] {
@@ -254,6 +289,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case other =>
         Left(DecodeError.InvalidType(JObject, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JNumber)
   }
 
   // either is right-biased; if decoding as Right fails it tries Left;
@@ -270,6 +307,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
               else Left(DecodeError.Multiple(Seq(err1, err2), Path.empty))
           }
       }
+
+    def acceptTypes = implicitly[JsonDecode[L]].acceptTypes ++ implicitly[JsonDecode[R]].acceptTypes
   }
 
   implicit def jlEnumDecode[T <: java.lang.Enum[T]](implicit tag: ClassTag[T]) = new JsonDecode[T] {
@@ -284,6 +323,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case other =>
         Left(DecodeError.InvalidType(JString, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JString)
   }
 
   implicit object UnitDecode extends JsonDecode[Unit] {
@@ -292,5 +333,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case nonEmpty: JArray => Left(DecodeError.InvalidLength(0, nonEmpty.length, Path.empty))
       case other => Left(DecodeError.InvalidType(JArray, other.jsonType, Path.empty))
     }
+
+    def acceptTypes = Set[JsonType](JArray)
   }
 }
