@@ -7,15 +7,15 @@ import scala.{collection => sc}
 import `-impl`.dynamic._
 import ast._
 
-class DynamicJValue(val staticOpt: Option[JValue]) extends AnyVal with Dynamic {
-  def static =
-    staticOpt match {
+class DynamicJValue(val ? : Option[JValue]) extends AnyVal with Dynamic {
+  def ! =
+    ? match {
       case Some(x) => x
       case None => throw new NoSuchElementException("DynamicJValue.static")
     }
 
   def applyDynamic[T](field: String)(subfieldOrIdx: T)(implicit ev: DynamicPathType[T]): DynamicJValue =
-    staticOpt match {
+    ? match {
       case Some(JObject(fields)) =>
         fields.get(field) match {
           case Some(item) =>
@@ -38,7 +38,7 @@ class DynamicJValue(val staticOpt: Option[JValue]) extends AnyVal with Dynamic {
     apply(field)
 
   def apply(idx: Int): DynamicJValue =
-    staticOpt match {
+    ? match {
       case Some(arr: JArray) if arr.isDefinedAt(idx) =>
         arr(idx).dynamic
       case _ =>
@@ -46,7 +46,7 @@ class DynamicJValue(val staticOpt: Option[JValue]) extends AnyVal with Dynamic {
     }
 
   def apply(field: String): DynamicJValue =
-    staticOpt match {
+    ? match {
       case Some(obj: JObject) =>
         new DynamicJValue(obj.get(field))
       case _ =>
