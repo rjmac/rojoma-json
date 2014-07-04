@@ -230,7 +230,7 @@ object JNumber extends JsonType {
   }
 
   private class JDoubleNumber(val toDouble: Double) extends JNumber {
-    if(toFloat.isNaN || toFloat.isInfinite) throw JsonInvalidDouble(toDouble)
+    if(toDouble.isNaN || toDouble.isInfinite) throw JsonInvalidDouble(toDouble)
 
     def toByte: Byte = toDouble.toByte
     def toShort: Short = toDouble.toShort
