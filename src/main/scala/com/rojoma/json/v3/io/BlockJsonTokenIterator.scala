@@ -17,6 +17,8 @@ import util.WrappedCharArray
   *
   * As extensions to standard JSON, this reader supports single-quoted
   * strings and Javascript-style comments.
+  * 
+  * Unless you actually need tokens, prefer [[com.rojoma.json.v3.io.FusedBlockJsonEventIterator]].
   *
   * @see [[com.rojoma.json.v3.io.JsonTokenIterator]]
   * @see [[com.rojoma.json.v3.io.JsonTokenGenerator]]

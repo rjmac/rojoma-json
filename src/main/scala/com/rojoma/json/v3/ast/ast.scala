@@ -5,6 +5,7 @@ import scala.language.implicitConversions
 import scala.{collection => sc}
 import scala.reflect.ClassTag
 import scala.annotation.implicitNotFound
+import java.math.{BigInteger, BigDecimal => JBigDecimal}
 
 sealed abstract class JsonInvalidValue(msg: String) extends IllegalArgumentException(msg) {
   def value: Any
@@ -82,7 +83,7 @@ object JValue {
 /** A JSON "atom" — anything except arrays or objects.  This and [[com.rojoma.json.v3.ast.JCompound]] form
   * a partition of the set of valid [[com.rojoma.json.v3.ast.JValue]]s. */
 sealed abstract class JAtom extends JValue {
-  def forced: JAtom
+  final def forced: this.type = this
 }
 
 object JAtom {
@@ -100,9 +101,11 @@ sealed abstract class JNumber extends JAtom {
   def toInt: Int
   def toLong: Long
   def toBigInt: BigInt
+  def toBigInteger: BigInteger
   def toFloat: Float
   def toDouble: Double
   def toBigDecimal: BigDecimal
+  def toJBigDecimal: JBigDecimal
 
   final def jsonType = JNumber
 
@@ -110,12 +113,10 @@ sealed abstract class JNumber extends JAtom {
   protected def asString: String
 
   override def equals(o: Any) = o match {
-    case that: JNumber => this.toBigDecimal == that.toBigDecimal
+    case that: JNumber => this.toJBigDecimal == that.toJBigDecimal
+    case _ => false
   }
-
-  override final lazy val hashCode = toBigDecimal.hashCode
-
-  def forced: JNumber = this
+  override final lazy val hashCode = toJBigDecimal.hashCode
 }
 
 object JNumber extends JsonType {
@@ -128,16 +129,19 @@ object JNumber extends JsonType {
     def toShort = toInt.toShort
     def toLong = toInt.toLong
     def toBigInt = BigInt(toInt)
+    def toBigInteger = BigInteger.valueOf(toInt)
 
     def toFloat = toInt.toFloat
     def toDouble = toInt.toDouble
-    lazy val toBigDecimal = BigDecimal(toInt, stdCtx)
+    def toBigDecimal = BigDecimal(toInt, stdCtx)
+    lazy val toJBigDecimal = new JBigDecimal(toInt, stdCtx)
 
     def asString = toInt.toString
     override def equals(o: Any) = o match {
       case that: JIntNumber => this.toInt == that.toInt
       case that: JLongNumber => this.toLong == that.toLong
       case that: JBigIntNumber => this.toBigInt == that.toBigInt
+      case that: JBigIntegerNumber => this.toBigInteger == that.toBigInteger
       case other => super.equals(other)
     }
   }
@@ -147,16 +151,19 @@ object JNumber extends JsonType {
     def toShort = toLong.toShort
     def toInt = toLong.toInt
     def toBigInt = BigInt(toLong)
+    def toBigInteger = BigInteger.valueOf(toLong)
 
     def toFloat = toLong.toFloat
     def toDouble = toLong.toDouble
-    lazy val toBigDecimal = BigDecimal(toLong, stdCtx)
+    def toBigDecimal = BigDecimal(toLong, stdCtx)
+    lazy val toJBigDecimal = new JBigDecimal(toLong, stdCtx)
 
     def asString = toLong.toString
     override def equals(o: Any) = o match {
-      case that: JLongNumber => this.toLong == that.toLong
       case that: JIntNumber => this.toLong == that.toLong
+      case that: JLongNumber => this.toLong == that.toLong
       case that: JBigIntNumber => this.toBigInt == that.toBigInt
+      case that: JBigIntegerNumber => this.toBigInt == that.toBigInt
       case _ => super.equals(o)
     }
   }
@@ -166,17 +173,42 @@ object JNumber extends JsonType {
     def toShort: Short = toBigInt.toShort
     def toInt: Int = toBigInt.toInt
     def toLong: Long = toBigInt.toLong
+    def toBigInteger: BigInteger = toBigInt.underlying()
 
     def toFloat: Float = toBigInt.toFloat
     def toDouble: Double = toBigInt.toDouble
-    lazy val toBigDecimal = BigDecimal(toDouble, stdCtx)
+    def toBigDecimal = BigDecimal(toBigInt, stdCtx)
+    def toJBigDecimal = new JBigDecimal(toBigInteger, stdCtx)
 
     def asString = toBigInt.toString
     override def equals(o: Any) = o match {
-      case that: JBigIntNumber => this.toBigInt == that.toBigInt
       case that: JIntNumber => this.toBigInt == that.toBigInt
       case that: JLongNumber => this.toBigInt == that.toBigInt
-      case _ => super.equals(o)
+      case that: JBigIntNumber => this.toBigInt == that.toBigInt
+      case that: JBigIntegerNumber => this.toBigInt == that.toBigInt
+      case other => super.equals(other)
+    }
+  }
+
+  private class JBigIntegerNumber(val toBigInteger: BigInteger) extends JNumber {
+    def toByte: Byte = toBigInteger.byteValue
+    def toShort: Short = toBigInteger.shortValue
+    def toInt: Int = toBigInteger.intValue
+    def toLong: Long = toBigInteger.longValue
+    def toBigInt: BigInt = BigInt(toBigInteger)
+
+    def toFloat: Float = toBigInteger.floatValue
+    def toDouble: Double = toBigInteger.doubleValue
+    def toBigDecimal = BigDecimal(toBigInt, stdCtx)
+    lazy val toJBigDecimal = new JBigDecimal(toBigInteger, stdCtx)
+
+    def asString = toBigInt.toString
+    override def equals(o: Any) = o match {
+      case that: JIntNumber => this.toBigInteger == that.toBigInteger
+      case that: JLongNumber => this.toBigInteger == that.toBigInteger
+      case that: JBigIntNumber => this.toBigInteger == that.toBigInteger
+      case that: JBigIntegerNumber => this.toBigInteger == that.toBigInteger
+      case other => super.equals(other)
     }
   }
 
@@ -188,9 +220,11 @@ object JNumber extends JsonType {
     def toInt: Int = toFloat.toInt
     def toLong: Long = toFloat.toLong
     def toBigInt: BigInt = toBigDecimal.toBigInt
+    def toBigInteger: BigInteger = toJBigDecimal.toBigInteger
 
     def toDouble: Double = toFloat.toDouble
-    lazy val toBigDecimal = BigDecimal(toDouble, stdCtx)
+    def toBigDecimal = BigDecimal(toDouble, stdCtx)
+    lazy val toJBigDecimal = new JBigDecimal(toDouble, stdCtx)
 
     def asString = toFloat.toString
   }
@@ -203,9 +237,11 @@ object JNumber extends JsonType {
     def toInt: Int = toDouble.toInt
     def toLong: Long = toDouble.toLong
     def toBigInt: BigInt = toBigDecimal.toBigInt
+    def toBigInteger: BigInteger = toJBigDecimal.toBigInteger
 
     def toFloat: Float = toDouble.toFloat
-    lazy val toBigDecimal = BigDecimal(toDouble, stdCtx)
+    def toBigDecimal = BigDecimal(toDouble, stdCtx)
+    lazy val toJBigDecimal = new JBigDecimal(toDouble, stdCtx)
 
     def asString = toDouble.toString
   }
@@ -216,11 +252,28 @@ object JNumber extends JsonType {
     def toInt: Int = toBigDecimal.toInt
     def toLong: Long = toBigDecimal.toLong
     def toBigInt: BigInt = toBigDecimal.toBigInt
+    def toBigInteger: BigInteger = toJBigDecimal.toBigInteger
 
     def toFloat: Float = toBigDecimal.toFloat
     def toDouble: Double = toBigDecimal.toDouble
+    lazy val toJBigDecimal = toBigDecimal.underlying()
 
     def asString = toBigDecimal.toString
+  }
+
+  private class JJBigDecimalNumber(val toJBigDecimal: JBigDecimal) extends JNumber {
+    def toByte: Byte = toJBigDecimal.byteValue
+    def toShort: Short = toJBigDecimal.shortValue
+    def toInt: Int = toJBigDecimal.intValue
+    def toLong: Long = toJBigDecimal.longValue
+    def toBigInt: BigInt = BigInt(toBigInteger)
+    def toBigInteger: BigInteger = toJBigDecimal.toBigInteger
+
+    def toFloat: Float = toBigDecimal.floatValue
+    def toDouble: Double = toBigDecimal.doubleValue
+    def toBigDecimal: BigDecimal = BigDecimal(toJBigDecimal)
+
+    def asString = toJBigDecimal.toString
   }
 
   private class JUncheckedStringNumber(override val asString: String) extends JNumber {
@@ -229,12 +282,12 @@ object JNumber extends JsonType {
     def toInt: Int = try { asString.toInt } catch { case _: NumberFormatException => toBigDecimal.toInt }
     def toLong: Long = try { asString.toLong } catch { case _: NumberFormatException => toBigDecimal.toLong }
     def toBigInt = try { BigInt(asString) } catch { case _: NumberFormatException => toBigDecimal.toBigInt }
+    def toBigInteger = try { new BigInteger(asString) } catch { case _: NumberFormatException => toJBigDecimal.toBigInteger }
 
     def toFloat: Float = try { asString.toFloat } catch { case _: NumberFormatException => toBigDecimal.toFloat }
     def toDouble: Double = try { asString.toDouble } catch { case _: NumberFormatException => toBigDecimal.toDouble }
-    lazy val toBigDecimal = BigDecimal(asString, stdCtx)
-
-    override def forced = new JBigDecimalNumber(toBigDecimal)
+    def toBigDecimal = BigDecimal(asString, stdCtx)
+    lazy val toJBigDecimal = new JBigDecimal(asString, stdCtx)
   }
 
   def apply(b: Byte): JNumber = new JIntNumber(b)
@@ -242,9 +295,11 @@ object JNumber extends JsonType {
   def apply(i: Int): JNumber = new JIntNumber(i)
   def apply(l: Long): JNumber = new JLongNumber(l)
   def apply(bi: BigInt): JNumber = new JBigIntNumber(bi)
+  def apply(bi: BigInteger): JNumber = new JBigIntegerNumber(bi)
   def apply(f: Float): JNumber = new JFloatNumber(f)
   def apply(d: Double): JNumber = new JDoubleNumber(d)
   def apply(bd: BigDecimal): JNumber = new JBigDecimalNumber(bd)
+  def apply(bd: JBigDecimal): JNumber = new JJBigDecimalNumber(bd)
 
   def unsafeFromString(s: String): JNumber = new JUncheckedStringNumber(s)
 
@@ -257,8 +312,6 @@ object JNumber extends JsonType {
   * respect to surrogate pairs, but it probably should. */
 case class JString(string: String) extends JAtom {
   def jsonType = JString
-
-  def forced: this.type = this
 }
 
 object JString extends JsonType {
@@ -272,8 +325,6 @@ object JString extends JsonType {
 /** A boolean */
 case class JBoolean(boolean: Boolean) extends JAtom {
   def jsonType = JBoolean
-
-  def forced: this.type = this
 }
 
 object JBoolean extends scala.runtime.AbstractFunction1[Boolean, JBoolean] with JsonType {
@@ -299,8 +350,6 @@ case object JNull extends JNull with JsonType {
   implicit object Concrete extends Json[JNull] {
     val jsonTypes = Set[JsonType](JNull)
   }
-
-  def forced: this.type = this
 }
 
 /** The common superclass of arrays and objects.  This and [[com.rojoma.json.v3.ast.JAtom]] form

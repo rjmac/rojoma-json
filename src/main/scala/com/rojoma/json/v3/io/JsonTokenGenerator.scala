@@ -49,6 +49,7 @@ object JsonTokenGenerator {
   case class FinalToken(token: JsonToken, endPosition: Position) extends SuccessfulEndResult
 
   case class UnexpectedCharacter(character: Char, expected: String, position: Position) extends Error with EndError
+  case class NumberOutOfRange(number: String, position: Position) extends Error with EndError
   case class UnexpectedEndOfInput(processing: String, position: Position) extends EndError
 
   val newGenerator: JsonTokenGenerator = new WaitingForToken(Position(1, 1))
@@ -56,6 +57,7 @@ object JsonTokenGenerator {
 
   def throwError(error: AnyError): Nothing = error match {
     case UnexpectedCharacter(c, e, pos) => throw new JsonUnexpectedCharacter(c,e,pos)
+    case NumberOutOfRange(n,pos) => throw new JsonNumberOutOfRange(n,pos)
     case UnexpectedEndOfInput(_, pos) => throw new JsonLexerEOF(pos)
   }
 }
@@ -512,6 +514,8 @@ private[io] object JsonTokenGeneratorImpl {
     final val ReadingExponent = 7
     final val Done = 8
 
+    case class NumberOutOfRangeException(number: String, position: Position) extends ControlThrowable
+
     def readNumber(input: PositionedCharExtractor): Result =
       continueReadingNumber(ReadingSign, Nil, Position(input.nextCharRow, input.nextCharCol), input)
 
@@ -520,7 +524,7 @@ private[io] object JsonTokenGeneratorImpl {
         case ReadingSign | ReadingFirstWholePartDigit | ReadingFirstFracPartDigit | ReadingExponentSign | ReadingFirstExponentDigit =>
           UnexpectedEndOfInput("number", pos)
         case _ =>
-          FinalToken(TokenNumber(chunks.reverse.mkString)(startPos),
+          FinalToken(toNumberToken(chunks.reverse.mkString, startPos),
                      pos)
       }
     }
@@ -542,13 +546,19 @@ private[io] object JsonTokenGeneratorImpl {
             case ReadingExponent => readExponent(sb, input, false)
             case Done =>
               val number = mergeChunks(sb, chunks)
-              return token(TokenNumber(number)(startPos), input)
+              try { return token(toNumberToken(number, startPos), input) }
+              catch { case NumberOutOfRangeException(number, pos) => return NumberOutOfRange(number, pos) }
           }
         }
         More(new ReadingNumber(state, addChunk(sb, chunks), startPos, Position(input.nextCharRow, input.nextCharCol)))
       } catch {
         case UnexpectedCharacterException(c, expected, pos) => UnexpectedCharacter(c, expected, pos)
       }
+    }
+
+    def toNumberToken(text: String, startPos: Position) = {
+      if(!ReaderUtils.isBigDecimalizable(text)) throw NumberOutOfRangeException(text, startPos)
+      TokenNumber(text)(startPos)
     }
 
     def readSign(sb: StringBuilder, input: PositionedCharExtractor): State = {

@@ -454,8 +454,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     // We'll match the whole thing, within the limits of BigDecimal
     val sb = new StringBuilder
 
-    val startRow = nextCharRow
-    val startCol = nextCharCol
+    val startPos = Position(nextCharRow, nextCharCol)
 
     if(peekChar() == '-') sb += nextChar()
 
@@ -470,12 +469,22 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     val hasExponent = !atEOF() && (peekChar() == 'e' || peekChar() == 'E')
     if(hasExponent) {
       sb += nextChar() // skip e/E
+
       if(peekChar() == '-') sb += nextChar()
       else if(peekChar() == '+') skipChar()
-      do { sb += readDigit() } while(!atEOF() && isDigit(peekChar()))
-    }
 
-    sb.toString
+      val exponentDigitsStart = sb.length
+      do { sb += readDigit() } while(!atEOF() && isDigit(peekChar()))
+
+      // this relies on the exponent being the last thing read
+      val result = sb.toString
+      if(!ReaderUtils.isBigDecimalizableUnsignedExponent(result, exponentDigitsStart)) {
+        throw new JsonNumberOutOfRange(result, startPos)
+      }
+      result
+    } else {
+      sb.toString
+    }
   }
 
   private def finishDatum(event: JsonEvent): JsonEvent = {

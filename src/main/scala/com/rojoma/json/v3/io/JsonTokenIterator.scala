@@ -174,14 +174,26 @@ class JsonTokenIterator(reader: Reader) extends AbstractBufferedIterator[JsonTok
     }
 
     val hasExponent = !atEOF() && (peekChar() == 'e' || peekChar() == 'E')
-    if(hasExponent) {
-      sb += nextChar() // skip e/E
-      if(peekChar() == '-') sb += nextChar()
-      else if(peekChar() == '+') nextChar() // just skip it
-      do { sb += readDigit() } while(!atEOF() && isDigit(peekChar()))
-    }
 
-    val n = sb.toString
+    val n =
+      if(hasExponent) {
+        sb += nextChar() // skip e/E
+
+        if(peekChar() == '-') sb += nextChar()
+        else if(peekChar() == '+') nextChar() // just skip it
+
+        val exponentDigitsStart = sb.length
+        do { sb += readDigit() } while(!atEOF() && isDigit(peekChar()))
+
+        // this relies on the exponent being the last thing read
+        val result = sb.toString
+        if(!ReaderUtils.isBigDecimalizableUnsignedExponent(result, exponentDigitsStart)) {
+          throw new JsonNumberOutOfRange(result, startPos)
+        }
+        result
+      } else {
+        sb.toString
+      }
     TokenNumber(n)(startPos)
   }
 
