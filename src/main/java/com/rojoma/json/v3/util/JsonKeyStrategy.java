@@ -1,0 +1,12 @@
+package com.rojoma.json.v3.util;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Retention(RetentionPolicy.CLASS)
+@Target({ElementType.TYPE, ElementType.PARAMETER})
+public @interface JsonKeyStrategy {
+    Strategy value();
+}

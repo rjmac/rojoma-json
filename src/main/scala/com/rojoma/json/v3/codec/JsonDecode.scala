@@ -282,7 +282,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
         Left(DecodeError.InvalidType(JObject, other.jsonType, Path.empty))
     }
 
-    def acceptTypes = Set[JsonType](JObject)
+    def acceptTypes = `-impl`.util.CommonAcceptTypes.justJObject
   }
 
   implicit def juMapDecode[T: JsonDecode] = new JsonDecode[ju.Map[String, T]] {

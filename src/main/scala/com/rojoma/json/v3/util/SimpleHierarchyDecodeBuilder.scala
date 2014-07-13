@@ -59,7 +59,7 @@ class SimpleHierarchyDecodeBuilder[Root <: AnyRef] private[util] (tagType: TagTy
             case other =>
               Left(DecodeError.InvalidType(JObject, other.jsonType, Path.empty))
           }
-          def acceptTypes = SimpleHierarchyDecodeBuilder.justJObject
+          def acceptTypes = `-impl`.util.CommonAcceptTypes.justJObject
         }
       case TagAndValue(typeField, valueField) =>
         new JsonDecode[Root] {
@@ -78,7 +78,7 @@ class SimpleHierarchyDecodeBuilder[Root <: AnyRef] private[util] (tagType: TagTy
             case other =>
               Left(DecodeError.InvalidType(JObject, other.jsonType, Path.empty))
           }
-          def acceptTypes = SimpleHierarchyDecodeBuilder.justJObject
+          def acceptTypes = `-impl`.util.CommonAcceptTypes.justJObject
         }
       case InternalTag(typeField, removeForSubcodec) =>
         new JsonDecode[Root] {
@@ -93,7 +93,7 @@ class SimpleHierarchyDecodeBuilder[Root <: AnyRef] private[util] (tagType: TagTy
             case other =>
               Left(DecodeError.InvalidType(JObject, other.jsonType, Path.empty))
           }
-          def acceptTypes = SimpleHierarchyDecodeBuilder.justJObject
+          def acceptTypes = `-impl`.util.CommonAcceptTypes.justJObject
         }
     }
   }
@@ -130,6 +130,4 @@ class NoTagSimpleHierarchyDecodeBuilder[Root <: AnyRef] private[util] (subcodecs
 object SimpleHierarchyDecodeBuilder {
   def apply[Root <: AnyRef](tagType: TagType) = new SimpleHierarchyDecodeBuilder[Root](tagType, Map.empty, ClassAwareMap.empty)
   def apply[Root <: AnyRef](tagType: NoTag) = new NoTagSimpleHierarchyDecodeBuilder[Root](Vector.empty)
-
-  private val justJObject = Set[JsonType](JObject)
 }
