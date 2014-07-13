@@ -19,13 +19,30 @@ object Path {
   case class Index(index: Int) extends Entry
   case class Field(field: String) extends Entry
 
-  def asString(xs: Seq[Entry]) = {
-    val sb = new StringBuffer()
-    xs.foreach {
-      case Field(f) =>
-        if(isSimple(f)) sb.append('.').append(f)
-        else sb.append('(').append(JString(f)).append(')')
-      case Index(i) => sb.append('(').append(i).append(')')
+  // produces a jq-style path spec
+  def asString(xs: List[Entry]) = {
+    val sb = new StringBuffer(".")
+
+    def appendEntry(e: Entry, isFirst: Boolean) {
+      e match {
+        case Field(f) =>
+          if(isSimple(f)) {
+            if(isFirst) sb.append(f)
+            else sb.append('.').append(f)
+          } else {
+            sb.append('[').append(JString(f)).append(']')
+          }
+        case Index(i) =>
+          sb.append('[').append(i).append(']')
+      }
+    }
+
+    xs match {
+      case e :: es =>
+        appendEntry(e, true)
+        for(e <- es) appendEntry(e, false)
+      case Nil =>
+        // nothing
     }
     sb.toString
   }
