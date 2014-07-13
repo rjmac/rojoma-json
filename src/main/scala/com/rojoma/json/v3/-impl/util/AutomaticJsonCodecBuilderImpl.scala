@@ -186,7 +186,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] {
             override def toString = "#<JsonEncode for " + ${T.toString} + ">"
           }) : _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname]"""
 
-    println(tree)
+    // println(tree)
 
     c.Expr[JsonEncode[T]](tree)
   }
@@ -257,7 +257,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] {
             override def toString = "#<JsonDecode for " + ${T.toString} + ">"
           }) : _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname]"""
 
-    println(tree)
+    // println(tree)
 
     c.Expr[JsonDecode[T]](tree)
   }
@@ -279,7 +279,7 @@ new _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.js
 } ) : _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname])
 """
 
-    println(tree)
+    // println(tree)
 
     c.Expr[JsonEncode[T] with JsonDecode[T]](tree)
   }
