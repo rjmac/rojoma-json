@@ -22,6 +22,7 @@ import `-impl`.util.AbstractIterator
 object JsonArrayIterator {
   def apply[T : JsonDecode](input: Iterator[JsonEvent], alreadyInArray: Boolean = false): Iterator[T] = {
     val buffer = input.buffered
+    var item = 0
 
     if(!alreadyInArray) {
       val next = try {
@@ -55,13 +56,14 @@ object JsonArrayIterator {
       def next(): T = {
         if(!hasNext) Iterator.empty.next()
         val pos = buffer.head.position
+        item += 1
         JsonDecode.fromJValue[T](JsonReader.fromEvents(buffer)) match {
           case Right(res) => res
-          case Left(err) => throw new ElementDecodeException(pos, err)
+          case Left(err) => throw new ElementDecodeException(pos, err.augment(Path.Index(item - 1)))
         }
       }
     }
   }
 
-  class ElementDecodeException(val position: Position, val error: DecodeError) extends RuntimeException("Unable to decode array element as specified type" + (if (position.isValid) " at " + position else ""))
+  class ElementDecodeException(val position: Position, val error: DecodeError) extends RuntimeException((if (position.isValid) position + ": " else "") + error.english)
 }
