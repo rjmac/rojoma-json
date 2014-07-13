@@ -30,3 +30,12 @@ libraryDependencies ++= {
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0" cross CrossVersion.full)
 
 sourceGenerators in Compile <+= (sourceManaged in Compile) map TupleCodecBuilder
+
+unmanagedSourceDirectories in Compile += locally {
+  val MajorMinor = """(\d+\.\d+)\..*""".r
+  val dir = scalaVersion.value match {
+    case MajorMinor(mm) => "scala-" + mm
+    case _ => sys.error("Unable to find major/minor Scala version in " + scalaVersion)
+  }
+  (scalaSource in Compile).value.getParentFile / dir
+}

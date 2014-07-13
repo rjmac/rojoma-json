@@ -2,12 +2,13 @@ package com.rojoma.json.v3
 package `-impl`.util
 
 import scala.collection.mutable
-import scala.reflect.macros.Context
 
 import codec._
 import util.{JsonKey, JsonKeyStrategy, Strategy, LazyCodec, NullForNone}
 
-abstract class AutomaticJsonCodecBuilderImpl[T] {
+import MacroCompat._
+
+abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat {
   val c: Context
   import c.universe._
 
@@ -18,8 +19,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] {
   private def identityStrat(x: String) = x
   private def underscoreStrat(x: String) = CamelSplit(x).map(_.toLowerCase).mkString("_")
 
-  private def freshTermName(): TermName = c.fresh()
-  private def newTN(s: String): TermName = newTermName(s)
+  private def freshTermName(): TermName = toTermName(c.freshName())
 
   private def isType(t: c.universe.Type, w: c.universe.Type) = {
     // There HAS to be a better way to do this.
@@ -28,13 +28,13 @@ abstract class AutomaticJsonCodecBuilderImpl[T] {
     t =:= w && !(t =:= typeOf[String] && t =:= typeOf[Map[_,_]])
   }
 
-  private def nameStrategy(thing: c.universe.Symbol, default: String => String) = {
-    thing.annotations.reverse.find { ann => isType(ann.tpe, typeOf[JsonKeyStrategy]) } match {
+  private def nameStrategy(thing: c.universe.Symbol, default: String => String): String => String = {
+    thing.annotations.reverse.find { ann => isType(ann.tree.tpe, typeOf[JsonKeyStrategy]) } match {
       case Some(ann) =>
-        ann.javaArgs.get(newTN("value")) match {
-          case Some(LiteralArgument(Constant(arg : Symbol))) =>
+        findValue(ann) match {
+          case Some(strat : Symbol) =>
             try {
-              Strategy.valueOf(arg.name.decoded) match {
+              Strategy.valueOf(strat.name.decodedName.toString) match {
                 case Strategy.Identity =>
                   identityStrat _
                 case Strategy.Underscore =>
@@ -55,13 +55,13 @@ abstract class AutomaticJsonCodecBuilderImpl[T] {
   private lazy val defaultNameStrategy = nameStrategy(T.typeSymbol, identityStrat)
 
   private def hasLazyAnnotation(param: TermSymbol) =
-    param.annotations.exists { ann => isType(ann.tpe, typeOf[LazyCodec]) }
+    param.annotations.exists { ann => isType(ann.tree.tpe, typeOf[LazyCodec]) }
 
   private def computeJsonName(param: TermSymbol): String = {
-    var name = nameStrategy(param, defaultNameStrategy)(param.name.decoded)
-    for(ann <- param.annotations if isType(ann.tpe, typeOf[JsonKey]))
-      ann.javaArgs.get(newTN("value")) match {
-        case Some(LiteralArgument(Constant(s: String))) =>
+    var name = nameStrategy(param, defaultNameStrategy)(param.name.decodedName.toString)
+    for(ann <- param.annotations if isType(ann.tree.tpe, typeOf[JsonKey]))
+      findValue(ann) match {
+        case Some(s: String) =>
           name = s
         case _ =>
           // pass
@@ -86,7 +86,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] {
     isType(tpe.erasure, typeOf[Option[_]].erasure)
   }
   private def hasNullForNameAnnotation(param: TermSymbol) =
-    param.annotations.exists(ann => isType(ann.tpe, typeOf[NullForNone]))
+    param.annotations.exists(ann => isType(ann.tree.tpe, typeOf[NullForNone]))
 
   private case class FieldInfo(codecName: TermName, isLazy: Boolean, jsonName: String, accessorName: TermName, missingMethodName: TermName, errorAugmenterMethodName: TermName, codecType: Type, isOption: Boolean, isNullForNone: Boolean)
 
@@ -100,7 +100,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] {
       val mem = member.asMethod
       if(mem.owner == T.typeSymbol) {
         for {
-          params <- mem.paramss
+          params <- mem.paramLists
         } {
           if(params.isEmpty || !params.head.asTerm.isImplicit) {
             val fieldList =
@@ -231,7 +231,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] {
       q"val $tmp = $expr"
     }
     val create = // not sure how to do this with quasiquote...
-      tmps.foldLeft(Select(New(TypeTree(T)), newTN("<init>")) : Tree) { (seed, arglist) =>
+      tmps.foldLeft(Select(New(TypeTree(T)), toTermName("<init>")) : Tree) { (seed, arglist) =>
         Apply(seed, arglist.map(Ident(_)))
       }
 
@@ -263,9 +263,9 @@ abstract class AutomaticJsonCodecBuilderImpl[T] {
   }
 
   private def codec: c.Expr[JsonEncode[T] with JsonDecode[T]] = {
-    val encode = newTN("encode")
-    val decode = newTN("decode")
-    val x = newTN("x")
+    val encode = toTermName("encode")
+    val decode = toTermName("decode")
+    val x = toTermName("x")
 
     val tree = q""" ((
 new _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname] {
