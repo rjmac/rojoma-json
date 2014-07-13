@@ -21,14 +21,15 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat {
 
   private def freshTermName(): TermName = toTermName(c.freshName())
 
-  private def isType(t: c.universe.Type, w: c.universe.Type) = {
+  private def isType(t: Type, w: Type) = {
     // There HAS to be a better way to do this.
     // t MAY be <error>.  w must not be!
     // since <error> =:= any type, reject if it looks "impossible".
     t =:= w && !(t =:= typeOf[String] && t =:= typeOf[Map[_,_]])
   }
 
-  private def nameStrategy(thing: c.universe.Symbol, default: String => String): String => String = {
+  private def nameStrategy(thing: Symbol, default: String => String): String => String = {
+    checkAnn(thing, typeOf[JsonKeyStrategy])
     thing.annotations.reverse.find { ann => isType(ann.tree.tpe, typeOf[JsonKeyStrategy]) } match {
       case Some(ann) =>
         findValue(ann) match {
@@ -54,11 +55,24 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat {
 
   private lazy val defaultNameStrategy = nameStrategy(T.typeSymbol, identityStrat)
 
-  private def hasLazyAnnotation(param: TermSymbol) =
+  // since v2 and v3 share the same names for their annotations, warn if we find one that isn't
+  // the same type but is the same name and don't find one that IS the right type.
+  def checkAnn(param: Symbol, t: Type) {
+    param.annotations.find { ann => ann.tree.tpe.erasure.typeSymbol.name == t.typeSymbol.name && !isType(ann.tree.tpe, t) }.foreach { ann =>
+      if(!param.annotations.exists { ann => isType(ann.tree.tpe, t) }) {
+        c.warning(param.pos, "Found non-v3 `" + t.typeSymbol.name.decodedName + "' annotation; did you accidentally import v2's?")
+      }
+    }
+  }
+
+  private def hasLazyAnnotation(param: TermSymbol) = {
+    checkAnn(param, typeOf[LazyCodec])
     param.annotations.exists { ann => isType(ann.tree.tpe, typeOf[LazyCodec]) }
+  }
 
   private def computeJsonName(param: TermSymbol): String = {
     var name = nameStrategy(param, defaultNameStrategy)(param.name.decodedName.toString)
+    checkAnn(param, typeOf[JsonKey])
     for(ann <- param.annotations if isType(ann.tree.tpe, typeOf[JsonKey]))
       findValue(ann) match {
         case Some(s: String) =>
@@ -85,8 +99,10 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat {
     val tpe = param.typeSignature.asSeenFrom(T, T.typeSymbol)
     isType(tpe.erasure, typeOf[Option[_]].erasure)
   }
-  private def hasNullForNameAnnotation(param: TermSymbol) =
+  private def hasNullForNameAnnotation(param: TermSymbol) = {
+    checkAnn(param, typeOf[NullForNone])
     param.annotations.exists(ann => isType(ann.tree.tpe, typeOf[NullForNone]))
+  }
 
   private case class FieldInfo(codecName: TermName, isLazy: Boolean, jsonName: String, accessorName: TermName, missingMethodName: TermName, errorAugmenterMethodName: TermName, codecType: Type, isOption: Boolean, isNullForNone: Boolean)
 
