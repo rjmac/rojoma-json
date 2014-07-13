@@ -15,58 +15,6 @@ trait JsonDecode[T] {
   def acceptTypes: Set[JsonType]
 }
 
-sealed trait DecodeError {
-  def augment(parent: Path.Entry): DecodeError
-}
-
-object DecodeError {
-  /** There were several choices and they all failed. */
-  case class Multiple(choices: Seq[Simple]) extends DecodeError {
-    def augment(parent: Path.Entry) = copy(choices = choices.map(_.augment(parent)))
-  }
-
-  def join(choices: Iterable[DecodeError]): DecodeError = {
-    val deduped =
-      if(choices.isInstanceOf[sc.Set[_]]) choices
-      else new sc.mutable.LinkedHashSet ++ choices
-    if(deduped.size == 1) choices.iterator.next()
-    else Multiple(deduped.toSeq.flatMap {
-                    case Multiple(subchoices) => subchoices
-                    case simple: Simple => Seq(simple)
-                  })
-  }
-
-  sealed abstract class Simple extends DecodeError {
-    val path: Path
-    def augment(parent: Path.Entry): Simple
-  }
-
-  /** A value was found in the correct position but of the wrong type. */
-  case class InvalidType(expected: JsonType, got: JsonType, path: Path) extends Simple {
-    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
-  }
-
-  /** A value of the correct JSON type was found but it held undecodable value. */
-  case class InvalidValue(got: JValue, path: Path) extends Simple {
-    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
-  }
-
-  /** A required field was missing. */
-  case class MissingField(field: String, path: Path) extends Simple {
-    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
-  }
-
-  /** An unknown field was present. */
-  case class InvalidField(field: String, path: Path) extends Simple {
-    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
-  }
-
-  /** An array with the wrong number of elements was found. */
-  case class InvalidLength(expected: Int, got: Int, path: Path) extends Simple {
-    def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
-  }
-}
-
 /** Generally-useful json implicits. */
 object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
   private type CB[A, B] = sc.generic.CanBuild[A, B]
