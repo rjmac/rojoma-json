@@ -8,7 +8,7 @@ import util.{JsonKey, JsonKeyStrategy, Strategy, LazyCodec, NullForNone}
 
 import MacroCompat._
 
-abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat {
+abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCommon {
   val c: Context
   import c.universe._
 
@@ -20,13 +20,6 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat {
   private def underscoreStrat(x: String) = CamelSplit(x).map(_.toLowerCase).mkString("_")
 
   private def freshTermName(): TermName = toTermName(c.freshName())
-
-  private def isType(t: Type, w: Type) = {
-    // There HAS to be a better way to do this.
-    // t MAY be <error>.  w must not be!
-    // since <error> =:= any type, reject if it looks "impossible".
-    t =:= w && !(t =:= typeOf[String] && t =:= typeOf[Map[_,_]])
-  }
 
   private def nameStrategy(thing: Symbol, default: String => String): String => String = {
     checkAnn(thing, typeOf[JsonKeyStrategy])
