@@ -6,85 +6,85 @@ import scala.annotation.tailrec
 
 import ast._
 
-/** A common parent representing both [[com.rojoma.json.zipper.JsonZipper]]s and the
- * [[com.rojoma.json.zipper.NothingZipper]]s which result from removing items from
- * the tree of [[com.rojoma.json.ast.JValue]]s. */
+/** A common parent representing both [[com.rojoma.json.v3.zipper.JsonZipper]]s and the
+ * [[com.rojoma.json.v3.zipper.NothingZipper]]s which result from removing items from
+ * the tree of [[com.rojoma.json.v3.ast.JValue]]s. */
 sealed trait ZipperLike {
   /** Move to the parent object.
    *
-   * @return A [[com.rojoma.json.zipper.JsonZipper]] pointing at the parent object,
+   * @return A [[com.rojoma.json.v3.zipper.JsonZipper]] pointing at the parent object,
    *   or `None` if this is the top-level object. */
   def up: Option[JsonZipper]
 
   /** Move to the parent object.
    *
-   * @return A [[com.rojoma.json.zipper.JsonZipper]] pointing at the parent object.
+   * @return A [[com.rojoma.json.v3.zipper.JsonZipper]] pointing at the parent object.
    * @throws NoSuchElementException if this is the top-level object. */
   def up_! : JsonZipper
 
   /** Move to the next element in the parent array.
    *
-   * @return A [[com.rojoma.json.zipper.JsonZipper]] pointing at the next element,
+   * @return A [[com.rojoma.json.v3.zipper.JsonZipper]] pointing at the next element,
    *   or `None` if there is no next element or if the parent is not a
-   *   [[com.rojoma.json.ast.JArray]]. */
+   *   [[com.rojoma.json.v3.ast.JArray]]. */
   def next: Option[JsonZipper]
 
   /** Move to the previous element in the parent array.
    *
-   * @return A [[com.rojoma.json.zipper.JsonZipper]] pointing at the previous element,
+   * @return A [[com.rojoma.json.v3.zipper.JsonZipper]] pointing at the previous element,
    *   or `None` if there is no previous element or if the parent is not a
-   *   [[com.rojoma.json.ast.JArray]]. */
+   *   [[com.rojoma.json.v3.ast.JArray]]. */
   def prev: Option[JsonZipper]
 
   /** Move to the next element in the parent array.
    *
-   * @return A [[com.rojoma.json.zipper.JsonZipper]] pointing at the next element.
+   * @return A [[com.rojoma.json.v3.zipper.JsonZipper]] pointing at the next element.
    * @throws NoSuchElementException if there is no next element or if the parent is not
-   *   a [[com.rojoma.json.ast.JArray]]. */
+   *   a [[com.rojoma.json.v3.ast.JArray]]. */
   def next_! = next.getOrElse(throw new NoSuchElementException("No next sibling"))
 
   /** Move to the previous element in the parent array.
    *
-   * @return A [[com.rojoma.json.zipper.JsonZipper]] pointing at the previous element.
+   * @return A [[com.rojoma.json.v3.zipper.JsonZipper]] pointing at the previous element.
    * @throws NoSuchElementException if there is no previous element or if the parent is not
-   *   a [[com.rojoma.json.ast.JArray]]. */
+   *   a [[com.rojoma.json.v3.ast.JArray]]. */
   def prev_! = prev.getOrElse(throw new NoSuchElementException("No previous sibling"))
 
   /** Move to a different field in the parent object.
    *
-   * @return A [[com.rojoma.json.zipper.JsonZipper]] pointing at the new field,
+   * @return A [[com.rojoma.json.v3.zipper.JsonZipper]] pointing at the new field,
    *   or `None` if that field does not exist or the parent is not a
-   *   [[com.rojoma.json.ast.JObject]]. */
+   *   [[com.rojoma.json.v3.ast.JObject]]. */
   def sibling(field: String): Option[JsonZipper]
 
   /** Move to a different field in the parent object.
    *
-   * @return A [[com.rojoma.json.zipper.JsonZipper]] pointing at the new field.
+   * @return A [[com.rojoma.json.v3.zipper.JsonZipper]] pointing at the new field.
    * @throws NoSuchElementException if there is no such field or if the parent is not a
-   *   [[com.rojoma.json.ast.JObject]]. */
+   *   [[com.rojoma.json.v3.ast.JObject]]. */
   def sibling_!(field: String) = sibling(field).getOrElse(throw new NoSuchElementException("No sibling " + field))
 
   /** Replace the current value with an atom.
    *
-   * @return A [[com.rojoma.json.zipper.JsonZipper]] pointing at the same location but
+   * @return A [[com.rojoma.json.v3.zipper.JsonZipper]] pointing at the same location but
    *   with the current value replaced. */
   def replace(newValue: JAtom): JAtomZipper
 
   /** Replace the current value with an array.
    *
-   * @return A [[com.rojoma.json.zipper.JsonZipper]] pointing at the same location but
+   * @return A [[com.rojoma.json.v3.zipper.JsonZipper]] pointing at the same location but
    *   with the current value replaced. */
   def replace(newValue: JArray): JArrayZipper
 
   /** Replace the current value with an object.
    *
-   * @return A [[com.rojoma.json.zipper.JsonZipper]] pointing at the same location but
+   * @return A [[com.rojoma.json.v3.zipper.JsonZipper]] pointing at the same location but
    *   with the current value replaced. */
   def replace(newValue: JObject): JObjectZipper
 
   /** Replace the current value with a new value.
    *
-   * @return A [[com.rojoma.json.zipper.JsonZipper]] pointing at the same location but
+   * @return A [[com.rojoma.json.v3.zipper.JsonZipper]] pointing at the same location but
    *   with the current value replaced. */
   def replace(newValue: JValue): JsonZipper = newValue match {
     case atom: JAtom => replace(atom)
@@ -97,21 +97,21 @@ sealed trait ZipperLike {
 sealed trait NothingZipper extends ZipperLike {
   /** Move up the chain of parents to the top of the object.
    *
-   * @return A [[com.rojoma.json.zipper.JsonZipper]] pointing at the top object,
+   * @return A [[com.rojoma.json.v3.zipper.JsonZipper]] pointing at the top object,
    *   or `None` if the top object was removed. */
   def top : Option[JsonZipper]
 
   /** Move up the chain of parents to the top of the object.
    *
-   * @return A [[com.rojoma.json.zipper.JsonZipper]] pointing at the top object.
+   * @return A [[com.rojoma.json.v3.zipper.JsonZipper]] pointing at the top object.
    * @throws NoSuchElementException if the top object was removed. */
   def top_! : JsonZipper
 }
 
-/** A zipper that points somewhere in the tree defined by a [[com.rojoma.json.ast.JValue]].
+/** A zipper that points somewhere in the tree defined by a [[com.rojoma.json.v3.ast.JValue]].
  * It can be used to move around or update the tree in a purely functional manner.
  *
- * @see [[com.rojoma.json.jpath.JPath]] for a higher-level read-only interface to this
+ * @see [[com.rojoma.json.v3.jpath.JPath]] for a higher-level read-only interface to this
  *   functionality. */
 sealed trait JsonZipper extends ZipperLike {
   type ValueType <: JValue
@@ -121,24 +121,24 @@ sealed trait JsonZipper extends ZipperLike {
 
   /** Move up the chain of parents to the top of the object.
    *
-   * @return A [[com.rojoma.json.zipper.JsonZipper]] pointing at the top object. */
+   * @return A [[com.rojoma.json.v3.zipper.JsonZipper]] pointing at the top object. */
   def top : JsonZipper
 
   /** Remove the current value from the tree.
    *
-   * @return A [[com.rojoma.json.zipper.NothingZipper]] pointing at the hole
+   * @return A [[com.rojoma.json.v3.zipper.NothingZipper]] pointing at the hole
    *   left by removing the current value. */
   def remove: NothingZipper
 
-  /** Safe downcast to [[com.rojoma.json.zipper.JAtomZipper]] */
+  /** Safe downcast to [[com.rojoma.json.v3.zipper.JAtomZipper]] */
   def asAtom = this.cast[JAtomZipper]
-  /** Safe downcast to [[com.rojoma.json.zipper.JArrayZipper]] */
+  /** Safe downcast to [[com.rojoma.json.v3.zipper.JArrayZipper]] */
   def asArray = this.cast[JArrayZipper]
-  /** Safe downcast to [[com.rojoma.json.zipper.JObjectZipper]] */
+  /** Safe downcast to [[com.rojoma.json.v3.zipper.JObjectZipper]] */
   def asObject = this.cast[JObjectZipper]
 }
 
-/** A [[com.rojoma.json.zipper.JsonZipper]] that points to a [[com.rojoma.json.ast.JAtom]]. */
+/** A [[com.rojoma.json.v3.zipper.JsonZipper]] that points to a [[com.rojoma.json.v3.ast.JAtom]]. */
 sealed trait JAtomZipper extends JsonZipper {
   type ValueType = JAtom
 }
@@ -148,7 +148,7 @@ object JAtomZipper {
   def unapply(zipper: JsonZipper) = zipper.cast[JAtomZipper].map(_.value)
 }
 
-/** A [[com.rojoma.json.zipper.JsonZipper]] that points to a [[com.rojoma.json.ast.JArray]]. */
+/** A [[com.rojoma.json.v3.zipper.JsonZipper]] that points to a [[com.rojoma.json.v3.ast.JArray]]. */
 sealed trait JArrayZipper extends JsonZipper {
   type ValueType = JArray
 
@@ -194,7 +194,7 @@ object JArrayZipper {
   def unapply(zipper: JsonZipper) = zipper.cast[JArrayZipper].map(_.value)
 }
 
-/** A [[com.rojoma.json.zipper.JsonZipper]] that points to a [[com.rojoma.json.ast.JObject]]. */
+/** A [[com.rojoma.json.v3.zipper.JsonZipper]] that points to a [[com.rojoma.json.v3.ast.JObject]]. */
 sealed trait JObjectZipper extends JsonZipper {
   type ValueType = JObject
 

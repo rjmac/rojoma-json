@@ -7,7 +7,7 @@ import zipper._
 import JPathImpl._
 
 /** A high-level interface for walking down a tree defined by a
- * [[com.rojoma.json.ast.JValue]], returning a set of sub-values
+ * [[com.rojoma.json.v3.ast.JValue]], returning a set of sub-values
  * that match a path defined by a series of steps.
  *
  * @example {{{
@@ -41,7 +41,7 @@ import JPathImpl._
 class JPath private (cursors: Stream[JsonZipper]) {
   def this(input: JValue) = this(Stream(JsonZipper(input)))
 
-  /** Produce a `Stream` of [[com.rojoma.json.ast.JValue]]s, one
+  /** Produce a `Stream` of [[com.rojoma.json.v3.ast.JValue]]s, one
    * for each current point. */
   def finish: Stream[JValue] = cursors.map(_.value)
 
@@ -51,26 +51,26 @@ class JPath private (cursors: Stream[JsonZipper]) {
   }
 
   /** Go down into the named field.  If a current point is
-   * not a [[com.rojoma.json.ast.JObject]], or does not contain the field,
+   * not a [[com.rojoma.json.v3.ast.JObject]], or does not contain the field,
    * it is dropped.*/
   def down(target: String) = step(downOp(target))
 
   /** Go down into the given index.  If a current point is
-   * not a [[com.rojoma.json.ast.JArray]], or does not contain the index,
+   * not a [[com.rojoma.json.v3.ast.JArray]], or does not contain the index,
    * it is dropped.*/
   def down(target: Int) = step(downOp(target))
 
   /** Go down into all children, whether fields or array elements.  If
-   * a current point is not a [[com.rojoma.json.ast.JObject]] or
-   * [[com.rojoma.json.ast.JArray]], it is dropped. */
+   * a current point is not a [[com.rojoma.json.v3.ast.JObject]] or
+   * [[com.rojoma.json.v3.ast.JArray]], it is dropped. */
   def * = step(downAllOp)
 
   /** Go down into the last child of an array.  If a current point is not
-   * a [[com.rojoma.json.ast.JArray]], it is dropped. */
+   * a [[com.rojoma.json.v3.ast.JArray]], it is dropped. */
   def downLast = step(downLastOp)
 
   /** Go down into the first child of an array.  If a current point is not
-   * a [[com.rojoma.json.ast.JArray]], it is dropped. */
+   * a [[com.rojoma.json.v3.ast.JArray]], it is dropped. */
   def downFirst = step(downFirstOp)
 
   /** Add every descendant of the current points to the set of points. */
@@ -109,12 +109,12 @@ class JPath private (cursors: Stream[JsonZipper]) {
   def up = step(upOp)
 
   /** Move to the next sibling.  Any points that were at the end
-   * already, or which were not children of [[com.rojoma.json.ast.JArray]]s,
+   * already, or which were not children of [[com.rojoma.json.v3.ast.JArray]]s,
    * will be dropped. */
   def next = step(nextOp)
 
   /** Move to the previous sibling.  Any points that were at the start
-   * already, or which were not children of [[com.rojoma.json.ast.JArray]]s,
+   * already, or which were not children of [[com.rojoma.json.v3.ast.JArray]]s,
    * will be dropped. */
   def prev = step(prevOp)
 }
