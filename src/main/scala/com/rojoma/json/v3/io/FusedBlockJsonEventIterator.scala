@@ -470,8 +470,8 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     if(hasExponent) {
       sb += nextChar() // skip e/E
 
-      if(peekChar() == '-') sb += nextChar()
-      else if(peekChar() == '+') skipChar()
+      if(peekChar() == '-' || peekChar() == '+') sb += nextChar()
+      else sb += '+' // ensure there's always a sign
 
       val exponentDigitsStart = sb.length
       do { sb += readDigit() } while(!atEOF() && isDigit(peekChar()))

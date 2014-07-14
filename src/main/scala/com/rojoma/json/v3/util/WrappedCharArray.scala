@@ -85,6 +85,8 @@ object WrappedCharArray {
    */
   def apply(chars: Array[Char]): WrappedCharArray = new WrappedCharArray(chars, 0, chars.length)
 
+  def fromString(chars: String) = apply(chars.toCharArray)
+
   val empty = apply(new Array[Char](0))
 }
 

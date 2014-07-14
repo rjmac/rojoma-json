@@ -245,7 +245,7 @@ object Variable {
     }
   }
 
-  def apply[T : JsonDecode : JsonEncode]: Variable[T] =
+  def apply[T : JsonDecode : JsonEncode](): Variable[T] =
     new DecodingVariable(JsonDecode[T]) {
       def generate(environment: Pattern.Results) =
         get(environment).map(JsonEncode[T].encode)

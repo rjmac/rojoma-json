@@ -2,6 +2,7 @@ package com.rojoma.json.v3
 package codec
 
 import ast.JString
+import `-impl`.codec.EntryLike
 
 // This doesn't feel like it belongs in "codec"
 
@@ -14,6 +15,8 @@ class Path(val toList: List[Path.Entry]) extends AnyVal {
 
 object Path {
   val empty = new Path(Nil)
+
+  def apply(entry: EntryLike*) = new Path(entry.map(_.toEntry).toList)
 
   sealed trait Entry
   case class Index(index: Int) extends Entry

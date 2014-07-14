@@ -179,8 +179,8 @@ class JsonTokenIterator(reader: Reader) extends AbstractBufferedIterator[JsonTok
       if(hasExponent) {
         sb += nextChar() // skip e/E
 
-        if(peekChar() == '-') sb += nextChar()
-        else if(peekChar() == '+') nextChar() // just skip it
+        if(peekChar() == '-' || peekChar() == '+') sb += nextChar()
+        else sb += '+' // ensure there's always a sign
 
         val exponentDigitsStart = sb.length
         do { sb += readDigit() } while(!atEOF() && isDigit(peekChar()))

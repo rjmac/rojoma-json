@@ -29,6 +29,8 @@ libraryDependencies ++= {
 
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0" cross CrossVersion.full)
 
+sourceGenerators in Compile <+= (sourceManaged in Compile) map SimpleJsonCodecBuilderBuilder
+
 sourceGenerators in Compile <+= (sourceManaged in Compile) map TupleCodecBuilder
 
 unmanagedSourceDirectories in Compile += locally {

@@ -620,6 +620,7 @@ private[io] object JsonTokenGeneratorImpl {
 
     def readExponentSign(sb: StringBuilder, input: PositionedCharExtractor): State = {
       if(input.peek() == '+' || input.peek() == '-') sb.append(input.next())
+      else sb.append('+') // ensure there's always a sign
       if(input.atEnd) ReadingFirstExponentDigit
       else readExponent(sb, input, true)
     }
