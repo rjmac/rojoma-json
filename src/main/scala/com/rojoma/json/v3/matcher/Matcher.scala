@@ -14,7 +14,11 @@ class JsonGenerationException extends RuntimeException("Cannot generate JSON; th
 sealed trait OptPattern
 
 object OptPattern extends LowPriorityImplicits {
-  implicit def litifyJValue(x: JValue): Pattern = Literal(x)
+  implicit def litifyJValue(x: JValue): Pattern = x match {
+    case atom: JAtom => Literal(atom)
+    case JArray(arr) => PArray(arr.map(litifyJValue) : _*)
+    case JObject(obj) => PObject(obj.mapValues(litifyJValue).toSeq : _*)
+  }
 
   /** Converts an object with a [[com.rojoma.json.v3.codec.JsonDecode]]
    * and [[com.rojoma.json.v3.codec.JsonEncode]] into a
@@ -271,7 +275,7 @@ case class PArray(subPatterns: Pattern*) extends Pattern {
   def evaluate(x: JValue, environment: Pattern.Results): Either[DecodeError, Pattern.Results] =
     x match {
       case arr: JArray =>
-        if(arr.length < subPatterns.length) {
+        if(arr.length != subPatterns.length) {
           Left(DecodeError.InvalidLength(subPatterns.length, arr.length, Path.empty))
         } else {
           Pattern.foldMatches(arr zip subPatterns, environment) { (env, vp, i) =>

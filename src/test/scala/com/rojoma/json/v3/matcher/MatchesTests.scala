@@ -33,40 +33,40 @@ class MatchesTests extends FunSuite with MustMatchers {
     }
 
     test("sequence literals do NOT match prefix") {
-      (j("""[1,2,3]""") matches j("""[1,2,3,4,5]""")) must equal (Left(DecodeError.InvalidValue(j("""[1,2,3,4,5]"""), Path.empty)))
+      (j("""[1,2,3]""") matches j("""[1,2,3,4,5]""")) must equal (Left(DecodeError.InvalidLength(3, 5, Path.empty)))
     }
 
     test("sequence literals do not match overlong") {
-      (j("""[1,2,3]""") matches j("""[1,2]""")) must equal (Left(DecodeError.InvalidValue(j("""[1,2]"""), Path.empty)))
+      (j("""[1,2,3]""") matches j("""[1,2]""")) must equal (Left(DecodeError.InvalidLength(3, 2, Path.empty)))
     }
 
-    test("sequence literals to not match mismatch") {
-      (j("""[1,2,3]""") matches j("""[1,3,3]""")) must equal (Left(DecodeError.InvalidValue(j("""[1,3,3]"""), Path.empty)))
+    test("sequence literals do not match mismatch") {
+      (j("""[1,2,3]""") matches j("""[1,3,3]""")) must equal (Left(DecodeError.InvalidValue(j("""3"""), Path(1))))
     }
 
     test("sequence literals inside other literals match like outer ones") {
       (j("""[[1,2,3]]""") matches j("""[[1,2,3]]""")) must equal (Right(Map.empty))
-      (j("""[[1,2,3]]""") matches j("""[[1,2,3,4,5]]""")) must equal (Left(DecodeError.InvalidValue(j("""[[1,2,3,4,5]]"""), Path.empty)))
-      (j("""[[1,2,3]]""") matches j("""[[1,2]]""")) must equal (Left(DecodeError.InvalidValue(j("""[[1,2]]"""), Path.empty)))
-      (j("""[[1,2,3]]""") matches j("""[[1,3,3]]""")) must equal (Left(DecodeError.InvalidValue(j("""[[1,3,3]]"""), Path.empty)))
+      (j("""[[1,2,3]]""") matches j("""[[1,2,3,4,5]]""")) must equal (Left(DecodeError.InvalidLength(3, 5, Path(0))))
+      (j("""[[1,2,3]]""") matches j("""[[1,2]]""")) must equal (Left(DecodeError.InvalidLength(3, 2, Path(0))))
+      (j("""[[1,2,3]]""") matches j("""[[1,3,3]]""")) must equal (Left(DecodeError.InvalidValue(j("""3"""), Path(0, 1))))
     }
 
     test("object literals match exactly") {
       (j("""{'hello':1,'world':2}""") matches j("""{'world':2,'hello':1}""")) must equal (Right(Map.empty))
     }
 
-    test("object literals do not match subset") {
-      (j("""{'hello':1,'world':2}""") matches j("""{'world':2,'hello':1,'gnu':3}""")) must equal (Left(DecodeError.InvalidValue(j("""{'world':2,'hello':1,'gnu':3}"""), Path.empty)))
+    test("object literals do match superset") {
+      (j("""{'hello':1,'world':2}""") matches j("""{'world':2,'hello':1,'gnu':3}""")) must equal (Right(Map.empty))
     }
 
-    test("object literals do not match superset") {
-      (j("""{'hello':1,'world':2}""") matches j("""{'world':2}""")) must equal (Left(DecodeError.InvalidValue(j("""{'world':2}"""), Path.empty)))
+    test("object literals do not match subset") {
+      (j("""{'hello':1,'world':2}""") matches j("""{'world':2}""")) must equal (Left(DecodeError.MissingField("hello", Path.empty)))
     }
 
     test("nested object literals match the same as top-level ones") {
       (j("""[{'hello':1,'world':2}]""") matches j("""[{'world':2,'hello':1}]""")) must equal (Right(Map.empty))
-      (j("""[{'hello':1,'world':2}]""") matches j("""[{'world':2,'hello':1,'gnu':3}]""")) must equal (Left(DecodeError.InvalidValue(j("""[{'world':2,'hello':1,'gnu':3}]"""), Path.empty)))
-      (j("""[{'hello':1,'world':2}]""") matches j("""[{'world':2}]""")) must equal (Left(DecodeError.InvalidValue(j("""[{'world':2}]"""), Path.empty)))
+      (j("""[{'hello':1,'world':2}]""") matches j("""[{'world':2,'hello':1,'gnu':3}]""")) must equal (Right(Map.empty))
+      (j("""[{'hello':1,'world':2}]""") matches j("""[{'world':2}]""")) must equal (Left(DecodeError.MissingField("hello", Path(0))))
     }
   }
 
