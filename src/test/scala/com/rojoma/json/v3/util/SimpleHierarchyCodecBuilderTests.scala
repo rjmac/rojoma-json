@@ -110,12 +110,12 @@ class SimpleHierarchyCodecBuilderTests extends FunSuite with MustMatchers {
 
   test("Bad inner value returns Left for the tag-and-value type") {
     val bc = baseCodec(TagAndValue("type", "value"))
-    bc.decode(j("{type: 'a', value : 'whatever'}")) must equal (Left(DecodeError.InvalidType(JObject, JString, new Path(List(Path.Field("value"))))))
+    bc.decode(j("{type: 'a', value : 'whatever'}")) must equal (Left(DecodeError.InvalidType(JObject, JString, Path("value"))))
   }
 
   test("Bad inner value returns Left for the tag-to-value type") {
     val bc = baseCodec(TagToValue)
-    bc.decode(j("{a : 'whatever'}")) must equal (Left(DecodeError.InvalidType(JObject, JString, new Path(List(Path.Field("a"))))))
+    bc.decode(j("{a : 'whatever'}")) must equal (Left(DecodeError.InvalidType(JObject, JString, Path("a"))))
   }
 
   test("Bad value value returns Left for the internal-tag type") {

@@ -25,11 +25,16 @@ object OptPattern extends LowPriorityImplicits {
    * [[com.rojoma.json.v3.matcher.Pattern]] which matches a value only
    * if the codec can decode it into something which is `equal` to the
    * object. */
-  implicit def litifyCodec[T : JsonDecode : JsonEncode](x: T): Pattern =
-    new FLiteral(j => JsonDecode[T].decode(j) == Right(x)) with ReallyDecode[T] {
-      override def generate(env: Pattern.Results) =
-        Some(JsonEncode[T].encode(x))
-      def decode = JsonDecode[T]
+  implicit def litifyCodec[T : JsonDecode : JsonEncode](lit: T): Pattern =
+    new Pattern {
+      def evaluate(x: JValue, environment: Pattern.Results): Either[DecodeError, Pattern.Results] =
+        JsonDecode[T].decode(x) match {
+          case Right(y) if lit == y => Right(environment)
+          case Right(_) => Left(DecodeError.InvalidValue(x, Path.empty))
+          case Left(err) => Left(err)
+        }
+
+      def generate(environment: Pattern.Results): Option[JValue] = Some(JsonEncode[T].encode(lit))
     }
 }
 
