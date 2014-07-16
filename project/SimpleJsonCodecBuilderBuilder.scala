@@ -91,7 +91,6 @@ object SimpleJsonCodecBuilder {
     sb.append("        case Left(err) =>\n")
     sb.append("          Left(err)\n")
     sb.append("      }\n")
-    sb.append("    def acceptTypes = CommonAcceptTypes.justJObject\n")
     sb.append("  }\n")
     sb.append("}\n")
     sb.toString

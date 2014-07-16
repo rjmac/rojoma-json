@@ -59,7 +59,6 @@ class SimpleHierarchyDecodeBuilder[Root <: AnyRef] private[util] (tagType: TagTy
             case other =>
               Left(DecodeError.InvalidType(JObject, other.jsonType, Path.empty))
           }
-          def acceptTypes = `-impl`.util.CommonAcceptTypes.justJObject
         }
       case TagAndValue(typeField, valueField) =>
         new JsonDecode[Root] {
@@ -78,7 +77,6 @@ class SimpleHierarchyDecodeBuilder[Root <: AnyRef] private[util] (tagType: TagTy
             case other =>
               Left(DecodeError.InvalidType(JObject, other.jsonType, Path.empty))
           }
-          def acceptTypes = `-impl`.util.CommonAcceptTypes.justJObject
         }
       case InternalTag(typeField, removeForSubcodec) =>
         new JsonDecode[Root] {
@@ -93,7 +91,6 @@ class SimpleHierarchyDecodeBuilder[Root <: AnyRef] private[util] (tagType: TagTy
             case other =>
               Left(DecodeError.InvalidType(JObject, other.jsonType, Path.empty))
           }
-          def acceptTypes = `-impl`.util.CommonAcceptTypes.justJObject
         }
     }
   }
@@ -118,10 +115,6 @@ class NoTagSimpleHierarchyDecodeBuilder[Root <: AnyRef] private[util] (subcodecs
           }
         }
         Left(DecodeError.join(accumulatedErrors.result()))
-      }
-
-      lazy val acceptTypes = subcodecs.foldLeft(Set.empty[JsonType]) { (acc, clsDec) =>
-        acc ++ clsDec._2.acceptTypes
       }
     }
   }

@@ -115,7 +115,6 @@ class TupleDecode {
     sb.append("      case other =>\n")
     sb.append("        Left(DecodeError.InvalidType(JArray, other.jsonType, Path.empty))\n")
     sb.append("    }\n")
-    sb.append("    def acceptTypes=Set(JArray)\n")
     sb.append("  }\n")
     sb.toString
   }

@@ -20,7 +20,6 @@ class SimpleHierarchyCodecBuilder[Root <: AnyRef] private[util] (enc: SimpleHier
       val d = dec.build
       def encode(x: Root) = e.encode(x)
       def decode(x: JValue) = d.decode(x)
-      def acceptTypes = d.acceptTypes
     }
   }
 }
@@ -36,7 +35,6 @@ class NoTagSimpleHierarchyCodecBuilder[Root <: AnyRef] private[util] (enc: NoTag
       val d = dec.build
       def encode(x: Root) = e.encode(x)
       def decode(x: JValue) = d.decode(x)
-      def acceptTypes = d.acceptTypes
     }
   }
 }

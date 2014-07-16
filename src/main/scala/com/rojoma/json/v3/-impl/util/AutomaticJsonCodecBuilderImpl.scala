@@ -262,7 +262,6 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
             ..$missingMethods
             ..$errorAugmenterMethods
             $decoder
-            val acceptTypes = _root_.com.rojoma.json.v3.`-impl`.util.CommonAcceptTypes.justJObject
             override def toString = ${"#<JsonDecode for " + T.toString + ">"}
           }) : _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname]"""
 
@@ -283,7 +282,6 @@ new _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.js
 
   def encode($x : $Tname) = $encode.encode($x)
   def decode($x : _root_.com.rojoma.json.v3.ast.JValue) = $decode.decode($x)
-  def acceptTypes = $decode.acceptTypes
   override def toString = ${"#<JsonCodec for " + T.toString + ">"}
 } ) : _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname])
 """
