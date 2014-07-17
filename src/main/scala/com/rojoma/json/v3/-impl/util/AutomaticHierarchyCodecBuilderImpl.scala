@@ -8,12 +8,12 @@ import MacroCompat._
 abstract class AutomaticHierarchyCodecBuilderImpl[T <: AnyRef] extends MacroCompat with MacroCommon {
   val c: Context
   import c.universe._
+  implicit val Ttag: c.WeakTypeTag[T]
 
-  implicit def Ttag: c.WeakTypeTag[T]
-  private lazy val T = weakTypeOf[T]
-  private lazy val Tname = TypeTree(T)
+  private val T = weakTypeOf[T]
+  private val Tname = TypeTree(T)
 
-  lazy val subclasses = locally {
+  val subclasses = locally {
     val cls = T.typeSymbol.asClass
     if(!cls.isSealed) c.abort(T.typeSymbol.pos, "Class must be sealed for use in an automatic hiearchy codec")
     cls.typeSignature
@@ -93,50 +93,50 @@ abstract class AutomaticHierarchyCodecBuilderImpl[T <: AnyRef] extends MacroComp
 
 object AutomaticHierarchyCodecBuilderImpl {
   def encodeTagged[T <: AnyRef : ctx.WeakTypeTag](ctx: Context)(tagType: ctx.Expr[TagType]): ctx.Expr[JsonEncode[T]] = {
-    val b = new AutomaticHierarchyCodecBuilderImpl[T] {
-      val c = ctx
-      val Ttag = implicitly[ctx.WeakTypeTag[T]].asInstanceOf[c.WeakTypeTag[T]]
-    }
-    b.encodeTagged(tagType.asInstanceOf[b.c.Expr[TagType]]).asInstanceOf[ctx.Expr[JsonEncode[T]]]
+    val b = new {
+      val c: ctx.type = ctx
+      val Ttag = implicitly[c.WeakTypeTag[T]]
+    } with AutomaticHierarchyCodecBuilderImpl[T]
+    b.encodeTagged(tagType)
   }
 
   def encodeTagless[T <: AnyRef : ctx.WeakTypeTag](ctx: Context)(tagType: ctx.Expr[NoTag]): ctx.Expr[JsonEncode[T]] = {
-    val b = new AutomaticHierarchyCodecBuilderImpl[T] {
-      val c = ctx
-      val Ttag = implicitly[ctx.WeakTypeTag[T]].asInstanceOf[c.WeakTypeTag[T]]
-    }
-    b.encodeTagless(tagType.asInstanceOf[b.c.Expr[NoTag]]).asInstanceOf[ctx.Expr[JsonEncode[T]]]
+    val b = new {
+      val c: ctx.type = ctx
+      val Ttag = implicitly[c.WeakTypeTag[T]]
+    } with AutomaticHierarchyCodecBuilderImpl[T]
+    b.encodeTagless(tagType)
   }
 
   def decodeTagged[T <: AnyRef : ctx.WeakTypeTag](ctx: Context)(tagType: ctx.Expr[TagType]): ctx.Expr[JsonDecode[T]] = {
-    val b = new AutomaticHierarchyCodecBuilderImpl[T] {
-      val c = ctx
-      val Ttag = implicitly[ctx.WeakTypeTag[T]].asInstanceOf[c.WeakTypeTag[T]]
-    }
-    b.decodeTagged(tagType.asInstanceOf[b.c.Expr[TagType]]).asInstanceOf[ctx.Expr[JsonDecode[T]]]
+    val b = new {
+      val c: ctx.type = ctx
+      val Ttag = implicitly[c.WeakTypeTag[T]]
+    } with AutomaticHierarchyCodecBuilderImpl[T]
+    b.decodeTagged(tagType)
   }
 
   def decodeTagless[T <: AnyRef : ctx.WeakTypeTag](ctx: Context)(tagType: ctx.Expr[NoTag]): ctx.Expr[JsonDecode[T]] = {
-    val b = new AutomaticHierarchyCodecBuilderImpl[T] {
-      val c = ctx
-      val Ttag = implicitly[ctx.WeakTypeTag[T]].asInstanceOf[c.WeakTypeTag[T]]
-    }
-    b.decodeTagless(tagType.asInstanceOf[b.c.Expr[NoTag]]).asInstanceOf[ctx.Expr[JsonDecode[T]]]
+    val b = new {
+      val c: ctx.type = ctx
+      val Ttag = implicitly[c.WeakTypeTag[T]]
+    } with AutomaticHierarchyCodecBuilderImpl[T]
+    b.decodeTagless(tagType)
   }
 
   def codecTagged[T <: AnyRef : ctx.WeakTypeTag](ctx: Context)(tagType: ctx.Expr[TagType]): ctx.Expr[JsonEncode[T] with JsonDecode[T]] = {
-    val b = new AutomaticHierarchyCodecBuilderImpl[T] {
-      val c = ctx
-      val Ttag = implicitly[ctx.WeakTypeTag[T]].asInstanceOf[c.WeakTypeTag[T]]
-    }
-    b.codecTagged(tagType.asInstanceOf[b.c.Expr[TagType]]).asInstanceOf[ctx.Expr[JsonEncode[T] with JsonDecode[T]]]
+    val b = new {
+      val c: ctx.type = ctx
+      val Ttag = implicitly[c.WeakTypeTag[T]]
+    } with AutomaticHierarchyCodecBuilderImpl[T]
+    b.codecTagged(tagType)
   }
 
   def codecTagless[T <: AnyRef : ctx.WeakTypeTag](ctx: Context)(tagType: ctx.Expr[NoTag]): ctx.Expr[JsonEncode[T] with JsonDecode[T]] = {
-    val b = new AutomaticHierarchyCodecBuilderImpl[T] {
-      val c = ctx
-      val Ttag = implicitly[ctx.WeakTypeTag[T]].asInstanceOf[c.WeakTypeTag[T]]
-    }
-    b.codecTagless(tagType.asInstanceOf[b.c.Expr[NoTag]]).asInstanceOf[ctx.Expr[JsonEncode[T] with JsonDecode[T]]]
+    val b = new {
+      val c: ctx.type = ctx
+      val Ttag = implicitly[c.WeakTypeTag[T]]
+    } with AutomaticHierarchyCodecBuilderImpl[T]
+    b.codecTagless(tagType)
   }
 }

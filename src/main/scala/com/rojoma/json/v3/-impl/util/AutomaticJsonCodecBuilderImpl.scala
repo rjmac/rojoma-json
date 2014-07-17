@@ -11,10 +11,10 @@ import MacroCompat._
 abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCommon {
   val c: Context
   import c.universe._
+  implicit val Ttag: c.WeakTypeTag[T]
 
-  implicit def Ttag: c.WeakTypeTag[T]
-  private lazy val T = weakTypeOf[T]
-  private lazy val Tname = TypeTree(T)
+  private val T = weakTypeOf[T]
+  private val Tname = TypeTree(T)
 
   private def identityStrat(x: String) = x
   private def underscoreStrat(x: String) = CamelSplit(x).map(_.toLowerCase).mkString("_")
@@ -46,7 +46,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
     }
   }
 
-  private lazy val defaultNameStrategy = nameStrategy(T.typeSymbol, identityStrat)
+  private val defaultNameStrategy = nameStrategy(T.typeSymbol, identityStrat)
 
   // since v2 and v3 share the same names for their annotations, warn if we find one that isn't
   // the same type but is the same name and don't find one that IS the right type.
@@ -99,7 +99,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
 
   private case class FieldInfo(codecName: TermName, isLazy: Boolean, jsonName: String, accessorName: TermName, missingMethodName: TermName, errorAugmenterMethodName: TermName, codecType: Type, isOption: Boolean, isNullForNone: Boolean)
 
-  private lazy val fieldss = locally {
+  private val fieldss = locally {
     val seenNames = new mutable.HashSet[String]
     val buffer = new mutable.ListBuffer[List[FieldInfo]]
     for {
@@ -139,10 +139,10 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
     }
     buffer.toList
   }
-  private lazy val fields = fieldss.flatten
+  private val fields = fieldss.flatten
 
   // TODO: figure out how to add the "lazy" modifiers after the fact
-  private lazy val encodes = fields.map { fi =>
+  private def encodes = fields.map { fi =>
     val enc = q"_root_.com.rojoma.json.v3.codec.JsonEncode[${TypeTree(fi.codecType)}]"
     if(fi.isLazy) {
       q"private[this] lazy val ${fi.codecName} = $enc"
@@ -150,7 +150,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
       q"private[this] val ${fi.codecName} = $enc"
     }
   }
-  private lazy val decodes = fields.map { fi =>
+  private def decodes = fields.map { fi =>
     val dec = q"_root_.com.rojoma.json.v3.codec.JsonDecode[${TypeTree(fi.codecType)}]"
     if(fi.isLazy) {
       q"private[this] lazy val ${fi.codecName} = $dec"
@@ -293,30 +293,28 @@ new _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.js
 }
 
 object AutomaticJsonCodecBuilderImpl {
-  // ...and typechecking falls over.
-
   def encode[T : ctx.WeakTypeTag](ctx: Context): ctx.Expr[JsonEncode[T]] = {
-    val b = new AutomaticJsonCodecBuilderImpl[T] {
-      val c = ctx
-      val Ttag = implicitly[ctx.WeakTypeTag[T]].asInstanceOf[c.WeakTypeTag[T]]
-    }
-    b.encode.asInstanceOf[ctx.Expr[JsonEncode[T]]]
+    val b = new {
+      val c: ctx.type = ctx
+      val Ttag = implicitly[c.WeakTypeTag[T]]
+    } with AutomaticJsonCodecBuilderImpl[T]
+    b.encode
   }
 
   def decode[T : ctx.WeakTypeTag](ctx: Context): ctx.Expr[JsonDecode[T]] = {
-    val b = new AutomaticJsonCodecBuilderImpl[T] {
-      val c = ctx
-      val Ttag = implicitly[ctx.WeakTypeTag[T]].asInstanceOf[c.WeakTypeTag[T]]
-    }
-    b.decode.asInstanceOf[ctx.Expr[JsonDecode[T]]]
+    val b = new {
+      val c: ctx.type = ctx
+      val Ttag = implicitly[c.WeakTypeTag[T]]
+    } with AutomaticJsonCodecBuilderImpl[T]
+    b.decode
   }
 
   def codec[T : ctx.WeakTypeTag](ctx: Context): ctx.Expr[JsonEncode[T] with JsonDecode[T]] = {
-    val b = new AutomaticJsonCodecBuilderImpl[T] {
-      val c = ctx
-      val Ttag = implicitly[ctx.WeakTypeTag[T]].asInstanceOf[c.WeakTypeTag[T]]
-    }
-    b.codec.asInstanceOf[ctx.Expr[JsonEncode[T] with JsonDecode[T]]]
+    val b = new {
+      val c: ctx.type = ctx
+      val Ttag = implicitly[c.WeakTypeTag[T]]
+    } with AutomaticJsonCodecBuilderImpl[T]
+    b.codec
   }
 }
 
