@@ -33,6 +33,10 @@ sourceGenerators in Compile <+= (sourceManaged in Compile) map SimpleJsonCodecBu
 
 sourceGenerators in Compile <+= (sourceManaged in Compile) map TupleCodecBuilder
 
+// Bit of a hack; regenerate README.markdown when version is changed
+// to a non-SNAPSHOT value.
+sourceGenerators in Compile <+= (baseDirectory, version, crossScalaVersions) map READMEBuilder
+
 unmanagedSourceDirectories in Compile += locally {
   val MajorMinor = """(\d+\.\d+)\..*""".r
   val dir = scalaVersion.value match {
