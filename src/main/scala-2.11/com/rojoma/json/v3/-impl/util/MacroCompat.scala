@@ -18,5 +18,5 @@ trait MacroCompat {
 }
 
 object MacroCompat {
-  type Context = scala.reflect.macros.blackbox.Context
+  type Context = scala.reflect.macros.whitebox.Context
 }

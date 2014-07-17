@@ -8,22 +8,45 @@ sealed abstract class JsonToken {
   def asMeaning: String
 
   val position: Position
+  def unpositioned: JsonToken
 }
 
 sealed abstract class SimpleJsonToken(val asFragment: String, val asMeaning: String) extends JsonToken
 
-case class TokenOpenBrace()(val position: Position) extends SimpleJsonToken("{", "start of object")
-case class TokenCloseBrace()(val position: Position) extends SimpleJsonToken("}", "end of object")
-case class TokenOpenBracket()(val position: Position) extends SimpleJsonToken("[", "start of list")
-case class TokenCloseBracket()(val position: Position) extends SimpleJsonToken("]", "end of list")
-case class TokenColon()(val position: Position) extends SimpleJsonToken(":", "colon")
-case class TokenComma()(val position: Position) extends SimpleJsonToken(",", "comma")
-case class TokenIdentifier(text: String)(val position: Position) extends SimpleJsonToken(text, "identifier")
-case class TokenNumber(number: String)(val position: Position) extends JsonToken {
-  lazy val asFragment = number
-  def asMeaning = "number"
+case class TokenOpenBrace()(val position: Position) extends SimpleJsonToken("{", "start of object") {
+  def unpositioned = TokenOpenBrace()(Position.Invalid)
 }
+
+case class TokenCloseBrace()(val position: Position) extends SimpleJsonToken("}", "end of object") {
+  def unpositioned = TokenCloseBrace()(Position.Invalid)
+}
+
+case class TokenOpenBracket()(val position: Position) extends SimpleJsonToken("[", "start of list") {
+  def unpositioned = TokenOpenBracket()(Position.Invalid)
+}
+
+case class TokenCloseBracket()(val position: Position) extends SimpleJsonToken("]", "end of list") {
+  def unpositioned = TokenCloseBracket()(Position.Invalid)
+}
+
+case class TokenColon()(val position: Position) extends SimpleJsonToken(":", "colon") {
+  def unpositioned = TokenColon()(Position.Invalid)
+}
+
+case class TokenComma()(val position: Position) extends SimpleJsonToken(",", "comma") {
+  def unpositioned = TokenComma()(Position.Invalid)
+}
+
+case class TokenIdentifier(text: String)(val position: Position) extends SimpleJsonToken(text, "identifier") {
+  def unpositioned = TokenIdentifier(text)(Position.Invalid)
+}
+
+case class TokenNumber(number: String)(val position: Position) extends SimpleJsonToken(number, "number") {
+  def unpositioned = TokenNumber(number)(Position.Invalid)
+}
+
 case class TokenString(text: String)(val position: Position) extends JsonToken {
   lazy val asFragment = CompactJsonWriter.toString(JString(text))
   def asMeaning = "string"
+  def unpositioned = TokenString(text)(Position.Invalid)
 }
