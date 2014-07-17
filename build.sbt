@@ -45,3 +45,9 @@ unmanagedSourceDirectories in Compile += locally {
   }
   (scalaSource in Compile).value.getParentFile / dir
 }
+
+// Include generated sources in source jar
+mappings in (Compile, packageSrc) <++= (sourceManaged in Compile, managedSources in Compile) map { (base, srcs) =>
+  import Path.{flat, relativeTo}
+  srcs x (relativeTo(base) | flat)
+}
