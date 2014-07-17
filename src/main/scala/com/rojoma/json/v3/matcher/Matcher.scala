@@ -58,7 +58,7 @@ trait Pattern extends OptPattern {
    * }}}
    *
    * @param x The value to test.
-   * @return An environment which can be used to look up variable bindings, or `None` if it didn't match.
+   * @return An environment which can be used to look up variable bindings, or `Left(error)` if it didn't match.
    */
   def matches(x: JValue) = evaluate(x, Map.empty)
 
@@ -70,7 +70,7 @@ trait Pattern extends OptPattern {
    *
    * @param x The value to test.
    * @return The environment augmented with any new [[com.rojoma.json.v3.matcher.Variable]]s
-   *    encountered in this `Pattern`, or `None` if it didn't match. */
+   *    encountered in this `Pattern`, or `Left(error)` if it didn't match. */
   def evaluate(x: JValue, environment: Pattern.Results): Either[DecodeError, Pattern.Results]
 
   /** Uses this `Pattern` together with the provided variable bindings to generate a
