@@ -97,7 +97,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
     param.annotations.exists(ann => isType(ann.tree.tpe, typeOf[NullForNone]))
   }
 
-  private case class FieldInfo(codecName: TermName, isLazy: Boolean, jsonName: String, accessorName: TermName, missingMethodName: TermName, errorAugmenterMethodName: TermName, codecType: Type, isOption: Boolean, isNullForNone: Boolean)
+  private case class FieldInfo(encName: TermName, decName: TermName, isLazy: Boolean, jsonName: String, accessorName: TermName, missingMethodName: TermName, errorAugmenterMethodName: TermName, codecType: Type, isOption: Boolean, isNullForNone: Boolean)
 
   private val fieldss = locally {
     val seenNames = new mutable.HashSet[String]
@@ -122,6 +122,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
                 } else seenNames += name
                 FieldInfo(
                   freshTermName(),
+                  freshTermName(),
                   hasLazyAnnotation(param),
                   name,
                   findAccessor(param),
@@ -141,53 +142,111 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
   }
   private val fields = fieldss.flatten
 
-  // TODO: figure out how to add the "lazy" modifiers after the fact
+  // three names for temporary variables used during the encoding/decoding process
+  private val tmp = freshTermName()
+  private val tmp2 = freshTermName()
+  private val tmp3 = freshTermName()
+
+  // the name of the thing being encoded or decoded
+  private val param = freshTermName()
+
   private def encodes = fields.map { fi =>
     val enc = q"_root_.com.rojoma.json.v3.codec.JsonEncode[${TypeTree(fi.codecType)}]"
     if(fi.isLazy) {
-      q"private[this] lazy val ${fi.codecName} = $enc"
+      q"private[this] lazy val ${fi.encName} = $enc"
     } else {
-      q"private[this] val ${fi.codecName} = $enc"
-    }
-  }
-  private def decodes = fields.map { fi =>
-    val dec = q"_root_.com.rojoma.json.v3.codec.JsonDecode[${TypeTree(fi.codecType)}]"
-    if(fi.isLazy) {
-      q"private[this] lazy val ${fi.codecName} = $dec"
-    } else {
-      q"private[this] val ${fi.codecName} = $dec"
+      q"private[this] val ${fi.encName} = $enc"
     }
   }
 
-  private def encode: c.Expr[JsonEncode[T]] = {
-    val tmp = freshTermName()
-    val tmp2 = freshTermName()
-
-    val param = freshTermName()
+  private def encoder = locally {
     val encoderMap = freshTermName()
-    val encoderMapUpdates = for(fi <- fields) yield {
+    def encoderMapUpdates = for(fi <- fields) yield {
       if(fi.isOption) {
         if(fi.isNullForNone) {
           q"""$encoderMap(${fi.jsonName}) = {
                 val $tmp = $param.${fi.accessorName}
-                if($tmp.isInstanceOf[_root_.scala.Some[_]]) ${fi.codecName}.encode($tmp.get)
+                if($tmp.isInstanceOf[_root_.scala.Some[_]]) ${fi.encName}.encode($tmp.get)
                 else _root_.com.rojoma.json.v3.ast.JNull
               }"""
         } else {
           q"""val $tmp = $param.${fi.accessorName}
-              if($tmp.isInstanceOf[_root_.scala.Some[_]]) $encoderMap(${fi.jsonName}) = ${fi.codecName}.encode($tmp.get)"""
+              if($tmp.isInstanceOf[_root_.scala.Some[_]]) $encoderMap(${fi.jsonName}) = ${fi.encName}.encode($tmp.get)"""
         }
       } else {
-        q"$encoderMap(${fi.jsonName}) = ${fi.codecName}.encode($param.${fi.accessorName})"
+        q"$encoderMap(${fi.jsonName}) = ${fi.encName}.encode($param.${fi.accessorName})"
       }
     }
 
-    val encoder = q"""def encode($param: $Tname) = {
-                        val $encoderMap = new _root_.scala.collection.mutable.LinkedHashMap[_root_.scala.Predef.String, _root_.com.rojoma.json.v3.ast.JValue]
-                        ..$encoderMapUpdates
-                        _root_.com.rojoma.json.v3.ast.JObject($encoderMap)
-                      }"""
+    q"""def encode($param: $Tname) = {
+          val $encoderMap = new _root_.scala.collection.mutable.LinkedHashMap[_root_.scala.Predef.String, _root_.com.rojoma.json.v3.ast.JValue]
+          ..$encoderMapUpdates
+          _root_.com.rojoma.json.v3.ast.JObject($encoderMap)
+        }"""
+  }
 
+  private def decodes = fields.map { fi =>
+    val dec = q"_root_.com.rojoma.json.v3.codec.JsonDecode[${TypeTree(fi.codecType)}]"
+    if(fi.isLazy) {
+      q"private[this] lazy val ${fi.decName} = $dec"
+    } else {
+      q"private[this] val ${fi.decName} = $dec"
+    }
+  }
+
+  private def missingMethods: List[DefDef] = fields.filter(!_.isOption).map { fi =>
+    q"""private[this] def ${fi.missingMethodName}: _root_.scala.Left[_root_.com.rojoma.json.v3.codec.DecodeError, _root_.scala.Nothing] =
+          _root_.scala.Left(_root_.com.rojoma.json.v3.codec.DecodeError.MissingField(${fi.jsonName},
+                            _root_.com.rojoma.json.v3.codec.Path.empty))"""
+  }
+
+  private def errorAugmenterMethods: List[DefDef] = fields.map { fi =>
+    q"""private[this] def ${fi.errorAugmenterMethodName}($tmp3 : _root_.scala.Either[_root_.com.rojoma.json.v3.codec.DecodeError, _root_.scala.Any]): _root_.scala.Left[_root_.com.rojoma.json.v3.codec.DecodeError, _root_.scala.Nothing] =
+         _root_.scala.Left($tmp3.asInstanceOf[_root_.scala.Left[_root_.com.rojoma.json.v3.codec.DecodeError, _root_.scala.Any]].a.augment(_root_.com.rojoma.json.v3.codec.Path.Field(${fi.jsonName})))"""
+  }
+
+  def decoder = locally {
+    val obj = freshTermName()
+    val tmps = fieldss.map { _.map { _ => freshTermName() } }
+
+    val decoderMapExtractions: List[ValDef] = for((fi,tmp) <- fields.zip(tmps.flatten)) yield {
+      val expr = if(fi.isOption) {
+        q"""val $tmp2 = $obj.get(${fi.jsonName})
+            if($tmp2.isInstanceOf[_root_.scala.Some[_]]) {
+              val $tmp3 = ${fi.decName}.decode($tmp2.get)
+              if($tmp3.isInstanceOf[_root_.scala.Right[_,_]]) Some($tmp3.asInstanceOf[_root_.scala.Right[_root_.scala.Any, ${TypeTree(fi.codecType)}]].b)
+              else if(_root_.com.rojoma.json.v3.ast.JNull == $tmp2.get) _root_.scala.None
+              else return ${fi.errorAugmenterMethodName}($tmp3)
+            } else _root_.scala.None"""
+      } else {
+        q"""val $tmp2 = ${obj}.get(${fi.jsonName})
+            if($tmp2.isInstanceOf[_root_.scala.Some[_]]) {
+              val $tmp3 = ${fi.decName}.decode($tmp2.get)
+              if($tmp3.isInstanceOf[_root_.scala.Right[_,_]]) $tmp3.asInstanceOf[_root_.scala.Right[_root_.scala.Any, ${TypeTree(fi.codecType)}]].b
+              else return ${fi.errorAugmenterMethodName}($tmp3)
+            } else return ${fi.missingMethodName}"""
+      }
+      q"val $tmp = $expr"
+    }
+    val create = // not sure how to do this with quasiquote...
+      tmps.foldLeft(Select(New(TypeTree(T)), toTermName("<init>")) : Tree) { (seed, arglist) =>
+        Apply(seed, arglist.map(Ident(_)))
+      }
+
+    q"""def decode($param: _root_.com.rojoma.json.v3.ast.JValue): _root_.scala.Either[_root_.com.rojoma.json.v3.codec.DecodeError, $Tname] =
+          if($param.isInstanceOf[_root_.com.rojoma.json.v3.ast.JObject]) {
+            val $obj = $param.asInstanceOf[_root_.com.rojoma.json.v3.ast.JObject].fields
+            ..$decoderMapExtractions
+            _root_.scala.Right($create)
+          } else {
+            _root_.scala.Left(_root_.com.rojoma.json.v3.codec.DecodeError.InvalidType(
+              _root_.com.rojoma.json.v3.ast.JObject,
+              $param.jsonType,
+              _root_.com.rojoma.json.v3.codec.Path.empty))
+          }"""
+  }
+
+  private def encode: c.Expr[JsonEncode[T]] = {
     val tree =
       q"""(new _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] {
             ..$encodes
@@ -201,61 +260,6 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
   }
 
   private def decode: c.Expr[JsonDecode[T]] = {
-    val tmp = freshTermName()
-    val tmp2 = freshTermName()
-    val tmp3 = freshTermName()
-
-    val param = freshTermName()
-    val obj = freshTermName()
-    val tmps = fieldss.map { _.map { _ => freshTermName() } }
-
-    val missingMethods: List[DefDef] = fields.filter(!_.isOption).map { fi =>
-      q"""private[this] def ${fi.missingMethodName}: _root_.scala.Left[_root_.com.rojoma.json.v3.codec.DecodeError, _root_.scala.Nothing] =
-            _root_.scala.Left(_root_.com.rojoma.json.v3.codec.DecodeError.MissingField(${fi.jsonName},
-                              _root_.com.rojoma.json.v3.codec.Path.empty))"""
-    }
-
-    val errorAugmenterMethods: List[DefDef] = fields.map { fi =>
-      q"""private[this] def ${fi.errorAugmenterMethodName}($tmp3 : _root_.scala.Either[_root_.com.rojoma.json.v3.codec.DecodeError, _root_.scala.Any]): _root_.scala.Left[_root_.com.rojoma.json.v3.codec.DecodeError, _root_.scala.Nothing] =
-           _root_.scala.Left($tmp3.asInstanceOf[_root_.scala.Left[_root_.com.rojoma.json.v3.codec.DecodeError, _root_.scala.Any]].a.augment(_root_.com.rojoma.json.v3.codec.Path.Field(${fi.jsonName})))"""
-    }
-
-    val decoderMapExtractions: List[ValDef] = for((fi,tmp) <- fields.zip(tmps.flatten)) yield {
-      val expr = if(fi.isOption) {
-        q"""val $tmp2 = $obj.get(${fi.jsonName})
-            if($tmp2.isInstanceOf[_root_.scala.Some[_]]) {
-              val $tmp3 = ${fi.codecName}.decode($tmp2.get)
-              if($tmp3.isInstanceOf[_root_.scala.Right[_,_]]) Some($tmp3.asInstanceOf[_root_.scala.Right[_root_.scala.Any, ${TypeTree(fi.codecType)}]].b)
-              else if(_root_.com.rojoma.json.v3.ast.JNull == $tmp2.get) _root_.scala.None
-              else return ${fi.errorAugmenterMethodName}($tmp3)
-            } else _root_.scala.None"""
-      } else {
-        q"""val $tmp2 = ${obj}.get(${fi.jsonName})
-            if($tmp2.isInstanceOf[_root_.scala.Some[_]]) {
-              val $tmp3 = ${fi.codecName}.decode($tmp2.get)
-              if($tmp3.isInstanceOf[_root_.scala.Right[_,_]]) $tmp3.asInstanceOf[_root_.scala.Right[_root_.scala.Any, ${TypeTree(fi.codecType)}]].b
-              else return ${fi.errorAugmenterMethodName}($tmp3)
-            } else return ${fi.missingMethodName}"""
-      }
-      q"val $tmp = $expr"
-    }
-    val create = // not sure how to do this with quasiquote...
-      tmps.foldLeft(Select(New(TypeTree(T)), toTermName("<init>")) : Tree) { (seed, arglist) =>
-        Apply(seed, arglist.map(Ident(_)))
-      }
-
-    val decoder = q"""def decode($param: _root_.com.rojoma.json.v3.ast.JValue): _root_.scala.Either[_root_.com.rojoma.json.v3.codec.DecodeError, $Tname] =
-                        if($param.isInstanceOf[_root_.com.rojoma.json.v3.ast.JObject]) {
-                          val $obj = $param.asInstanceOf[_root_.com.rojoma.json.v3.ast.JObject].fields
-                          ..$decoderMapExtractions
-                          _root_.scala.Right($create)
-                        } else {
-                          _root_.scala.Left(_root_.com.rojoma.json.v3.codec.DecodeError.InvalidType(
-                            _root_.com.rojoma.json.v3.ast.JObject,
-                            $param.jsonType,
-                            _root_.com.rojoma.json.v3.codec.Path.empty))
-                        }"""
-
     val tree =
       q"""(new _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname] {
             ..$decodes
@@ -275,16 +279,15 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
     val decode = toTermName("decode")
     val x = toTermName("x")
 
-    val tree = q""" ((
-new _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname] {
-  private[this] val $encode = _root_.com.rojoma.json.v3.util.AutomaticJsonEncodeBuilder[$Tname]
-  private[this] val $decode = _root_.com.rojoma.json.v3.util.AutomaticJsonDecodeBuilder[$Tname]
-
-  def encode($x : $Tname) = $encode.encode($x)
-  def decode($x : _root_.com.rojoma.json.v3.ast.JValue) = $decode.decode($x)
-  override def toString = ${"#<JsonCodec for " + T.toString + ">"}
-} ) : _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname])
-"""
+    val tree = q"""(new _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname] {
+                     ..$encodes
+                     ..$decodes
+                     ..$missingMethods
+                     ..$errorAugmenterMethods
+                     $encoder
+                     $decoder
+                     override def toString = ${"#<JsonCodec for " + T.toString + ">"}
+                   }) : _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname]"""
 
     // println(tree)
 
