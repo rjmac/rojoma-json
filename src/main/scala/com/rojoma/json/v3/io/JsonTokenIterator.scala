@@ -35,6 +35,7 @@ class JsonTokenIterator(reader: Reader) extends AbstractBufferedIterator[JsonTok
 
   private var nextCharRow = 1 // This is the position of the next char returned from "nextChar()" or "peekChar()"
   private var nextCharCol = 1
+  private val scratch = new StringBuilder
 
   override def toString =
     if(nextToken ne null) "non-empty iterator"
@@ -161,81 +162,81 @@ class JsonTokenIterator(reader: Reader) extends AbstractBufferedIterator[JsonTok
     //    -?\d+(\.\d+)?([eE][+-]?\d+)?
     // In particular, JSON restricts leading zeros, but we'll match
     // the whole thing anyway.
-    val sb = new StringBuilder
+    scratch.setLength(0)
 
-    if(peekChar() == '-') sb += nextChar()
+    if(peekChar() == '-') scratch += nextChar()
 
-    do { sb += readDigit() } while(!atEOF() && isDigit(peekChar()))
+    do { scratch += readDigit() } while(!atEOF() && isDigit(peekChar()))
 
     val hasFrac = !atEOF() && peekChar() == '.'
     if(hasFrac) {
-      sb += nextChar() // skip decimal
-      do { sb += readDigit() } while(!atEOF() && isDigit(peekChar()))
+      scratch += nextChar() // skip decimal
+      do { scratch += readDigit() } while(!atEOF() && isDigit(peekChar()))
     }
 
     val hasExponent = !atEOF() && (peekChar() == 'e' || peekChar() == 'E')
 
     val n =
       if(hasExponent) {
-        sb += nextChar() // skip e/E
+        scratch += nextChar() // skip e/E
 
-        if(peekChar() == '-' || peekChar() == '+') sb += nextChar()
-        else sb += '+' // ensure there's always a sign
+        if(peekChar() == '-' || peekChar() == '+') scratch += nextChar()
+        else scratch += '+' // ensure there's always a sign
 
-        val exponentDigitsStart = sb.length
-        do { sb += readDigit() } while(!atEOF() && isDigit(peekChar()))
+        val exponentDigitsStart = scratch.length
+        do { scratch += readDigit() } while(!atEOF() && isDigit(peekChar()))
 
         // this relies on the exponent being the last thing read
-        val result = sb.toString
+        val result = scratch.toString
         if(!ReaderUtils.isBigDecimalizableUnsignedExponent(result, exponentDigitsStart)) {
           throw new JsonNumberOutOfRange(result, startPos)
         }
         result
       } else {
-        sb.toString
+        scratch.toString
       }
     TokenNumber(n)(startPos)
   }
 
   private def readIdentifier(startPos: Position) = {
-    val sb = new StringBuilder
-    sb += nextChar()
-    while(!atEOF() && Character.isUnicodeIdentifierPart(peekChar())) sb += nextChar()
-    TokenIdentifier(sb.toString())(startPos)
+    scratch.setLength(0)
+    scratch += nextChar()
+    while(!atEOF() && Character.isUnicodeIdentifierPart(peekChar())) scratch += nextChar()
+    TokenIdentifier(scratch.toString())(startPos)
   }
 
   private def readString(startPos: Position) = {
-    val sb = new StringBuilder
+    scratch.setLength(0)
     val Boundary = nextChar()
     while(peekChar() != Boundary) {
-      readPotentialSurrogatePairInto(sb, readChar(), Boundary)
+      readPotentialSurrogatePairInto(readChar(), Boundary)
     }
     nextChar() // skip closing character
-    TokenString(sb.toString)(startPos)
+    TokenString(scratch.toString)(startPos)
   }
 
   @annotation.tailrec
-  private def readPotentialSurrogatePairInto(sb: StringBuilder, c: Char, endOfString: Char) {
+  private def readPotentialSurrogatePairInto(c: Char, endOfString: Char) {
     if(c >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE) {
       val badChar = 0xfffd.toChar
       if(Character.isHighSurrogate(c)) {
         if(peekChar() == endOfString) {
-          sb += badChar
+          scratch += badChar
         } else {
           val potentialSecondHalf = readChar()
           if(Character.isLowSurrogate(potentialSecondHalf)) {
-            sb += c
-            sb += potentialSecondHalf
+            scratch += c
+            scratch += potentialSecondHalf
           } else {
-            sb += badChar
-            readPotentialSurrogatePairInto(sb, potentialSecondHalf, endOfString)
+            scratch += badChar
+            readPotentialSurrogatePairInto(potentialSecondHalf, endOfString)
           }
         }
       } else {
-        sb += badChar
+        scratch += badChar
       }
     } else {
-      sb += c
+      scratch += c
     }
   }
 

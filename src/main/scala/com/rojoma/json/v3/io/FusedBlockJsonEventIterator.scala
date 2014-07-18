@@ -32,6 +32,8 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   private [this] var stack = new Array[Boolean](16) // values are true for "parsing array" and false for "parsing object"
   private [this] var stackPtr = -1
 
+  private [this] val scratch = new StringBuilder
+
   // prevent toString from having side-effects
   override def toString() = {
     if((available ne null) || (pos != end)) "non-empty iterator"
@@ -342,37 +344,37 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   }
 
   private def readString(): String = {
-    val sb = new StringBuilder
+    scratch.setLength(0)
     val Boundary = nextChar()
     while(peekChar() != Boundary) {
-      readPotentialSurrogatePairInto(sb, readChar(), Boundary)
+      readPotentialSurrogatePairInto(readChar(), Boundary)
     }
     skipChar() // skip closing quote
-    sb.toString
+    scratch.toString
   }
 
   @annotation.tailrec
-  private def readPotentialSurrogatePairInto(sb: StringBuilder, c: Char, endOfString: Char) {
+  private def readPotentialSurrogatePairInto(c: Char, endOfString: Char) {
     if(c >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE) {
       val badChar = 0xfffd.toChar
       if(Character.isHighSurrogate(c)) {
         if(peekChar() == endOfString) {
-          sb += badChar
+          scratch += badChar
         } else {
           val potentialSecondHalf = readChar()
           if(Character.isLowSurrogate(potentialSecondHalf)) {
-            sb += c
-            sb += potentialSecondHalf
+            scratch += c
+            scratch += potentialSecondHalf
           } else {
-            sb += badChar
-            readPotentialSurrogatePairInto(sb, potentialSecondHalf, endOfString)
+            scratch += badChar
+            readPotentialSurrogatePairInto(potentialSecondHalf, endOfString)
           }
         }
       } else {
-        sb += badChar
+        scratch += badChar
       }
     } else {
-      sb += c
+      scratch += c
     }
   }
 
@@ -430,10 +432,10 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   }
 
   private def readIdentifier(): String = {
-    val sb = new StringBuilder
-    sb += nextChar()
-    while(!atEOF() && Character.isUnicodeIdentifierPart(peekChar())) sb += nextChar()
-    sb.toString()
+    scratch.setLength(0)
+    scratch += nextChar()
+    while(!atEOF() && Character.isUnicodeIdentifierPart(peekChar())) scratch += nextChar()
+    scratch.toString()
   }
 
   private def readDigit(): Char = {
@@ -452,38 +454,38 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     // the regular expression:
     //    -?\d+(\.\d+)?([eE][+-]?\d+)?
     // We'll match the whole thing, within the limits of BigDecimal
-    val sb = new StringBuilder
+    scratch.setLength(0)
 
     val startPos = Position(nextCharRow, nextCharCol)
 
-    if(peekChar() == '-') sb += nextChar()
+    if(peekChar() == '-') scratch += nextChar()
 
-    do { sb += readDigit() } while(!atEOF() && isDigit(peekChar()))
+    do { scratch += readDigit() } while(!atEOF() && isDigit(peekChar()))
 
     val hasFrac = !atEOF() && peekChar() == '.'
     if(hasFrac) {
-      sb += nextChar() // skip decimal
-      do { sb += readDigit() } while(!atEOF() && isDigit(peekChar()))
+      scratch += nextChar() // skip decimal
+      do { scratch += readDigit() } while(!atEOF() && isDigit(peekChar()))
     }
 
     val hasExponent = !atEOF() && (peekChar() == 'e' || peekChar() == 'E')
     if(hasExponent) {
-      sb += nextChar() // skip e/E
+      scratch += nextChar() // skip e/E
 
-      if(peekChar() == '-' || peekChar() == '+') sb += nextChar()
-      else sb += '+' // ensure there's always a sign
+      if(peekChar() == '-' || peekChar() == '+') scratch += nextChar()
+      else scratch += '+' // ensure there's always a sign
 
-      val exponentDigitsStart = sb.length
-      do { sb += readDigit() } while(!atEOF() && isDigit(peekChar()))
+      val exponentDigitsStart = scratch.length
+      do { scratch += readDigit() } while(!atEOF() && isDigit(peekChar()))
 
       // this relies on the exponent being the last thing read
-      val result = sb.toString
+      val result = scratch.toString
       if(!ReaderUtils.isBigDecimalizableUnsignedExponent(result, exponentDigitsStart)) {
         throw new JsonNumberOutOfRange(result, startPos)
       }
       result
     } else {
-      sb.toString
+      scratch.toString
     }
   }
 
