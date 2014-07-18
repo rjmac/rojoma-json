@@ -25,7 +25,7 @@ rojoma-json-v3 is published for Scala version 2.10 and 2.11.
 
 ## Documentation
 
-### package com.rojoma.json.ast
+### package com.rojoma.json.v3.ast
 
  * `JValue`: An AST for JSON
     * `JAtom`
@@ -60,7 +60,7 @@ This is implemented via scala's `Dynamic` trait; as a result,
 `applyDynamic`, `selectDynamic`, and `apply`, plus the methods on
 `Object`, will resolve to real methods instead of path elements.
 
-### package com.rojoma.json.codec
+### package com.rojoma.json.v3.codec
 
  * `JsonEncode[T]`: a typeclass for converting objects to `JValue`s
  * `JsonDecode[T]`: a typeclass for converting objects from `JValue`s
@@ -100,7 +100,7 @@ JsonEncode[T] === implicitly[JsonEncode[T]]
 JsonDecode[T] === implicitly[JsonDecode[T]]
 ```
 
-### package com.rojoma.json.io
+### package com.rojoma.json.v3.io
 
  * `JsonReader`: Convert character data to `JValues`
  * `JsonWriter`: Convert `JValues` to character data
@@ -145,7 +145,7 @@ faster at the cost of reading more than that.  If you do not specify,
 rojoma-json will always pick the non-`Block` versions when reading
 from `Reader`s.
 
-### package com.rojoma.json.matcher
+### package com.rojoma.json.v3.matcher
 
  * `OptPattern`: The base class of all `Pattern`s, plus `POption`
     * `Pattern`: A specification for extracting data from `JValue`s
@@ -228,7 +228,7 @@ method, passing in a list of variable bindings in the form `variable := value` o
 if the variable occurs in an "optional" position (i.e., inside a `POption`
 or `FirstOf`) `variable :=? optValue`, where `optValue` is an `Option`.
 
-### package com.rojoma.json.zipper
+### package com.rojoma.json.v3.zipper
 
 A zipper for navigating JSON.  There are five interfaces:
 
@@ -256,7 +256,7 @@ object in the hole it represents (via the `replace` method) or move
 nothing `top` might not return anything, since it is possible that the
 root object is what was removed.
 
-### package com.rojoma.json.jpath
+### package com.rojoma.json.v3.jpath
 
 The `JPath` class is a simple wrapper over `JsonZipper`s for doing
 "xpath-style" queries on a `JValue`.
@@ -269,7 +269,7 @@ new JPath(myObject).down("users").*.having(_.down("city").where(_.here == JStrin
 The result is a `Stream[JValue]`.  Currently `JPath` is a read-only
 interface.
 
-### package com.rojoma.json.util
+### package com.rojoma.json.v3.util
 
 Utility operations that combine parts from other packages.  The main
 member of this package is the object `JsonUtil` which contains
@@ -344,14 +344,14 @@ Note that the `AutomaticHierarchy` builders can be affected by
 [SI-7046](https://issues.scala-lang.org/browse/SI-7046) and
 [SI-7588](https://issues.scala-lang.org/browse/SI-7588).
 
-### package com.rojoma.json.interpolation
+### package com.rojoma.json.v3.interpolation
 
 A string interpolator for building `JValue`s in a syntactically
 lightweight way.  The package contains interpolators `json` and `j`;
 they are exact synonyms.
 
 ```scala
-import com.rojoma.json.interpolation._
+import com.rojoma.json.v3.interpolation._
 
 val x = "world"
 
@@ -366,6 +366,18 @@ j"""{ "a" : ${A(5)} }""" // { "a" : { "x" : 5 } }
 
 The interpolators are implemented as macros.  The well-formedness of
 the template is checked at compile time.
+
+### package com.rojoma.json.v3.conversions.v2
+
+While version 3 of rojoma-json is not binary or source compatible with
+v2, it can exist alongside it.  This package contains helpers to
+convert between the two versions, to assist in transitions.
+
+The package is meant to have all its contents imported.  It contains
+implicit conversions which add `v3` methods onto rojoma-json-2's
+`JValue`s and `v2` methods onto rojoma-json-3's.  In addition, it can
+create rojoma-json-2 `JsonCodec`s from instances of 3's `JsonEncode`
+and `JsonDecode`.
 
 ## Incompatible changes from rojoma-json 2
 
