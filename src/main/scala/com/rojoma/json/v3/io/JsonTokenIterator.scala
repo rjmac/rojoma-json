@@ -28,14 +28,14 @@ import `-impl`.util.AbstractBufferedIterator
   * @see [[com.rojoma.json.v3.io.JsonToken]]
   */
 class JsonTokenIterator(reader: Reader) extends AbstractBufferedIterator[JsonToken] {
-  private var isPeeked: Boolean = false
-  private var peeked: Char = _
+  private[this] var isPeeked: Boolean = false
+  private[this] var peeked: Char = _
 
-  private var nextToken: JsonToken = null
+  private[this] var nextToken: JsonToken = null
 
-  private var nextCharRow = 1 // This is the position of the next char returned from "nextChar()" or "peekChar()"
-  private var nextCharCol = 1
-  private val scratch = new StringBuilder
+  private[this] var nextCharRow = 1 // This is the position of the next char returned from "nextChar()" or "peekChar()"
+  private[this] var nextCharCol = 1
+  private[this] val scratch = new StringBuilder
 
   override def toString =
     if(nextToken ne null) "non-empty iterator"
