@@ -1,8 +1,15 @@
+import com.typesafe.tools.mima.plugin.MimaPlugin.mimaDefaultSettings
+import com.typesafe.tools.mima.plugin.MimaKeys.previousArtifact
+
+mimaDefaultSettings
+
 name := "rojoma-json-v3"
 
 organization := "com.rojoma"
 
-version := "3.0.0-SNAPSHOT"
+version := "3.0.0"
+
+previousArtifact <<= scalaBinaryVersion { sv => None /* Some("com.rojoma" % ("rojoma-json_" + sv) % "3.0.0") */ }
 
 scalaVersion := "2.11.1"
 
