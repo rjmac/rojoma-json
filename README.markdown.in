@@ -52,7 +52,7 @@ downcast to a more specific type.
 There is also support for "dynamically typed" access to JValues:
 
 ```scala
-someJValue = parseJson("""{outer:{inner:[0,1,2,3]}}""
+someJValue = parseJson("""{outer:{inner:[0,1,2,3]}}""")
 someJValue.dynamic.outer.inner(2).?       // returns Some(JNumber(2))
 someJValue.dynamic.outer("inner")(2).?    // returns Some(JNumber(2))
 someJValue.dynamic.outer.inner(2).!       // returns JNumber(2)
@@ -394,3 +394,5 @@ and `JsonDecode`.
  * `PArray` now requires an exact length match.
  * The position on `JsonToken`s and `JsonEvent`s is now provided in a
    secondary constructor parameter, rather than being a mutable field.
+ * The various high-level readers prefer to use block IO instead of
+   character-by-character IO.
