@@ -13,8 +13,8 @@ trait JsonReader {
 }
 
 object JsonReader {
-  def apply(r: Reader, buffer: Boolean = true): JsonReader =
-    if(buffer) new FusedBlockJsonReader(r)
+  def apply(r: Reader, buffer: Boolean = true, blockSize: Int = 1024): JsonReader =
+    if(buffer) new FusedBlockJsonReader(r, blockSize = blockSize)
     else new EventJsonReader(new JsonTokenIterator(r))
   def apply(s: String): JsonReader = new FusedBlockJsonReader(s)
 
@@ -29,8 +29,8 @@ object JsonReader {
     * @see [[com.rojoma.json.v3.io.JsonReader]] */
   @throws(classOf[JsonReaderException])
   @throws(classOf[java.io.IOException])
-  def fromReader(r: Reader, buffer: Boolean = false) =
-    apply(r, buffer).read()
+  def fromReader(r: Reader, buffer: Boolean = true, blockSize: Int = 1024) =
+    apply(r, buffer, blockSize).read()
 
   /** Read a [[com.rojoma.json.v3.ast.JValue]] out of a `String`.
     * @param s The source of characters.
