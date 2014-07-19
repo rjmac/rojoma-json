@@ -82,7 +82,7 @@ class JsonEventIteratorComparisonTests extends FunSuite with MustMatchers with P
         case (Right(_), Left(_)) =>
           fail("First iterator's hasNext succeeded; second threw an exception")
         case (Left(_), Right(_)) =>
-          fail("Second iterator's hasNext succeeded; right threw an exception")
+          fail("Second iterator's hasNext succeeded; first threw an exception")
       }
 
       val aEv = attempt(a.next())
