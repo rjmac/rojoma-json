@@ -356,6 +356,7 @@ case object JNull extends JNull with JsonType {
   * a partition of the set of valid [[com.rojoma.json.v3.ast.JValue]]s. */
 sealed trait JCompound extends JValue {
   def forced: JCompound
+  def size: Int
 }
 
 object JCompound {
