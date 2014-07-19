@@ -32,7 +32,7 @@ rojoma-json-v3 is published for Scala version 2.10 and 2.11.
        * `JNull`
        * `JBoolean(boolean: Boolean)`
        * `JString(string: String)`
-       * `JNumber(bigdecimal: BigDecimal)`
+       * `JNumber`
     * `JCompound`
        * `JArray(toSeq: scala.collection.Seq[JValue])`
        * `JObject(fields: scala.collection.Map[String, JValue])`
@@ -41,6 +41,10 @@ The `JCompound` classes extend `Iterable` and have convenience methods
 that make them act like `Seq` and `Map` respectively, but are not
 themselves actually `Seq`s or `Map`s.  Use the `toSeq`, or `fields` or
 `toMap`, method to get a real one.
+
+`JNumber` is not a case class; it is an abstract class whose
+implementation varies depending on how it was constructed.  Use the
+various `toX` methods to access its value.
 
 All `JValue`s have a `cast[T]` method that can be used to safely
 downcast to a more specific type.
