@@ -12,8 +12,8 @@ import ast._
   * this parser accepts unquoted strings (i.e., identifiers) as field-names. */
 class JsonReader(input: Iterator[JsonEvent]) {
   def this(tokens: Iterator[JsonToken], fieldCache: FieldCache) = this(new JsonEventIterator(tokens, fieldCache))
-  def this(reader: Reader, fieldCache: FieldCache) = this(new JsonEventIterator(reader, fieldCache))
-  def this(text: String, fieldCache: FieldCache) = this(new FusedBlockJsonEventIterator(new java.io.StringReader(text), fieldCache))
+  def this(reader: Reader, fieldCache: FieldCache) = this(new FusedBlockJsonEventIterator(reader, fieldCache))
+  def this(text: String, fieldCache: FieldCache) = this(new java.io.StringReader(text), fieldCache)
 
   def this(tokens: Iterator[JsonToken])(implicit dummy: com.rojoma.json.v3.`-impl`.StupidErasure = null) = this(tokens, IdentityFieldCache)
   def this(reader: Reader) = this(reader, IdentityFieldCache)
@@ -89,9 +89,9 @@ class JsonReader(input: Iterator[JsonEvent]) {
 }
 
 object JsonReader {
-  def apply(r: Reader, buffer: Boolean = false): JsonReader =
+  def apply(r: Reader, buffer: Boolean = true): JsonReader =
     if(buffer) new JsonReader(new FusedBlockJsonEventIterator(r))
-    else new JsonReader(r)
+    else new JsonReader(new JsonTokenIterator(r))
   def apply(s: String): JsonReader = new JsonReader(s)
 
   /** Read a [[com.rojoma.json.v3.ast.JValue]] out of a `Reader`.
