@@ -70,7 +70,7 @@ class JsonEventIterator(input: Iterator[JsonToken], fieldCache: FieldCache) exte
   }
 
   /**
-   * Finish reading the "current" object or list, where "current" is
+   * Finish reading the "current" object or array, where "current" is
    * defined as "the most recent compound object started by `next()`.
    * If a top-level object has not been started, this does nothing.
    *
@@ -103,9 +103,9 @@ class JsonEventIterator(input: Iterator[JsonToken], fieldCache: FieldCache) exte
   final def dropRestOfCompound() = skipRestOfCompound()
 
   /** Skips the next datum that would be returned entirely.  If the next event
-   * is the start of a list or object, `skipRestOfCompound()` is called to
+   * is the start of a array or object, `skipRestOfCompound()` is called to
    * pass over it. If it's a field event, the field and its associated value
-   * are skipped. If it's the end of a list or object, no position change is
+   * are skipped. If it's the end of a array or object, no position change is
    * made and the next call to `head` or `next()` will still return the end
    * event.  Otherwise, it's an atom and is consumed.
    *
@@ -182,7 +182,7 @@ object JsonEventIterator {
       case TokenCloseBracket() =>
         EndOfArrayEvent()(token.position)
       case _ =>
-        error(token, "datum or end of list")
+        error(token, "datum or end of array")
     }
   }
 
@@ -195,7 +195,7 @@ object JsonEventIterator {
       case TokenCloseBracket() =>
         EndOfArrayEvent()(token.position)
       case _ =>
-        error(token, "comma or end of list")
+        error(token, "comma or end of array")
     }
   }
 

@@ -129,7 +129,7 @@ private[io] object JsonEventGeneratorImpl {
       case TokenCloseBracket() =>
         event(EndOfArrayEvent()(token.position), stack)
       case _ =>
-        error(token, "datum or end of list")
+        error(token, "datum or end of array")
     }
 
     def name = "AwaitingEntryOrEndOfArray"
@@ -142,7 +142,7 @@ private[io] object JsonEventGeneratorImpl {
       case TokenCloseBracket() =>
         event(EndOfArrayEvent()(token.position), stack)
       case _ =>
-        error(token, "comma or end of list")
+        error(token, "comma or end of array")
     }
 
     def name = "AwaitingCommaOrEndOfArray"

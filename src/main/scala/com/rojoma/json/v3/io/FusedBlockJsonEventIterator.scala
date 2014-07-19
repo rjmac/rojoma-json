@@ -276,7 +276,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     if(peekChar() == ']') {
       endArray()
     } else {
-      readDatumEvent("datum or end of list")
+      readDatumEvent("datum or end of array")
     }
   }
 
@@ -295,7 +295,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
       case ']' =>
         endArray()
       case _ =>
-        badToken("comma or end of list")
+        badToken("comma or end of array")
     }
   }
 
@@ -347,34 +347,43 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     scratch.setLength(0)
     val Boundary = nextChar()
     while(peekChar() != Boundary) {
-      readPotentialSurrogatePairInto(readChar(), Boundary)
+      readPotentialSurrogatePair(readChar(), Boundary)
     }
     skipChar() // skip closing quote
     scratch.toString
   }
 
-  @annotation.tailrec
-  private def readPotentialSurrogatePairInto(c: Char, endOfString: Char) {
+  private def readPotentialSurrogatePair(c: Char, endOfString: Char) {
     if(c >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE) {
-      val badChar = 0xfffd.toChar
-      if(Character.isHighSurrogate(c)) {
-        if(peekChar() == endOfString) {
-          scratch += badChar
-        } else {
-          val potentialSecondHalf = readChar()
-          if(Character.isLowSurrogate(potentialSecondHalf)) {
-            scratch += c
-            scratch += potentialSecondHalf
-          } else {
-            scratch += badChar
-            readPotentialSurrogatePairInto(potentialSecondHalf, endOfString)
-          }
-        }
-      } else {
-        scratch += badChar
-      }
+      readSurrogatePair(c, endOfString)
     } else {
       scratch += c
+    }
+  }
+
+  private def badChar = 0xfffd.toChar
+
+  @annotation.tailrec
+  private def readSurrogatePair(c: Char, endOfString: Char) {
+    if(Character.isHighSurrogate(c)) {
+      if(peekChar() == endOfString) {
+        scratch += badChar
+      } else {
+        val potentialSecondHalf = readChar()
+        if(Character.isLowSurrogate(potentialSecondHalf)) {
+          scratch += c
+          scratch += potentialSecondHalf
+        } else {
+          scratch += badChar
+          if(potentialSecondHalf >= Character.MIN_SURROGATE && potentialSecondHalf <= Character.MAX_SURROGATE) {
+            readSurrogatePair(potentialSecondHalf, endOfString)
+          } else {
+            scratch += potentialSecondHalf
+          }
+        }
+      }
+    } else {
+      scratch += badChar
     }
   }
 
@@ -499,7 +508,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   }
 
   /**
-   * Finish reading the "current" object or list, where "current" is
+   * Finish reading the "current" object or array, where "current" is
    * defined as "the most recent compound object started by `next()`.
    * If a top-level object has not been started, this does nothing.
    *
@@ -532,9 +541,9 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   final def dropRestOfCompound() = skipRestOfCompound()
 
   /** Skips the next datum that would be returned entirely.  If the next event
-   * is the start of a list or object, `skipRestOfCompound()` is called to
+   * is the start of a array or object, `skipRestOfCompound()` is called to
    * pass over it. If it's a field event, the field and its associated value
-   * are skipped. If it's the end of a list or object, no position change is
+   * are skipped. If it's the end of a array or object, no position change is
    * made and the next call to `head` or `next()` will still return the end
    * event.  Otherwise, it's an atom and is consumed.
    *

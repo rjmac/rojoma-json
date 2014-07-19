@@ -21,11 +21,11 @@ case class TokenCloseBrace()(val position: Position) extends SimpleJsonToken("}"
   def unpositioned = TokenCloseBrace()(Position.Invalid)
 }
 
-case class TokenOpenBracket()(val position: Position) extends SimpleJsonToken("[", "start of list") {
+case class TokenOpenBracket()(val position: Position) extends SimpleJsonToken("[", "start of array") {
   def unpositioned = TokenOpenBracket()(Position.Invalid)
 }
 
-case class TokenCloseBracket()(val position: Position) extends SimpleJsonToken("]", "end of list") {
+case class TokenCloseBracket()(val position: Position) extends SimpleJsonToken("]", "end of array") {
   def unpositioned = TokenCloseBracket()(Position.Invalid)
 }
 

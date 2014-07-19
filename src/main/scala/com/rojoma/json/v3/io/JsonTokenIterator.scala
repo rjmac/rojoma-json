@@ -209,34 +209,43 @@ class JsonTokenIterator(reader: Reader) extends AbstractBufferedIterator[JsonTok
     scratch.setLength(0)
     val Boundary = nextChar()
     while(peekChar() != Boundary) {
-      readPotentialSurrogatePairInto(readChar(), Boundary)
+      readPotentialSurrogatePair(readChar(), Boundary)
     }
     nextChar() // skip closing character
     TokenString(scratch.toString)(startPos)
   }
 
-  @annotation.tailrec
-  private def readPotentialSurrogatePairInto(c: Char, endOfString: Char) {
+  private def readPotentialSurrogatePair(c: Char, endOfString: Char) {
     if(c >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE) {
-      val badChar = 0xfffd.toChar
-      if(Character.isHighSurrogate(c)) {
-        if(peekChar() == endOfString) {
-          scratch += badChar
-        } else {
-          val potentialSecondHalf = readChar()
-          if(Character.isLowSurrogate(potentialSecondHalf)) {
-            scratch += c
-            scratch += potentialSecondHalf
-          } else {
-            scratch += badChar
-            readPotentialSurrogatePairInto(potentialSecondHalf, endOfString)
-          }
-        }
-      } else {
-        scratch += badChar
-      }
+      readSurrogatePair(c, endOfString)
     } else {
       scratch += c
+    }
+  }
+
+  private def badChar = 0xfffd.toChar
+
+  @annotation.tailrec
+  private def readSurrogatePair(c: Char, endOfString: Char) {
+    if(Character.isHighSurrogate(c)) {
+      if(peekChar() == endOfString) {
+        scratch += badChar
+      } else {
+        val potentialSecondHalf = readChar()
+        if(Character.isLowSurrogate(potentialSecondHalf)) {
+          scratch += c
+          scratch += potentialSecondHalf
+        } else {
+          scratch += badChar
+          if(potentialSecondHalf >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE) {
+            readSurrogatePair(potentialSecondHalf, endOfString)
+          } else {
+            scratch += potentialSecondHalf
+          }
+        }
+      }
+    } else {
+      scratch += badChar
     }
   }
 
