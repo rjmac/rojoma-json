@@ -43,7 +43,7 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
   private def atEOF(): Boolean =
     pos == end && !refill()
 
-  private def skipCharNotAtEOF() { // must be called before EOF
+  private def skipCharNotAtEOF() {
     if(block(pos) == '\n') { nextCharRow += 1; nextCharCol = 1 }
     else { nextCharCol += 1 }
     pos += 1
@@ -372,7 +372,7 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
     if(hasExponent) {
       scratch += nextCharNotAtEOF() // skip e/E
 
-      if(peekCharLexer() == '-' || peekCharLexer() == '+') scratch += nextCharNotAtEOF()
+      if(peekCharLexer() == '-' || peekCharNotAtEOF() == '+') scratch += nextCharNotAtEOF()
       else scratch += '+' // ensure there's always a sign
 
       val exponentDigitsStart = scratch.length

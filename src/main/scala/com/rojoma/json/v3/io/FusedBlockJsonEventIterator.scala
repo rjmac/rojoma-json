@@ -89,48 +89,52 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   private def atEOF(): Boolean =
     pos == end && !refill()
 
-  private def ensureChars() {
-    if(atEOF) throwEOF()
-  }
-
-  private def skipChar() {
-    nextChar()
+  private def skipCharNotAtEOF() {
+    if(block(pos) == '\n') { nextCharRow += 1; nextCharCol = 1 }
+    else { nextCharCol += 1 }
+    pos += 1
   }
 
   private def peekChar() = {
-    ensureChars()
+    if(atEOF) throwEOF()
     block(pos)
   }
 
+  private def peekCharNotAtEOF() = block(pos)
+
   private def nextChar() = {
     val result = peekChar()
-    pos += 1
-    if(result == '\n') { nextCharRow += 1; nextCharCol = 1 }
-    else { nextCharCol += 1 }
+    skipCharNotAtEOF()
     result
   }
 
-  private def skipToEndOfLine() = while(!atEOF() && peekChar() != '\n') skipChar()
+  private def nextCharNotAtEOF() = {
+    val result = block(pos)
+    skipCharNotAtEOF()
+    result
+  }
+
+  private def skipToEndOfLine() = while(!atEOF() && peekCharNotAtEOF() != '\n') skipCharNotAtEOF()
 
   private def skipBlockComment() {
     var last = nextChar()
     while(last != '*' || peekChar() != '/') last = nextChar()
-    skipChar() // skip final '/'
+    skipCharNotAtEOF() // skip final '/'
   }
 
   private def skipComment() {
-    skipChar() // skip opening "/"
+    skipCharNotAtEOF() // skip opening "/"
     peekChar() match {
-      case '/' => skipChar(); skipToEndOfLine()
-      case '*' => skipChar(); skipBlockComment()
+      case '/' => skipCharNotAtEOF(); skipToEndOfLine()
+      case '*' => skipCharNotAtEOF(); skipBlockComment()
       case c => lexerError(c, "/ or *", nextCharRow, nextCharCol)
     }
   }
 
   @annotation.tailrec
   private def skipWhitespace() {
-    while(!atEOF() && Character.isWhitespace(peekChar())) skipChar()
-    if(!atEOF() && peekChar() == '/') { skipComment(); skipWhitespace() }
+    while(!atEOF() && Character.isWhitespace(peekCharNotAtEOF())) skipCharNotAtEOF()
+    if(!atEOF() && peekCharNotAtEOF() == '/') { skipComment(); skipWhitespace() }
   }
 
   private def advance() {
@@ -220,7 +224,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     skipWhitespace()
     peekChar() match {
       case ',' =>
-        skipChar()
+        skipCharNotAtEOF()
 
         // compat with JsonEventIterator: if the EOF happens now,
         // just end the read
@@ -240,7 +244,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   private def readObjectDatumPrecededByColon(): JsonEvent = {
     skipWhitespace()
     if(peekChar() == ':') {
-      skipChar()
+      skipCharNotAtEOF()
 
       // compat with JsonEventIterator: if the EOF happens now,
       // just end the read
@@ -284,7 +288,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     skipWhitespace()
     peekChar() match {
       case ',' =>
-        skipChar()
+        skipCharNotAtEOF()
 
         // compat with JsonEventIterator: if the EOF happens now,
         // just end the read
@@ -303,7 +307,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     // Precondition: positioned on '{'
     val row = nextCharRow
     val col = nextCharCol
-    skipChar()
+    skipCharNotAtEOF()
     push(false)
     compoundReadState = 0
     nonDatum(StartOfObjectEvent()(Position(row, col)))
@@ -313,7 +317,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     // Precondition: positioned on '}'
     val row = nextCharRow
     val col = nextCharCol
-    skipChar()
+    skipCharNotAtEOF()
     pop()
     finishDatum(EndOfObjectEvent()(Position(row, col)))
   }
@@ -322,7 +326,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     // Precondition: positioned on '['
     val row = nextCharRow
     val col = nextCharCol
-    skipChar()
+    skipCharNotAtEOF()
     push(true)
     compoundReadState = 0
     nonDatum(StartOfArrayEvent()(Position(row, col)))
@@ -332,7 +336,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     // Precondition: positioned on ']'
     val row = nextCharRow
     val col = nextCharCol
-    skipChar()
+    skipCharNotAtEOF()
     pop()
     finishDatum(EndOfArrayEvent()(Position(row, col)))
   }
@@ -349,7 +353,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     while(peekChar() != Boundary) {
       readPotentialSurrogatePair(readChar(), Boundary)
     }
-    skipChar() // skip closing quote
+    skipCharNotAtEOF() // skip closing quote
     scratch.toString
   }
 
@@ -395,7 +399,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   }
 
   private def readEscapedCharacter(): Char = {
-    def ret(c: Char) = { skipChar(); c }
+    def ret(c: Char) = { skipCharNotAtEOF(); c }
     peekChar() match {
       case '"' => ret('"')
       case '\'' => ret('\'')
@@ -406,7 +410,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
       case 'n' => ret('\n')
       case 'r' => ret('\r')
       case 't' => ret('\t')
-      case 'u' => skipChar(); readUnicodeCharacter()
+      case 'u' => skipCharNotAtEOF(); readUnicodeCharacter()
       case c => lexerError(c, "string escape character", nextCharRow, nextCharCol)
     }
   }
@@ -421,13 +425,13 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   private def readHexDigit(): Int = {
     peekChar() match {
       case c if isDigit(c) =>
-        skipChar()
+        skipCharNotAtEOF()
         c.toInt - '0'.toInt
       case c if 'a' <= c && c <= 'f' =>
-        skipChar()
+        skipCharNotAtEOF()
         10 + c.toInt - 'a'.toInt
       case c if 'A' <= c && c <= 'F' =>
-        skipChar()
+        skipCharNotAtEOF()
         10 + c.toInt - 'A'.toInt
       case c =>
         lexerError(c, "hex digit", nextCharRow, nextCharCol)
@@ -443,7 +447,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   private def readIdentifier(): String = {
     scratch.setLength(0)
     scratch += nextChar()
-    while(!atEOF() && Character.isUnicodeIdentifierPart(peekChar())) scratch += nextChar()
+    while(!atEOF() && Character.isUnicodeIdentifierPart(peekCharNotAtEOF())) scratch += nextCharNotAtEOF()
     scratch.toString()
   }
 
@@ -469,23 +473,23 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
 
     if(peekChar() == '-') scratch += nextChar()
 
-    do { scratch += readDigit() } while(!atEOF() && isDigit(peekChar()))
+    do { scratch += readDigit() } while(!atEOF() && isDigit(peekCharNotAtEOF()))
 
-    val hasFrac = !atEOF() && peekChar() == '.'
+    val hasFrac = !atEOF() && peekCharNotAtEOF() == '.'
     if(hasFrac) {
       scratch += nextChar() // skip decimal
-      do { scratch += readDigit() } while(!atEOF() && isDigit(peekChar()))
+      do { scratch += readDigit() } while(!atEOF() && isDigit(peekCharNotAtEOF()))
     }
 
-    val hasExponent = !atEOF() && (peekChar() == 'e' || peekChar() == 'E')
+    val hasExponent = !atEOF() && (peekCharNotAtEOF() == 'e' || peekCharNotAtEOF() == 'E')
     if(hasExponent) {
-      scratch += nextChar() // skip e/E
+      scratch += nextCharNotAtEOF() // skip e/E
 
-      if(peekChar() == '-' || peekChar() == '+') scratch += nextChar()
+      if(peekChar() == '-' || peekCharNotAtEOF() == '+') scratch += nextCharNotAtEOF()
       else scratch += '+' // ensure there's always a sign
 
       val exponentDigitsStart = scratch.length
-      do { scratch += readDigit() } while(!atEOF() && isDigit(peekChar()))
+      do { scratch += readDigit() } while(!atEOF() && isDigit(peekCharNotAtEOF()))
 
       // this relies on the exponent being the last thing read
       val result = scratch.toString
