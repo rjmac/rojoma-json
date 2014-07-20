@@ -378,8 +378,8 @@ v2, it can exist alongside it.  This package contains helpers to
 convert between the two versions, to assist in transitions.
 
 The package is meant to have all its contents imported.  It contains
-implicit conversions which add `v3` methods onto rojoma-json-2's
-`JValue`s and `v2` methods onto rojoma-json-3's.  In addition, it can
+implicit conversions which add `toV3` methods onto rojoma-json-2's
+`JValue`,  and `toV2` methods onto rojoma-json-3's.  In addition, it can
 create rojoma-json-2 `JsonCodec`s from instances of 3's `JsonEncode`
 and `JsonDecode`.
 
