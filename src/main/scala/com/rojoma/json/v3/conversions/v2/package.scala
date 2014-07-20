@@ -7,6 +7,8 @@ import com.rojoma.json.{ast => v2ast}
 import com.rojoma.json.v3.{ast => v3ast}
 import com.rojoma.json.{codec => v2codec}
 import com.rojoma.json.v3.{codec => v3codec}
+import com.rojoma.json.{io => v2io}
+import com.rojoma.json.v3.{io => v3io}
 
 import `-impl`.conversions.v2._
 
@@ -24,6 +26,11 @@ package object v2 extends LowPriorityConversions {
   implicit def fromNullConversion(x: v2ast.JNull) = new FromV2Null(x)
   implicit def fromObjectConversion(x: v2ast.JObject) = new FromV2Object(x)
   implicit def fromArrayConversion(x: v2ast.JArray) = new FromV2Array(x)
+
+  // Unlike JValues, it is unlikely to be worth preserving precise
+  // types for tokens and events.  Certainly not in the iterator case!
+  // But just in case, the implicit conversions live in LowPriorityConversion
+  // for binary compat reasons.
 
   /** (Implicitly) create a JsonCodec from an encode/decode */
   implicit def jsonCodec[T : v3codec.JsonEncode : v3codec.JsonDecode] = new v2codec.JsonCodec[T] {
