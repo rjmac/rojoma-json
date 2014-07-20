@@ -314,7 +314,7 @@ case class JString(string: String) extends JAtom {
   def jsonType = JString
 }
 
-object JString extends JsonType {
+object JString extends scala.runtime.AbstractFunction1[String, JString] with JsonType {
   override final def toString = "string"
 
   implicit object Concrete extends Json[JString] {
