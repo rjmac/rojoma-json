@@ -2,6 +2,7 @@ package com.rojoma.json.v3
 package codec
 
 import scala.{collection => sc}
+import scala.language.implicitConversions
 
 import ast._
 
@@ -11,6 +12,13 @@ sealed trait DecodeError {
 }
 
 object DecodeError {
+  // can't be added to DecodeError as
+  //    def augment(parent: String/Int): DecodeError = augment(parent)
+  // for binary compat reasons, and can't keep the name "augment" because
+  // the existing augment will hide it from implicit search.  So it's
+  // called "prefix"!
+  implicit def prefixable(de: DecodeError) = new `-impl`.codec.PrefixableDecodeError(de)
+
   /** There were several choices and they all failed. */
   case class Multiple(choices: Seq[Simple]) extends DecodeError {
     def augment(parent: Path.Entry) = copy(choices = choices.map(_.augment(parent)))
@@ -34,31 +42,31 @@ object DecodeError {
   }
 
   /** A value was found in the correct position but of the wrong type. */
-  case class InvalidType(expected: JsonType, got: JsonType, path: Path) extends Simple {
+  case class InvalidType(expected: JsonType, got: JsonType, path: Path = Path.empty) extends Simple {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
     def english = "Invalid type at " + path + ": expected " + expected + "; got " + got
   }
 
   /** A value of the correct JSON type was found but it held undecodable value. */
-  case class InvalidValue(got: JValue, path: Path) extends Simple {
+  case class InvalidValue(got: JValue, path: Path = Path.empty) extends Simple {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
     def english = "Invalid value at " + path + ": got " + got
   }
 
   /** A required field was missing. */
-  case class MissingField(field: String, path: Path) extends Simple {
+  case class MissingField(field: String, path: Path = Path.empty) extends Simple {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
     def english = "Missing field at " + path + ": expected " + JString(field)
   }
 
   /** An unknown field was present. */
-  case class InvalidField(field: String, path: Path) extends Simple {
+  case class InvalidField(field: String, path: Path = Path.empty) extends Simple {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
     def english = "Unexpected field at " + path + ": got " + JString(field)
   }
 
   /** An array with the wrong number of elements was found. */
-  case class InvalidLength(expected: Int, got: Int, path: Path) extends Simple {
+  case class InvalidLength(expected: Int, got: Int, path: Path = Path.empty) extends Simple {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
     def english = "Invalid length at " + path + ": expected " + expected + "; got " + got
   }

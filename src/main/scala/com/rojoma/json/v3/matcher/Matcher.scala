@@ -30,7 +30,7 @@ object OptPattern extends LowPriorityImplicits {
       def evaluate(x: JValue, environment: Pattern.Results): Either[DecodeError, Pattern.Results] =
         JsonDecode[T].decode(x) match {
           case Right(y) if lit == y => Right(environment)
-          case Right(_) => Left(DecodeError.InvalidValue(x, Path.empty))
+          case Right(_) => Left(DecodeError.InvalidValue(x))
           case Left(err) => Left(err)
         }
 
@@ -162,8 +162,8 @@ object Pattern {
 case class Literal(literal: JValue) extends Pattern {
   def evaluate(x: JValue, environment: Pattern.Results): Either[DecodeError, Pattern.Results] =
     if(x == literal) Right(environment)
-    else if(x.jsonType == literal.jsonType) Left(DecodeError.InvalidValue(x, Path.empty))
-    else Left(DecodeError.InvalidType(literal.jsonType, x.jsonType, Path.empty))
+    else if(x.jsonType == literal.jsonType) Left(DecodeError.InvalidValue(x))
+    else Left(DecodeError.InvalidType(literal.jsonType, x.jsonType))
 
   def generate(environment: Pattern.Results) = Some(literal)
 }
@@ -174,7 +174,7 @@ case class Literal(literal: JValue) extends Pattern {
 case class FLiteral(recognizer: JValue => Boolean) extends Pattern {
   def evaluate(x: JValue, environment: Pattern.Results): Either[DecodeError, Pattern.Results] =
     if(recognizer(x)) Right(environment)
-    else Left(DecodeError.InvalidValue(x, Path.empty))
+    else Left(DecodeError.InvalidValue(x))
 
   def generate(environment: Pattern.Results): Option[JValue] = None
 }
@@ -246,7 +246,7 @@ object Variable {
             case Some(r2) if r2 == r1 =>
               Right(environment)
             case _ =>
-              Left(DecodeError.InvalidValue(x, Path.empty))
+              Left(DecodeError.InvalidValue(x))
           }
         case Left(err) =>
           Left(err)
@@ -281,18 +281,18 @@ case class PArray(subPatterns: Pattern*) extends Pattern {
     x match {
       case arr: JArray =>
         if(arr.length != subPatterns.length) {
-          Left(DecodeError.InvalidLength(subPatterns.length, arr.length, Path.empty))
+          Left(DecodeError.InvalidLength(subPatterns.length, arr.length))
         } else {
           Pattern.foldMatches(arr zip subPatterns, environment) { (env, vp, i) =>
             val (subValue, subPattern) = vp
             subPattern.evaluate(subValue, env) match {
               case r@Right(_) => r
-              case Left(err) => return Left(err.augment(Path.Index(i)))
+              case Left(err) => return Left(err.prefix(i))
             }
           }
         }
       case other =>
-        Left(DecodeError.InvalidType(JArray, other.jsonType, Path.empty))
+        Left(DecodeError.InvalidType(JArray, other.jsonType))
     }
 
   def generate(environment: Pattern.Results) = {
@@ -342,17 +342,17 @@ case class PObject(subPatterns: (String, OptPattern)*) extends Pattern {
               case Some(subValue) =>
                 subPat.evaluate(subValue, env) match {
                   case r@Right(_) => r
-                  case Left(err) => Left(err.augment(Path.Field(subKey)))
+                  case Left(err) => Left(err.prefix(subKey))
                 }
               case None =>
-                Left(DecodeError.MissingField(subKey, Path.empty))
+                Left(DecodeError.MissingField(subKey))
             }
           case (subKey, POption(subPat)) =>
             obj.get(subKey) match {
               case Some(subValue) =>
                 subPat.evaluate(subValue, env) match {
                   case r@Right(_) => r
-                  case Left(err) => Left(err.augment(Path.Field(subKey)))
+                  case Left(err) => Left(err.prefix(subKey))
                 }
               case None =>
                 Right(env)
@@ -360,7 +360,7 @@ case class PObject(subPatterns: (String, OptPattern)*) extends Pattern {
         }
       }
     case other =>
-      Left(DecodeError.InvalidType(JObject, other.jsonType, Path.empty))
+      Left(DecodeError.InvalidType(JObject, other.jsonType))
   }
 
 

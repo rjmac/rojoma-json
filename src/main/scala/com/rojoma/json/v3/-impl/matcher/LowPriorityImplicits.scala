@@ -17,7 +17,7 @@ class LowPriorityImplicits {
       def evaluate(x: JValue, environment: Pattern.Results): Either[DecodeError, Pattern.Results] =
         JsonDecode[T].decode(x) match {
           case Right(y) if lit == y => Right(environment)
-          case Right(_) => Left(DecodeError.InvalidValue(x, Path.empty))
+          case Right(_) => Left(DecodeError.InvalidValue(x))
           case Left(err) => Left(err)
         }
 
