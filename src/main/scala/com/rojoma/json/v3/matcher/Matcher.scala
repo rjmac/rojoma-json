@@ -8,6 +8,10 @@ import codec._
 
 import `-impl`.matcher._
 
+// Note: in a couple of places in this file are type parameters with bounds
+// like ": JsonDecode : JsonEncode"; this is the opposite order to what is
+// conventional, but cannot be changed for binary compatibility reasons.
+
 class JsonGenerationException extends RuntimeException("Cannot generate JSON; this is always a logic error.  You've forgotten to bind a variable, or you've used a pattern that cannot generate.")
 
 /** Either a [[com.rojoma.json.v3.matcher.Pattern]] or a [[com.rojoma.json.v3.matcher.POption]]. */
@@ -260,11 +264,23 @@ object Variable {
         get(environment).map(JsonEncode[T].encode)
     }
 
-  def decodeOnly[T : JsonDecode]: Variable[T] =
+  // I'd like to have an explicit
+  //   decodeOnly[T](decode: JsonDecode[T])
+  // too, but it erases to the same as the implicit version.
+  // Since an extra pair of parens is not a huge deal, I'll
+  // just let decodeOnly get called with an explicit evidence
+  // parameter if it matters.  In practice, I've found decode-
+  // only patterns where you in fact don't have an encoder
+  // aren't used all THAT much.
+
+  def decodeOnly[T : JsonDecode](): Variable[T] =
     new DecodingVariable(JsonDecode[T]) {
       def generate(environment: Pattern.Results) =
         None
     }
+
+  def apply[T](codec: JsonEncode[T] with JsonDecode[T]): Variable[T] = apply()(codec, codec)
+  def apply[T](encode: JsonEncode[T], decode: JsonDecode[T]): Variable[T] = apply()(decode, encode)
 }
 
 /** A [[com.rojoma.json.v3.matcher.Pattern]] which matches if the value is
