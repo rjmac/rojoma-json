@@ -20,15 +20,35 @@ object JsonInterpolatorImpl {
       }
     }
 
+    def move(pos: c.universe.Position, offset: Int): c.universe.Position =
+      if(pos.isRange) pos.withStart(pos.start + offset)
+      else pos.withPoint(pos.start + offset)
+
+    def offsetOf(s: String, p: io.Position) = {
+      val before = s.split("\n", -1).take(p.row - 1).map(_.length + 1).sum
+      val result = before + p.column - 1
+      result
+    }
+    def relativize(start: c.universe.Position, s: String, j: io.Position): c.universe.Position =
+      if(j == io.Position.Invalid) move(start, s.length)
+      else move(start, offsetOf(s, j))
+
     def abort(msg: String) = c.abort(c.enclosingPosition, msg)
-    def tokens(s: String, pos: Position) = try {
-      new JsonTokenIterator(new StringReader(s)).toList.map(_.unpositioned)
+    def tokens(s: String, pos: c.universe.Position) = try {
+      new JsonTokenIterator(new StringReader(s)).toList
     } catch {
       case e: JsonLexException =>
-       c.abort(pos, stripPos(e.message))
+       c.abort(relativize(pos, s, e.position), stripPos(e.message))
     }
 
-    type Tokens = List[(List[JsonToken], Position)]
+    case class TokenInfo(tokens: List[JsonToken])(orig: String, pos: c.universe.Position) {
+      def pop = TokenInfo(tokens.tail)(orig, pos)
+      def position = tokens.headOption match {
+        case Some(hd) => relativize(pos, orig, hd.position)
+        case None => relativize(pos, orig, Position.Invalid)
+      }
+    }
+    type Tokens = List[TokenInfo]
     type Data = List[c.Expr[Any]]
 
     trait State {
@@ -36,36 +56,36 @@ object JsonInterpolatorImpl {
       def substateCompleted(datum: Tree, tokens: Tokens, data: Data): (Either[Tree, State], Tokens, Data)
     }
 
-    def unexpectedDatum(data: Data, what: String): Nothing = data match {
+    def unexpectedDatum(data: Data, what: String, posIfNoData: c.universe.Position): Nothing = data match {
       case hd :: _ => c.abort(hd.tree.pos, s"Expected $what, got interpolated datum")
-      case Nil => abort("Internal error: No more tokens, no more data?")
+      case Nil => c.abort(posIfNoData, new JsonParserEOF(Position.Invalid).message)
     }
 
     case class ExpectingDatum(parentState: State) extends State {
       def next(tokens: Tokens, data: Data): (Either[Tree, State], Tokens, Data) =
         tokens match {
-          case (Nil, pos) :: tl =>
-            if(data.isEmpty) c.abort(pos,"Internal error: no more data")
+          case (ti@TokenInfo(Nil)) :: tl =>
+            if(data.isEmpty) c.abort(ti.position, new JsonParserEOF(Position.Invalid).message)
             parentState.substateCompleted(q"_root_.com.rojoma.json.v3.codec.JsonEncode.toJValue(${data.head})", tl, data.tail)
-          case (TokenOpenBrace() :: tl1, pos) :: tl2 =>
-            (Right(ExpectingFieldOrEndOfObject(parentState)), (tl1,pos) :: tl2, data)
-          case (TokenOpenBracket() :: tl1, pos) :: tl2 =>
-            (Right(ExpectingElementOrEndOfArray(parentState)), (tl1,pos) :: tl2, data)
-          case (TokenIdentifier("true") :: tl1, pos) :: tl2 =>
-            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JBoolean.canonicalTrue", (tl1,pos) :: tl2, data)
-          case (TokenIdentifier("false") :: tl1, pos) :: tl2 =>
-            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JBoolean.canonicalFalse", (tl1,pos) :: tl2, data)
-          case (TokenIdentifier("null") :: tl1, pos) :: tl2 =>
-            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JNull", (tl1,pos) :: tl2, data)
-          case (TokenString(s) :: tl1, pos) :: tl2 =>
-            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JString($s)", (tl1,pos) :: tl2, data)
-          case (TokenNumber(n) :: tl1, pos) :: tl2 =>
+          case (ti@TokenInfo(TokenOpenBrace() :: _)) :: tl2 =>
+            (Right(ExpectingFieldOrEndOfObject(parentState)), ti.pop :: tl2, data)
+          case (ti@TokenInfo(TokenOpenBracket() :: _)) :: tl2 =>
+            (Right(ExpectingElementOrEndOfArray(parentState)), ti.pop :: tl2, data)
+          case (ti@TokenInfo(TokenIdentifier("true") :: _)) :: tl2 =>
+            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JBoolean.canonicalTrue", ti.pop :: tl2, data)
+          case (ti@TokenInfo(TokenIdentifier("false") :: _)) :: tl2 =>
+            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JBoolean.canonicalFalse", ti.pop :: tl2, data)
+          case (ti@TokenInfo(TokenIdentifier("null") :: _)) :: tl2 =>
+            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JNull", ti.pop :: tl2, data)
+          case (ti@TokenInfo(TokenString(s) :: _)) :: tl2 =>
+            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JString($s)", ti.pop :: tl2, data)
+          case (ti@TokenInfo(TokenNumber(n) :: _)) :: tl2 =>
             // Hmm.   We can inspect "n" and generate a more specific JNumber type.
             // But it's most likely we'll just be serializing the result, so there's
             // not much point.
-            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JNumber.unsafeFromString($n)", (tl1,pos) :: tl2, data)
-          case (t :: _, pos) :: _ =>
-            c.abort(pos, new JsonUnexpectedToken(t, "datum").message)
+            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JNumber.unsafeFromString($n)", ti.pop :: tl2, data)
+          case (ti@TokenInfo(t :: _)) :: _ =>
+            c.abort(ti.position, stripPos(new JsonUnexpectedToken(t, "datum").message))
           case Nil =>
             abort("Internal error: no more tokens")
         }
@@ -76,8 +96,8 @@ object JsonInterpolatorImpl {
     case class ExpectingElementOrEndOfArray(parentState: State) extends State {
       def next(tokens: Tokens, data: Data): (Either[Tree, State], Tokens, Data) =
         tokens match {
-          case (TokenCloseBracket() :: tl1, pos) :: tl2 =>
-            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JArray.canonicalEmpty", (tl1,pos) :: tl2, data)
+          case (ti@TokenInfo(TokenCloseBracket() :: _)) :: tl2 =>
+            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JArray.canonicalEmpty", ti.pop :: tl2, data)
           case _ =>
             (Right(ExpectingDatum(this)), tokens, data)
         }
@@ -88,14 +108,14 @@ object JsonInterpolatorImpl {
     case class ExpectingCommaOrEndOfArray(elemsRev: List[Tree], parentState: State) extends State {
       def next(tokens: Tokens, data: Data): (Either[Tree, State], Tokens, Data) =
         tokens match {
-          case (TokenCloseBracket() :: tl1, pos) :: tl2 =>
-            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JArray(_root_.scala.collection.immutable.Vector(..${elemsRev.reverse}))", (tl1, pos) :: tl2, data)
-          case (TokenComma() :: tl1, pos) :: tl2 =>
-            (Right(ExpectingDatum(this)), (tl1, pos) :: tl2, data)
-          case (t :: _, pos) :: _ =>
-            c.abort(pos, new JsonUnexpectedToken(t, "comma or end of array").message)
-          case (Nil, _) :: _ =>
-            unexpectedDatum(data, "comma or end of array")
+          case (ti@TokenInfo(TokenCloseBracket() :: _)) :: tl2 =>
+            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JArray(_root_.scala.collection.immutable.Vector(..${elemsRev.reverse}))", ti.pop :: tl2, data)
+          case (ti@TokenInfo(TokenComma() :: _)) :: tl2 =>
+            (Right(ExpectingDatum(this)), ti.pop :: tl2, data)
+          case (ti@TokenInfo(t :: _)) :: _ =>
+            c.abort(ti.position, stripPos(new JsonUnexpectedToken(t, "comma or end of array").message))
+          case (ti@TokenInfo(Nil)) :: _ =>
+            unexpectedDatum(data, "comma or end of array", ti.position)
           case Nil =>
             abort("Internal error: no more tokens")
         }
@@ -106,8 +126,8 @@ object JsonInterpolatorImpl {
     case class ExpectingFieldOrEndOfObject(parentState: State) extends State {
       def next(tokens: Tokens, data: Data): (Either[Tree, State], Tokens, Data) =
         tokens match {
-          case (TokenCloseBrace() :: tl1, pos) :: tl2 =>
-            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JObject.canonicalEmpty", (tl1,pos) :: tl2, data)
+          case (ti@TokenInfo(TokenCloseBrace() :: _)) :: tl2 =>
+            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JObject.canonicalEmpty", ti.pop :: tl2, data)
           case _ =>
             (Right(ExpectingField(ExpectingCommaOrEndOfObject(Nil, parentState))), tokens, data)
         }
@@ -118,16 +138,16 @@ object JsonInterpolatorImpl {
     case class ExpectingField(parentState: State) extends State {
       def next(tokens: Tokens, data: Data): (Either[Tree, State], Tokens, Data) =
         tokens match {
-          case (Nil, pos) :: tl =>
-            if(data.isEmpty) c.abort(pos, "Internal error: no more data")
+          case (ti@TokenInfo(Nil)) :: tl =>
+            if(data.isEmpty) c.abort(ti.position, new JsonParserEOF(Position.Invalid).message)
             val field = q"${data.head} : _root_.scala.Predef.String"
             (Right(ExpectingColon(field, parentState)), tl, data.tail)
-          case (TokenIdentifier(s) :: tl1, pos) :: tl2 =>
-            (Right(ExpectingColon(q"$s", parentState)), (tl1,pos) :: tl2, data)
-          case (TokenString(s) :: tl1, pos) :: tl2 =>
-            (Right(ExpectingColon(q"$s", parentState)), (tl1,pos) :: tl2, data)
-          case (t :: _, pos) :: _ =>
-            c.abort(pos, new JsonUnexpectedToken(t, "field name").message)
+          case (ti@TokenInfo(TokenIdentifier(s) :: _)) :: tl2 =>
+            (Right(ExpectingColon(q"$s", parentState)), ti.pop :: tl2, data)
+          case (ti@TokenInfo(TokenString(s) :: _)) :: tl2 =>
+            (Right(ExpectingColon(q"$s", parentState)), ti.pop :: tl2, data)
+          case (ti@TokenInfo(t :: _)) :: _ =>
+            c.abort(ti.position, stripPos(new JsonUnexpectedToken(t, "field name").message))
           case Nil =>
             abort("Internal error: no more tokens")
         }
@@ -138,12 +158,12 @@ object JsonInterpolatorImpl {
     case class ExpectingColon(field: Tree, parentState: State) extends State {
       def next(tokens: Tokens, data: Data): (Either[Tree, State], Tokens, Data) =
         tokens match {
-          case (TokenColon() :: tl1, pos) :: tl2 =>
-            (Right(ExpectingDatum(this)), (tl1, pos) :: tl2, data)
-          case (t :: _, pos) :: _ =>
-            c.abort(pos, new JsonUnexpectedToken(t, "colon").message)
-          case (Nil, _) :: _ =>
-            unexpectedDatum(data, "colon")
+          case (ti@TokenInfo(TokenColon() :: _)) :: tl2 =>
+            (Right(ExpectingDatum(this)), ti.pop :: tl2, data)
+          case (ti@TokenInfo(t :: _)) :: _ =>
+            c.abort(ti.position, stripPos(new JsonUnexpectedToken(t, "colon").message))
+          case (ti@TokenInfo(Nil)) :: _ =>
+            unexpectedDatum(data, "colon", ti.position)
           case Nil =>
             abort("Internal error: no more tokens")
         }
@@ -154,14 +174,14 @@ object JsonInterpolatorImpl {
     case class ExpectingCommaOrEndOfObject(fieldsRev: List[Tree], parentState: State) extends State {
       def next(tokens: Tokens, data: Data): (Either[Tree, State], Tokens, Data) =
         tokens match {
-          case (TokenCloseBrace() :: tl1, pos) :: tl2 =>
-            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JObject(_root_.scala.collection.immutable.Map(..${fieldsRev.reverse}))", (tl1, pos) :: tl2, data)
-          case (TokenComma() :: tl1, pos) :: tl2 =>
-            (Right(ExpectingField(this)), (tl1, pos) :: tl2, data)
-          case (t :: _, pos) :: _ =>
-            c.abort(pos, new JsonUnexpectedToken(t, "comma or end of object").message)
-          case (Nil, _) :: _ =>
-            unexpectedDatum(data, "comma or end of object")
+          case (ti@TokenInfo(TokenCloseBrace() :: _)) :: tl2 =>
+            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JObject(_root_.scala.collection.immutable.Map(..${fieldsRev.reverse}))", ti.pop :: tl2, data)
+          case (ti@TokenInfo(TokenComma() :: _)) :: tl2 =>
+            (Right(ExpectingField(this)), ti.pop :: tl2, data)
+          case (ti@TokenInfo(t :: _)) :: _ =>
+            c.abort(ti.position, stripPos(new JsonUnexpectedToken(t, "comma or end of object").message))
+          case (ti@TokenInfo(Nil)) :: _ =>
+            unexpectedDatum(data, "comma or end of object", ti.position)
           case Nil =>
             abort("Internal error: no more tokens")
         }
@@ -181,22 +201,22 @@ object JsonInterpolatorImpl {
         state.next(parts, pieces) match {
           case (Right(nextState), parts2, pieces2) =>
             loop(nextState, parts2, pieces2)
-          case (Left(tree), (Nil, _) :: Nil, Nil) =>
+          case (Left(tree), TokenInfo(Nil) :: Nil, Nil) =>
             tree
           case (Left(tree), Nil, Nil) =>
             tree
           // I don't think most of these cases can happen, but let's
           // keep the exhaustivity checker happy.
-          case (Left(_), (_ :: _, pos) :: _, _) =>
-            c.abort(pos, leftoverData)
-          case (Left(_), (Nil, _) :: ((_ :: _, pos) :: tl), _) =>
-            c.abort(pos, leftoverData)
+          case (Left(_), (ti@TokenInfo(_ :: _)) :: _, _) =>
+            c.abort(ti.position, leftoverData)
+          case (Left(_), TokenInfo(Nil) :: ((ti@TokenInfo(_ :: _)) :: tl), _) =>
+            c.abort(ti.position, leftoverData)
           case (Left(_), _, hd :: _) =>
             c.abort(hd.tree.pos, leftoverData)
           case (Left(_), xs, Nil) =>
-            xs.find(_._1.nonEmpty) match {
-              case Some((_, pos)) =>
-                c.abort(pos, leftoverData)
+            xs.find(_.tokens.nonEmpty) match {
+              case Some(ti) =>
+                c.abort(ti.position, leftoverData)
                case None =>
                 abort(leftoverData)
             }
@@ -210,10 +230,10 @@ object JsonInterpolatorImpl {
         val parts = rawParts map {
           case node@Literal(Constant(part: String)) =>
             try {
-              (tokens(part, node.pos), node.pos)
+              TokenInfo(tokens(part, node.pos))(part, node.pos)
             } catch {
               case e: JsonReaderException =>
-                c.abort(node.pos, e.message)
+                c.abort(relativize(node.pos, part, e.position), stripPos(e.message))
             }
         }
         if(parts.length != pieces.length + 1) abort("Internal error: there is not one more piece than part")
