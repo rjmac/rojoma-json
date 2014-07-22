@@ -1,7 +1,7 @@
 package com.rojoma.json.v3
 package codec
 
-import ast.JString
+import ast._
 import `-impl`.codec.EntryLike
 
 // This doesn't feel like it belongs in "codec"
@@ -21,6 +21,23 @@ object Path {
   sealed trait Entry
   case class Index(index: Int) extends Entry
   case class Field(field: String) extends Entry
+  object Entry {
+    implicit val jCodec: JsonEncode[Entry] with JsonDecode[Entry] = new JsonEncode[Entry] with JsonDecode[Entry] {
+      def encode(e: Entry) = e match {
+        case Index(i) => JNumber(i)
+        case Field(s) => JString(s)
+      }
+      def decode(x: JValue) = x match {
+        case JString(s) => Right(Field(s))
+        case n: JNumber => Right(Index(n.toInt))
+        case other =>
+          Left(
+            DecodeError.Multiple(List(
+                                   DecodeError.InvalidType(JString, x.jsonType),
+                                   DecodeError.InvalidType(JNumber, x.jsonType))))
+      }
+    }
+  }
 
   // produces a jq-style path spec
   def asString(xs: List[Entry]) = {
@@ -59,5 +76,12 @@ object Path {
       i += 1
     }
     true
+  }
+
+  implicit val jCodec: JsonEncode[Path] with JsonDecode[Path] = new JsonEncode[Path] with JsonDecode[Path] {
+    private val enc = JsonEncode[List[Path.Entry]]
+    private val dec = JsonDecode[List[Path.Entry]]
+    def encode(p: Path) = enc.encode(p.toList)
+    def decode(x: JValue) = dec.decode(x).right.map(new Path(_))
   }
 }

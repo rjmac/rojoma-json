@@ -104,7 +104,7 @@ class TupleDecode {
     def mapNames3a[T](a: Int => String, b: Int => String, c: Int => String)(f: (String, String, String, Int) => T) = (1 to n).map(x => (a(x), b(x), c(x), x)).map(f.tupled)
 
     sb.append("  implicit def tuple").append(n).append("Decode").append(typeNames.mkString("[",",","]")).append("( implicit ").append(mapNames2(subcodecName, typeName) { (sc,t) => sc + ": JsonDecode[" + t + "]" }.mkString(",")).append(") = new JsonDecode[").append(typeNames.mkString("(",",",")")).append("] {\n")
-    sb.append("    private def pathErr(err: DecodeError, n: Int) = Left(err.augment(Path.Index(n - 1)))\n")
+    sb.append("    private def pathErr(err: DecodeError, n: Int) = Left(err.prefix(n - 1))\n")
     sb.append("    def decode(jvalue: JValue): DecodeResult[(").append(typeNames.mkString(",")).append(")] = jvalue match {\n")
     sb.append("      case JArray(Seq(").append(elemNames.mkString(",")).append(")) =>\n")
     for(line <- mapNames3a(decodedName, subcodecName, elemName)("        val " + _ + " = " + _ + ".decode(" + _ + ") match { case Right(result) => result; case Left(err) => return pathErr(err, " + _ + ") }\n")) {
@@ -112,9 +112,9 @@ class TupleDecode {
     }
     sb.append("        Right((").append(decodedNames.mkString(",")).append("))\n")
     sb.append("      case arr: JArray =>\n")
-    sb.append("        Left(DecodeError.InvalidLength(").append(n).append(", arr.length, Path.empty))\n")
+    sb.append("        Left(DecodeError.InvalidLength(expected = ").append(n).append(", got = arr.length))\n")
     sb.append("      case other =>\n")
-    sb.append("        Left(DecodeError.InvalidType(JArray, other.jsonType, Path.empty))\n")
+    sb.append("        Left(DecodeError.InvalidType(expected = JArray, got = other.jsonType))\n")
     sb.append("    }\n")
     sb.append("  }\n")
     sb.toString

@@ -297,7 +297,7 @@ case class PArray(subPatterns: Pattern*) extends Pattern {
     x match {
       case arr: JArray =>
         if(arr.length != subPatterns.length) {
-          Left(DecodeError.InvalidLength(subPatterns.length, arr.length))
+          Left(DecodeError.InvalidLength(expected = subPatterns.length, got = arr.length))
         } else {
           Pattern.foldMatches(arr zip subPatterns, environment) { (env, vp, i) =>
             val (subValue, subPattern) = vp

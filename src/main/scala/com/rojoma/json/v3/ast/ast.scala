@@ -20,6 +20,22 @@ sealed abstract class Json[T <: JValue] {
 }
 
 sealed trait JsonType
+object JsonType {
+  import codec._
+  implicit val jCodec: JsonEncode[JsonType] with JsonDecode[JsonType] = new JsonEncode[JsonType] with JsonDecode[JsonType] {
+    def encode(j: JsonType) = JString(j.toString)
+    def decode(x: JValue) = x match {
+      case JString(JObject.toString) => Right(JObject)
+      case JString(JArray.toString) => Right(JArray)
+      case JString(JString.toString) => Right(JString)
+      case JString(JNumber.toString) => Right(JNumber)
+      case JString(JBoolean.toString) => Right(JBoolean)
+      case JString(JNull.toString) => Right(JNull)
+      case s: JString => Left(DecodeError.InvalidValue(s))
+      case other => Left(DecodeError.InvalidType(other.jsonType, JString))
+    }
+  }
+}
 
 /** A JSON datum.  This can be safely downcast to a more-specific type
   * using the `cast` method which is implicitly added to this class
@@ -57,7 +73,7 @@ sealed trait JValue {
 }
 
 object JValue {
-  final override def toString = "value"
+  final override val toString = "value"
 
   /** Safe downcast with a fairly nice syntax.
     * This will statically prevent attempting to cast anywhere except
@@ -87,7 +103,7 @@ sealed abstract class JAtom extends JValue {
 }
 
 object JAtom {
-  final override def toString = "atom"
+  final override val toString = "atom"
 
   implicit object Concrete extends Json[JAtom] {
     val jsonTypes = Set[JsonType](JNumber, JString, JBoolean, JNull)
@@ -120,7 +136,7 @@ sealed abstract class JNumber extends JAtom {
 }
 
 object JNumber extends JsonType {
-  final override def toString = "number"
+  final override val toString = "number"
 
   private val stdCtx = java.math.MathContext.UNLIMITED
 
@@ -315,7 +331,7 @@ case class JString(string: String) extends JAtom {
 }
 
 object JString extends scala.runtime.AbstractFunction1[String, JString] with JsonType {
-  override final def toString = "string"
+  override final val toString = "string"
 
   implicit object Concrete extends Json[JString] {
     val jsonTypes = Set[JsonType](JString)
@@ -333,7 +349,7 @@ object JBoolean extends scala.runtime.AbstractFunction1[Boolean, JBoolean] with 
   val canonicalTrue = JBoolean(true)
   val canonicalFalse = JBoolean(false)
 
-  override final def toString = "boolean"
+  override final val toString = "boolean"
 
   implicit object Concrete extends Json[JBoolean] {
     val jsonTypes = Set[JsonType](JBoolean)
@@ -343,7 +359,7 @@ object JBoolean extends scala.runtime.AbstractFunction1[Boolean, JBoolean] with 
 /** Null. */
 sealed abstract class JNull extends JAtom // so the object has a nameable type
 case object JNull extends JNull with JsonType {
-  final override def toString = "null"
+  final override val toString = "null"
 
   def jsonType = JNull
 
@@ -360,7 +376,7 @@ sealed trait JCompound extends JValue {
 }
 
 object JCompound {
-  final override def toString = "compound"
+  final override val toString = "compound"
 
   implicit object Concrete extends Json[JCompound] {
     val jsonTypes = JArray.Concrete.jsonTypes ++ JObject.Concrete.jsonTypes
@@ -408,7 +424,7 @@ case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFu
 
 object JArray extends scala.runtime.AbstractFunction1[sc.Seq[JValue], JArray] with JsonType {
   val canonicalEmpty = JArray(Vector.empty) // Vector because JsonReader is guaranteed to return JArrays which contain Vectors.
-  override final def toString = "array"
+  override final val toString = "array"
   implicit object Concrete extends Json[JArray] {
     val jsonTypes = Set[JsonType](JArray)
   }
@@ -453,7 +469,7 @@ case class JObject(val fields: sc.Map[String, JValue]) extends Iterable[(String,
 
 object JObject extends scala.runtime.AbstractFunction1[sc.Map[String, JValue], JObject] with JsonType {
   val canonicalEmpty = JObject(Map.empty) // _Not_ LinkedHashMap because all JsonReader guarantees is ordering of elements, which this satisfies.
-  override final def toString = "object"
+  override final val toString = "object"
   implicit object Concrete extends Json[JObject] {
     val jsonTypes = Set[JsonType](JObject)
   }
