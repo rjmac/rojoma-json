@@ -10,6 +10,7 @@ trait MacroCompat {
   import c.universe._
 
   def toTermName(s: String) = TermName(s)
+  def toTypeName(s: String) = TypeName(s)
 
   def findValue[T](ann: Annotation): Option[Any] =
     ann.tree.children.tail.collect {

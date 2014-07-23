@@ -10,6 +10,7 @@ trait MacroCompat {
   import c.universe._
 
   def toTermName(s: String) = newTermName(s)
+  def toTypeName(s: String) = newTypeName(s)
 
   implicit class EnhContext(underlying: Context) {
     def freshName() = underlying.fresh()
@@ -28,6 +29,10 @@ trait MacroCompat {
       case Some(LiteralArgument(Constant(v))) => Some(v)
       case _ => None
     }
+  }
+
+  object termNames {
+    val ROOTPKG = "_root_"
   }
 }
 
