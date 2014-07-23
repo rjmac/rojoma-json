@@ -2,6 +2,7 @@ package com.rojoma.json.v3
 package codec
 
 import ast._
+import util.WrapperJsonCodec
 import `-impl`.codec.EntryLike
 
 // This doesn't feel like it belongs in "codec"
@@ -78,10 +79,5 @@ object Path {
     true
   }
 
-  implicit val jCodec: JsonEncode[Path] with JsonDecode[Path] = new JsonEncode[Path] with JsonDecode[Path] {
-    private val enc = JsonEncode[List[Path.Entry]]
-    private val dec = JsonDecode[List[Path.Entry]]
-    def encode(p: Path) = enc.encode(p.toList)
-    def decode(x: JValue) = dec.decode(x).right.map(new Path(_))
-  }
+  implicit val jCodec = WrapperJsonCodec[Path, List[Entry]](new Path(_), _.toList)
 }

@@ -7,8 +7,10 @@ import sc.JavaConversions._
 import sc.{mutable => scm}
 import scala.reflect.ClassTag
 import java.{util => ju}
+import java.{net => jn}
 
 import ast._
+import util.WrapperJsonDecode
 
 trait JsonDecode[T] {
   def decode(x: JValue): JsonDecode.DecodeResult[T]
@@ -251,4 +253,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       case other => Left(DecodeError.InvalidType(JArray, other.jsonType))
     }
   }
+
+  implicit val uuidDecode = WrapperJsonDecode[ju.UUID, String](ju.UUID.fromString)
+  implicit val uriDecode = WrapperJsonDecode[jn.URI, String](jn.URI.create)
 }

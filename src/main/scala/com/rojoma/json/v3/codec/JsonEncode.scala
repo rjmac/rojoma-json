@@ -7,8 +7,10 @@ import sc.JavaConverters._
 import sc.{mutable => scm}
 import scala.reflect.ClassTag
 import java.{util => ju}
+import java.{net => jn}
 
 import ast._
+import util.WrapperJsonEncode
 
 trait JsonEncode[T] {
   def encode(x: T): JValue
@@ -146,4 +148,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
     private val empty = JArray.canonicalEmpty
     def encode(x: Unit) = empty
   }
+
+  implicit val uuidEncode = WrapperJsonEncode[ju.UUID, String](_.toString)
+  implicit val uriEncode = WrapperJsonEncode[jn.URI, String](_.toString)
 }
