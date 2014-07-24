@@ -71,7 +71,11 @@ abstract class AutomaticJsonCodecImpl extends MacroCompat {
     case List(cls: ClassDef) => (cls, defaultCompanion(cls))
     case List(cls: ClassDef, companion: ModuleDef) => (cls, companion)
     case _ =>
-      c.abort(c.enclosingPosition, s"Invalid target for ${requestType.getName}")
+      c.abort(c.enclosingPosition, s"${requestType.getSimpleName} must be used on a class")
+  }
+
+  if(cls.tparams.nonEmpty) {
+    c.abort(cls.tparams.head.pos, s"Cannot use ${requestType.getSimpleName} with a generic class")
   }
 
   // Hm.  I'm not sure a freshName would be guaranteed to be stable.
