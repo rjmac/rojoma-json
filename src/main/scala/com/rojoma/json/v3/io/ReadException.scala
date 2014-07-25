@@ -231,12 +231,28 @@ object JsonReadException {
 }
 
 object JsonReaderException {
-  implicit val jCodec = locally {
-    import util._
-    SimpleHierarchyCodecBuilder[JsonReaderException](NoTag).
-      branch[JsonLexException].
-      branch[JsonParseException].
-      branch[JsonReadException].
-      build
+    import codec._
+
+  implicit val jCodec: JsonEncode[JsonReaderException] with JsonDecode[JsonReaderException] = new JsonEncode[JsonReaderException] with JsonDecode[JsonReaderException] {
+    private val Type = Path("type")
+
+    def encode(e: JsonReaderException) = e match {
+      case l: JsonLexException => JsonEncode.toJValue(l)
+      case p: JsonParseException => JsonEncode.toJValue(p)
+      case r: JsonReadException => JsonEncode.toJValue(r)
+    }
+
+    def decode(x: JValue) =
+      JsonDecode.fromJValue[JsonLexException](x) match {
+        case r@Right(_) => r
+        case Left(DecodeError.InvalidValue(_, Type)) =>
+          JsonDecode.fromJValue[JsonParseException](x) match {
+            case r@Right(_) => r
+            case Left(DecodeError.InvalidValue(_, Type)) =>
+              JsonDecode.fromJValue[JsonReadException](x)
+            case l@Left(_) => l
+          }
+        case l@Left(_) => l
+      }
   }
 }
