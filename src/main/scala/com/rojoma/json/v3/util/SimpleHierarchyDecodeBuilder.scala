@@ -39,7 +39,7 @@ class SimpleHierarchyDecodeBuilder[Root <: AnyRef] private[util] (tagType: TagTy
                 } {
                   subdec.decode(possibleObject) match {
                     case r@Right(_) => return r
-                    case Left(err) => pendingErrors += err.augment(Path.Field(possibleTag))
+                    case Left(err) => pendingErrors += err.prefix(possibleTag)
                   }
                 }
               } else {
@@ -49,47 +49,65 @@ class SimpleHierarchyDecodeBuilder[Root <: AnyRef] private[util] (tagType: TagTy
                 } {
                   subdec.decode(field) match {
                     case r@Right(_) => return r
-                    case Left(err) => pendingErrors += err.augment(Path.Field(tag))
+                    case Left(err) => pendingErrors += err.prefix(tag)
                   }
                 }
               }
               val errorsFound = pendingErrors.result()
               if(errorsFound.nonEmpty) Left(DecodeError.join(errorsFound))
-              else Left(DecodeError.Multiple(subcodecs.keys.toSeq.map(DecodeError.MissingField(_, Path.empty))))
+              else Left(DecodeError.Multiple(subcodecs.keys.toSeq.map(DecodeError.MissingField(_))))
             case other =>
-              Left(DecodeError.InvalidType(JObject, other.jsonType, Path.empty))
+              Left(DecodeError.InvalidType(expected = JObject, got = other.jsonType))
           }
         }
       case TagAndValue(typeField, valueField) =>
         new JsonDecode[Root] {
           def decode(x: JValue): Either[DecodeError, Root] = x match {
             case JObject(fields) =>
-              val typeTag = fields.getOrElse(typeField, return Left(DecodeError.MissingField(typeField, Path.empty))) match {
-                case JString(s) => s
-                case other => return Left(DecodeError.InvalidType(JString, other.jsonType, Path.empty))
-              }
-              val subDec = subcodecs.getOrElse(typeTag, return Left(DecodeError.InvalidValue(JString(typeTag), Path.empty)))
-              val jvalue = fields.getOrElse(valueField, return Left(DecodeError.MissingField(valueField, Path.empty)))
-              subDec.decode(jvalue) match {
-                case r@Right(_) => r
-                case Left(err) => Left(err.augment(Path.Field(valueField)))
+              fields.get(typeField) match {
+                case Some(jTypeTag@JString(typeTag)) =>
+                  subcodecs.get(typeTag) match {
+                    case Some(subDec) =>
+                      fields.get(valueField) match {
+                        case Some(jvalue) =>
+                          subDec.decode(jvalue) match {
+                            case r@Right(_) => r
+                            case Left(err) => Left(err.prefix(valueField))
+                          }
+                        case None =>
+                          Left(DecodeError.MissingField(valueField))
+                      }
+                    case None =>
+                      Left(DecodeError.InvalidValue(jTypeTag, Path(typeField)))
+                  }
+                case Some(other) =>
+                  Left(DecodeError.InvalidType(expected = JString, got = other.jsonType, Path(typeField)))
+                case None =>
+                  Left(DecodeError.MissingField(typeField))
               }
             case other =>
-              Left(DecodeError.InvalidType(JObject, other.jsonType, Path.empty))
+              Left(DecodeError.InvalidType(expected = JObject, got = other.jsonType, Path.empty))
           }
         }
       case InternalTag(typeField, removeForSubcodec) =>
         new JsonDecode[Root] {
           def decode(x: JValue): Either[DecodeError, Root] = x match {
             case JObject(fields) =>
-              val typeTag = fields.getOrElse(typeField, return Left(DecodeError.MissingField(typeField, Path.empty))) match {
-                case JString(s) => s
-                case other => return Left(DecodeError.InvalidType(JString, other.jsonType, Path.empty))
+              fields.get(typeField) match {
+                case Some(jTypeTag@JString(typeTag)) =>
+                  subcodecs.get(typeTag) match {
+                    case Some(subDec) =>
+                      subDec.decode(if(removeForSubcodec) JObject(fields-typeField) else x) // no need to augment error results since we're not moving downward
+                    case None =>
+                      Left(DecodeError.InvalidValue(jTypeTag, Path(typeField)))
+                  }
+                case Some(other) =>
+                  Left(DecodeError.InvalidType(expected = JString, got = other.jsonType, Path(typeField)))
+                case None =>
+                  Left(DecodeError.MissingField(typeField))
               }
-              val subDec = subcodecs.getOrElse(typeTag, return Left(DecodeError.InvalidValue(JString(typeTag), Path.empty)))
-              subDec.decode(if(removeForSubcodec) JObject(fields-typeField) else x) // no need to augment error results since we're not moving downward
             case other =>
-              Left(DecodeError.InvalidType(JObject, other.jsonType, Path.empty))
+              Left(DecodeError.InvalidType(expected = JObject, got = other.jsonType))
           }
         }
     }
