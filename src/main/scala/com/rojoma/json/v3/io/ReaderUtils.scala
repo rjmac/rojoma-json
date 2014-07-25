@@ -32,4 +32,29 @@ private[io] object ReaderUtils {
     val lenInChars = s.length - offset
     lenInChars < intMaxLength || (lenInChars == intMaxLength && s.toLong <= Int.MaxValue)
   }
+
+  def isValidIdentifier(s: String): Boolean = {
+    exactlyOneToken(s) match {
+      case Some(TokenIdentifier(_)) => true
+      case _ => false
+    }
+  }
+
+  def isValidNumber(s: String): Boolean = {
+    exactlyOneToken(s) match {
+      case Some(TokenNumber(_)) => true
+      case _ => false
+    }
+  }
+
+  private def exactlyOneToken(n: String): Option[JsonToken] =
+    JsonTokenGenerator.newGenerator(n) match {
+      case JsonTokenGenerator.Token(t, _, ri) if ri.isEmpty => Some(t)
+      case JsonTokenGenerator.More(cont) =>
+        cont.endOfInput() match {
+          case JsonTokenGenerator.FinalToken(t, _) => Some(t)
+          case _ => None
+        }
+      case _ => None
+    }
 }

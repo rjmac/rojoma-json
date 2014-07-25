@@ -47,3 +47,196 @@ class JsonUnknownIdentifier(val identifier: String, val position: Position) exte
 class JsonBadParse(val event: JsonEvent) extends JsonReaderException(pos(event.position, "Received unexpected event %s", event)) with JsonReadException {
   def position = event.position
 }
+
+// codecs -- these do not preserve stack information, since the main
+// use-case I see for them is reporting errors to user code.
+
+object JsonLexException {
+  implicit val jCodec = locally {
+    import matcher._
+    import codec._
+    import util._
+
+    implicit val characterCodec = new JsonEncode[Char] with JsonDecode[Char] {
+      def encode(c: Char) = JString(c.toString)
+      def decode(x: JValue) = x match {
+        case js@JString(s) =>
+          if(s.length == 1) Right(s.charAt(0))
+          else Left(DecodeError.InvalidValue(js))
+        case other =>
+          Left(DecodeError.InvalidType(expected = JString, got = other.jsonType))
+      }
+    }
+
+    implicit val unexpectedCharacterCodec = new JsonEncode[JsonUnexpectedCharacter] with JsonDecode[JsonUnexpectedCharacter] {
+      private val character = Variable[Char]()
+      private val expected = Variable[String]()
+      private val position = Variable[Position]()
+      private val pattern = PObject(
+        "character" -> character,
+        "expected" -> expected,
+        "position" -> POption(position)
+      )
+
+      def encode(e: JsonUnexpectedCharacter) = pattern.generate(
+        character := e.character,
+        expected := e.expected,
+        position := e.position
+      )
+
+      def decode(x: JValue) = pattern.matches(x).right.map { r =>
+        new JsonUnexpectedCharacter(character(r), expected(r), position.getOrElse(r, Position.Invalid))
+      }
+    }
+
+    implicit val numberOutOfRangeCodec = new JsonEncode[JsonNumberOutOfRange] with JsonDecode[JsonNumberOutOfRange] {
+      private val number = Variable[String]()
+      private val position = Variable[Position]()
+      private val pattern = PObject(
+        "number" -> number,
+        "position" -> POption(position)
+      )
+      
+      def encode(e: JsonNumberOutOfRange) = pattern.generate(
+        number := e.number,
+        position := e.position
+      )
+
+      def decode(x: JValue) = pattern.matches(x).right.map { r =>
+        new JsonNumberOutOfRange(number(r), position.getOrElse(r, Position.Invalid))
+      }
+    }
+
+    implicit val lexerEofCodec = new JsonEncode[JsonLexerEOF] with JsonDecode[JsonLexerEOF] {
+      private val position = Variable[Position]()
+      private val pattern = PObject(
+        "phase" -> "lexer",
+        "position" -> POption(position)
+      )
+
+      def encode(e: JsonLexerEOF) = pattern.generate(
+        position := e.position
+      )
+
+      def decode(x: JValue) = pattern.matches(x).right.map { r =>
+        new JsonLexerEOF(position.getOrElse(r, Position.Invalid))
+      }
+    }
+
+    SimpleHierarchyCodecBuilder[JsonLexException](InternalTag("type", false)).
+      branch[JsonUnexpectedCharacter]("unexpected-character").
+      branch[JsonNumberOutOfRange]("number-out-of-range").
+      branch[JsonLexerEOF]("eof").
+      build
+  }
+}
+
+object JsonParseException {
+  implicit val jCodec = locally {
+    import matcher._
+    import codec._
+    import util._
+
+    implicit val unexpectedTokenCodec = new JsonEncode[JsonUnexpectedToken] with JsonDecode[JsonUnexpectedToken] {
+      private val token = Variable[JsonToken](JsonToken.sansPositionCodec)
+      private val expected = Variable[String]()
+      private val position = Variable[Position]()
+      private val pattern = PObject(
+        "token" -> token,
+        "expected" -> expected,
+        "position" -> POption(position)
+      )
+
+      def encode(e: JsonUnexpectedToken) = pattern.generate(
+        token := e.token,
+        expected := e.expected,
+        position := e.token.position
+      )
+
+      def decode(x: JValue) = pattern.matches(x).right.map { r =>
+        new JsonUnexpectedToken(token(r).positionedAt(position.getOrElse(r, Position.Invalid)), expected(r))
+      }
+    }
+
+    implicit val unknownIdentifierCodec = new JsonEncode[JsonUnknownIdentifier] with JsonDecode[JsonUnknownIdentifier] {
+      private val identifier = Variable[String]()
+      private val position = Variable[Position]()
+      private val pattern = PObject(
+        "identifier" -> identifier,
+        "position" -> POption(position)
+      )
+
+      def encode(e: JsonUnknownIdentifier) = pattern.generate(
+        identifier := e.identifier,
+        position := e.position
+      )
+
+      def decode(x: JValue) = pattern.matches(x).right.map { r =>
+        new JsonUnknownIdentifier(identifier(r), position.getOrElse(r, Position.Invalid))
+      }
+    }
+
+    implicit val parserEofCodec = new JsonEncode[JsonParserEOF] with JsonDecode[JsonParserEOF] {
+      private val position = Variable[Position]()
+      private val pattern = PObject(
+        "phase" -> "parser",
+        "position" -> POption(position)
+      )
+
+      def encode(e: JsonParserEOF) = pattern.generate(
+        position := e.position
+      )
+
+      def decode(x: JValue) = pattern.matches(x).right.map { r =>
+        new JsonParserEOF(position.getOrElse(r, Position.Invalid))
+      }
+    }
+
+    SimpleHierarchyCodecBuilder[JsonParseException](InternalTag("type", false)).
+      branch[JsonUnexpectedToken]("unexpected-token").
+      branch[JsonUnknownIdentifier]("unknown-identifier").
+      branch[JsonParserEOF]("eof").
+      build
+  }
+}
+
+object JsonReadException {
+  implicit val jCodec = locally {
+    import matcher._
+    import codec._
+    import util._
+
+    implicit val badParseCodec = new JsonEncode[JsonBadParse] with JsonDecode[JsonBadParse] {
+      private val event = Variable[JsonEvent](JsonEvent.sansPositionCodec)
+      private val position = Variable[Position]()
+      private val pattern = PObject(
+        "event" -> event,
+        "position" -> POption(position)
+      )
+
+      def encode(e: JsonBadParse) = pattern.generate(
+        event := e.event,
+        position := e.event.position
+      )
+
+      def decode(x: JValue) = pattern.matches(x).right.map { r =>
+        new JsonBadParse(event(r).positionedAt(position.getOrElse(r, Position.Invalid)))
+      }
+    }
+
+    SimpleHierarchyCodecBuilder[JsonReadException](InternalTag("type", false)).
+      branch[JsonBadParse]("bad-parse").
+      build
+  }
+}
+
+object JsonReaderException {
+  implicit val jCodec = locally {
+    import util._
+    SimpleHierarchyCodecBuilder[JsonReaderException](NoTag).
+      branch[JsonLexException].
+      branch[JsonParseException].
+      branch[JsonReadException].
+      build
+  }
+}
