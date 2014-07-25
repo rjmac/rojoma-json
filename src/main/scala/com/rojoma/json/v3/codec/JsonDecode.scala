@@ -254,6 +254,6 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
-  implicit val uuidDecode = WrapperJsonDecode[ju.UUID, String](ju.UUID.fromString)
-  implicit val uriDecode = WrapperJsonDecode[jn.URI, String](jn.URI.create)
+  implicit val uuidDecode = WrapperJsonDecode[ju.UUID](ju.UUID.fromString)
+  implicit val uriDecode = WrapperJsonDecode[jn.URI](jn.URI.create)
 }

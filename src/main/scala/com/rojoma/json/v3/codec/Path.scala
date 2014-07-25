@@ -79,5 +79,6 @@ object Path {
     true
   }
 
-  implicit val jCodec = WrapperJsonCodec[Path, List[Entry]](new Path(_), _.toList)
+  private def create(xs: List[Entry]) = new Path(xs) // helping out type inference
+  implicit val jCodec = WrapperJsonCodec[Path](create, _.toList)
 }
