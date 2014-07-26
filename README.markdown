@@ -6,7 +6,7 @@ Starting with version 2.0.0, rojoma-json is published on Maven
 central, so setting up SBT is as simple as
 
 ```scala
-libraryDependencies += "com.rojoma" %% "rojoma-json-v3" % "3.0.0"
+libraryDependencies += "com.rojoma" %% "rojoma-json-v3" % "3.1.0"
 ```
 
 While for Maven, the pom snippet is:
@@ -16,7 +16,7 @@ While for Maven, the pom snippet is:
   <dependency>
     <groupId>com.rojoma</groupId>
     <artifactId>rojoma-json-v3_${scala.version}</artifactId>
-    <version>3.0.0</version>
+    <version>3.1.0</version>
   </dependency>
 </dependencies>
 ```
@@ -379,9 +379,9 @@ convert between the two versions, to assist in transitions.
 
 The package is meant to have all its contents imported.  It contains
 implicit conversions which add `toV3` methods onto rojoma-json-2's
-`JValue`,  and `toV2` methods onto rojoma-json-3's.  In addition, it can
-create rojoma-json-2 `JsonCodec`s from instances of 3's `JsonEncode`
-and `JsonDecode`.
+`JsonToken`s, `JsonEvent`s, and `JValue`s and `toV2` methods onto
+rojoma-json-3's.  In addition, it can create rojoma-json-2
+`JsonCodec`s from instances of 3's `JsonEncode` and `JsonDecode`.
 
 ## Incompatible changes from rojoma-json 2
 
