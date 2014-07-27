@@ -6,7 +6,7 @@ Starting with version 2.0.0, rojoma-json is published on Maven
 central, so setting up SBT is as simple as
 
 ```scala
-libraryDependencies += "com.rojoma" %% "rojoma-json-v3" % "3.1.0"
+libraryDependencies += "com.rojoma" %% "rojoma-json-v3" % "3.1.1"
 ```
 
 While for Maven, the pom snippet is:
@@ -16,7 +16,7 @@ While for Maven, the pom snippet is:
   <dependency>
     <groupId>com.rojoma</groupId>
     <artifactId>rojoma-json-v3_${scala.version}</artifactId>
-    <version>3.1.0</version>
+    <version>3.1.1</version>
   </dependency>
 </dependencies>
 ```
@@ -48,6 +48,21 @@ various `toX` methods to access its value.
 
 All `JValue`s have a `cast[T]` method that can be used to safely
 downcast to a more specific type.
+
+There is also support for "dynamically typed" access to JValues:
+
+```scala
+someJValue = j"{outer : {inner : [0,1,2,3]}}"
+someJValue.dyn.outer.inner(2).?             // returns Right(JNumber(2))
+someJValue.dyn.outer("inner")(2).?          // returns Right(JNumber(2))
+someJValue.dyn.outer.inner(2).!             // returns JNumber(2)
+someJValue.dyn.outer.nonexistant.inner(2).? // returns Left(DecodeError.MissingField("nonexistant", .outer))
+someJValue.dyn.outer.nonexistant.inner(2).! // throws a NoSuchElementException
+```
+
+This is implemented via scala's `Dynamic` trait; as a result,
+`applyDynamic`, `selectDynamic`, and `apply`, plus the methods on
+`Object`, will resolve to real methods instead of path elements.
 
 ### package com.rojoma.json.v3.codec
 
