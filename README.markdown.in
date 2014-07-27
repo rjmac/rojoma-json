@@ -52,12 +52,12 @@ downcast to a more specific type.
 There is also support for "dynamically typed" access to JValues:
 
 ```scala
-someJValue = parseJson("""{outer:{inner:[0,1,2,3]}}""")
-someJValue.dynamic.outer.inner(2).?       // returns Some(JNumber(2))
-someJValue.dynamic.outer("inner")(2).?    // returns Some(JNumber(2))
-someJValue.dynamic.outer.inner(2).!       // returns JNumber(2)
-someJValue.dynamic.nonexistant.inner(2).? // returns None
-someJValue.dynamic.nonexistant.inner(2).! // throws a NoSuchElementException
+someJValue = j"{outer : {inner : [0,1,2,3]}}"
+someJValue.dyn.outer.inner(2).?             // returns Right(JNumber(2))
+someJValue.dyn.outer("inner")(2).?          // returns Right(JNumber(2))
+someJValue.dyn.outer.inner(2).!             // returns JNumber(2)
+someJValue.dyn.outer.nonexistant.inner(2).? // returns Left(DecodeError.MissingField("nonexistant", .outer))
+someJValue.dyn.outer.nonexistant.inner(2).! // throws a NoSuchElementException
 ```
 
 This is implemented via scala's `Dynamic` trait; as a result,

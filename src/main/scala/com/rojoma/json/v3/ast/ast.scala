@@ -66,7 +66,19 @@ sealed trait JValue {
     * plus `apply`, `applyDynamic`, and `selectDynamic` cannot be accessed
     * with simple field-notation.  Instead, pass them as strings to
     * the `apply` method. */
+  @deprecated(message = "Prefer `dyn`", since = "3.1.1")
   def dynamic = new com.rojoma.json.v3.dynamic.DynamicJValue(Some(this))
+
+  /** Produces a dynamically typed view of this `JValue` which can be
+    * descended using dot-notation for field names or apply-type
+    * syntax for arrays.  It can be turned back into a `JValue` with
+    * the `!` or `?` methods.
+    *
+    * Note that certain field-names (the names common to all `Objects`
+    * plus `apply`, `applyDynamic`, and `selectDynamic` cannot be accessed
+    * with simple field-notation.  Instead, pass them as strings to
+    * the `apply` method. */
+  def dyn = com.rojoma.json.v3.dynamic.InformationalDynamicJValue(this)
 
   /* The concrete type of this value. */
   def jsonType: JsonType
