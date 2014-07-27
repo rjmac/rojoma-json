@@ -31,14 +31,6 @@ trait MacroCompat {
     }
   }
 
-
-  implicit class EnhPositionApi(p: Position) {
-    def offset =
-      if(p.isRange) throw new UnsupportedOperationException("Position.point on class scala.reflect.internal.util.RangePosition")
-      else p.startOrPoint
-  }
-
-
   object termNames {
     val ROOTPKG = "_root_"
   }
