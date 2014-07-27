@@ -49,21 +49,6 @@ various `toX` methods to access its value.
 All `JValue`s have a `cast[T]` method that can be used to safely
 downcast to a more specific type.
 
-There is also support for "dynamically typed" access to JValues:
-
-```scala
-someJValue = parseJson("""{outer:{inner:[0,1,2,3]}}""")
-someJValue.dynamic.outer.inner(2).?       // returns Some(JNumber(2))
-someJValue.dynamic.outer("inner")(2).?    // returns Some(JNumber(2))
-someJValue.dynamic.outer.inner(2).!       // returns JNumber(2)
-someJValue.dynamic.nonexistant.inner(2).? // returns None
-someJValue.dynamic.nonexistant.inner(2).! // throws a NoSuchElementException
-```
-
-This is implemented via scala's `Dynamic` trait; as a result,
-`applyDynamic`, `selectDynamic`, and `apply`, plus the methods on
-`Object`, will resolve to real methods instead of path elements.
-
 ### package com.rojoma.json.v3.codec
 
  * `JsonEncode[T]`: a typeclass for converting objects to `JValue`s
