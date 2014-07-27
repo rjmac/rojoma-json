@@ -61,7 +61,7 @@ object InformationalDynamicJValue extends (JValue => InformationalDynamicJValue)
   }
 }
 
-@deprecated(message = "Prefer `InformationalDynamicJValue`", since = "3.2.0")
+@deprecated(message = "Prefer `InformationalDynamicJValue`", since = "3.1.1")
 class DynamicJValue(val ? : Option[JValue]) extends AnyVal with Dynamic {
   def ! =
     ? match {
