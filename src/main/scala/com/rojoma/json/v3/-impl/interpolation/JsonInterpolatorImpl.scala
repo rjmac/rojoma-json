@@ -22,7 +22,7 @@ object JsonInterpolatorImpl {
 
     def move(pos: c.universe.Position, offset: Int): c.universe.Position =
       if(pos.isRange) pos.withStart(pos.start + offset)
-      else pos.withPoint(pos.start + offset)
+      else pos.withPoint(pos.point + offset)
 
     def offsetOf(s: String, p: io.Position) = {
       val before = s.split("\n", -1).take(p.row - 1).map(_.length + 1).sum
