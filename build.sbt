@@ -7,7 +7,7 @@ name := "rojoma-json-v3"
 
 organization := "com.rojoma"
 
-version := "3.2.0-SNAPSHOT"
+version := "3.1.2"
 
 previousArtifact := Some("com.rojoma" % ("rojoma-json-v3_" + scalaBinaryVersion.value) % "3.1.1")
 
