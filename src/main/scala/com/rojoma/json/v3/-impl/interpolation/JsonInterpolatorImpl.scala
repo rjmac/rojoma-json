@@ -140,7 +140,7 @@ object JsonInterpolatorImpl {
         tokens match {
           case (ti@TokenInfo(Nil)) :: tl =>
             if(data.isEmpty) c.abort(ti.position, new JsonParserEOF(Position.Invalid).message)
-            val field = q"${data.head} : _root_.scala.Predef.String"
+            val field = q"_root_.com.rojoma.json.v3.codec.FieldEncode.toField(${data.head})"
             (Right(ExpectingColon(field, parentState)), tl, data.tail)
           case (ti@TokenInfo(TokenIdentifier(s) :: _)) :: tl2 =>
             (Right(ExpectingColon(q"$s", parentState)), ti.pop :: tl2, data)

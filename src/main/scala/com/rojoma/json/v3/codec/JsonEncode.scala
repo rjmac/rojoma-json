@@ -119,13 +119,35 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
     def encode(x: T) = x
   }
 
-  implicit def mapEncode[T, M[U, V] <: sc.Map[U, V]](implicit tEncode: JsonEncode[T]) = new JsonEncode[M[String, T]] {
+  implicit def fieldMapEncode[T, U, M[A, B] <: sc.Map[A, B]](implicit tEncode: FieldEncode[T], uEncode: JsonEncode[U]): JsonEncode[M[T,U]] = new JsonEncode[M[T, U]] {
+    def encode(x: M[T, U]) =
+      if(x.nonEmpty) {
+        if(tEncode eq FieldEncode.stringEncode) JObject(x.asInstanceOf[M[String, U]].mapValues(uEncode.encode))
+        else encodeWithCodec(x)
+      } else JObject.canonicalEmpty
+
+    private def encodeWithCodec(x: M[T, U]) = {
+      // In keeping with the general philosophy of compound encoders,
+      // we'll encode as lazily as possible.
+      val keysConverted: sc.Map[String, U] = x.map { case (k, v) => tEncode.encode(k) -> v }
+      JObject(keysConverted.mapValues(uEncode.encode))
+    }
+  }
+
+  implicit def fieldJuMapEncode[T, U](implicit tEncode: FieldEncode[T], uEncode: JsonEncode[U]): JsonEncode[ju.Map[T,U]] = new JsonEncode[ju.Map[T, U]] {
+    val scalaCodec = fieldMapEncode[T, U, sc.Map]
+    def encode(x: ju.Map[T, U]) = scalaCodec.encode(x.asScala)
+  }
+
+  @deprecated(message = "Use fieldMapEncode instead", since="3.2.0")
+  def mapEncode[T, M[U, V] <: sc.Map[U, V]](implicit tEncode: JsonEncode[T]) = new JsonEncode[M[String, T]] {
     def encode(x: M[String, T]) =
       if(x.nonEmpty) JObject(x.mapValues(tEncode.encode))
       else JObject.canonicalEmpty
   }
 
-  implicit def juMapEncode[T: JsonEncode] = new JsonEncode[ju.Map[String, T]] {
+  @deprecated(message = "Use fieldJuMapEncode instead", since="3.2.0")
+  def juMapEncode[T: JsonEncode] = new JsonEncode[ju.Map[String, T]] {
     def encode(x: ju.Map[String, T]) =
       if(!x.isEmpty) JObject(x.asScala.mapValues(JsonEncode[T].encode))
       else JObject.canonicalEmpty

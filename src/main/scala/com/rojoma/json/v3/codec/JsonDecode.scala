@@ -184,7 +184,50 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
-  implicit def mapDecode[T, M[U, V] <: sc.Map[U, V]](implicit tDecode: JsonDecode[T], buildFactory: CB[(String, T), M[String, T]]) = new JsonDecode[M[String, T]] {
+  implicit def fieldMapDecode[T, U, M[A, B] <: sc.Map[A, B]](implicit tDecode: FieldDecode[T], uDecode: JsonDecode[U], buildFactory: CB[(T, U), M[T, U]]) = new JsonDecode[M[T, U]] {
+    def decode(x: JValue): DecodeResult[M[T, U]] = x match {
+      case JObject(fields) =>
+        val builder = buildFactory()
+        for((kv, jv) <- fields) {
+          tDecode.decode(kv) match {
+            case Right(k) =>
+              uDecode.decode(jv) match {
+                case Right(v) => builder += (k -> v)
+                case Left(err) => return Left(err.prefix(kv))
+              }
+            case Left(err) =>
+              return Left(err)
+          }
+        }
+        Right(builder.result())
+      case other =>
+        Left(DecodeError.InvalidType(JObject, other.jsonType))
+    }
+  }
+
+  implicit def fieldJuMapDecode[T, U](implicit tDecode: FieldDecode[T], uDecode: JsonDecode[U]) = new JsonDecode[ju.Map[T, U]] {
+    def decode(x: JValue): DecodeResult[ju.Map[T, U]] = x match {
+      case JObject(fields) =>
+        val result = new ju.LinkedHashMap[T, U]
+        for((kv, jv) <- fields) {
+          tDecode.decode(kv) match {
+            case Right(k) =>
+              uDecode.decode(jv) match {
+                case Right(v) => result.put(k, v)
+                case Left(err) => return Left(err.prefix(kv))
+              }
+            case Left(err) =>
+              return Left(err)
+          }
+        }
+        Right(result)
+      case other =>
+        Left(DecodeError.InvalidType(JObject, other.jsonType))
+    }
+  }
+
+  @deprecated(message = "Use fieldMapEncode instead", since="3.2.0")
+  def mapDecode[T, M[U, V] <: sc.Map[U, V]](implicit tDecode: JsonDecode[T], buildFactory: CB[(String, T), M[String, T]]) = new JsonDecode[M[String, T]] {
     def decode(x: JValue): DecodeResult[M[String, T]] = x match {
       case JObject(fields) =>
         val builder = buildFactory()
@@ -200,7 +243,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
-  implicit def juMapDecode[T: JsonDecode] = new JsonDecode[ju.Map[String, T]] {
+  @deprecated(message = "Use fieldJuMapEncode instead", since="3.2.0")
+  def juMapDecode[T: JsonDecode] = new JsonDecode[ju.Map[String, T]] {
     def decode(x: JValue): DecodeResult[ju.Map[String, T]] = x match {
       case JObject(fields) =>
         val result = new ju.LinkedHashMap[String, T]
