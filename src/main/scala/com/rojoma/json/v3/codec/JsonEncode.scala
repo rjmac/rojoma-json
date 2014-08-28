@@ -119,18 +119,26 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
     def encode(x: T) = x
   }
 
-  implicit def fieldMapEncode[T, U, M[A, B] <: sc.Map[A, B]](implicit tEncode: FieldEncode[T], uEncode: JsonEncode[U]): JsonEncode[M[T,U]] = new JsonEncode[M[T, U]] {
-    def encode(x: M[T, U]) =
-      if(x.nonEmpty) {
-        if(tEncode eq FieldEncode.stringEncode) JObject(x.asInstanceOf[M[String, U]].mapValues(uEncode.encode))
-        else encodeWithCodec(x)
-      } else JObject.canonicalEmpty
-
-    private def encodeWithCodec(x: M[T, U]) = {
-      // In keeping with the general philosophy of compound encoders,
-      // we'll encode as lazily as possible.
-      val keysConverted: sc.Map[String, U] = x.map { case (k, v) => tEncode.encode(k) -> v }
-      JObject(keysConverted.mapValues(uEncode.encode))
+  implicit def fieldMapEncode[T, U, M[A, B] <: sc.Map[A, B]](implicit tEncode: FieldEncode[T], uEncode: JsonEncode[U]): JsonEncode[M[T,U]] = {
+    if(tEncode eq FieldEncode.stringEncode) {
+      // common enough to have its own impl, since it can be done more cheaply
+      // We're taking advantage of the fact that modifying the thing that was
+      // encoded has undefined effects on the encodee up to ".forced".
+      new JsonEncode[M[String, U]] {
+        def encode(x: M[String, U]) =
+          if(x.nonEmpty) JObject(x.mapValues(uEncode.encode))
+          else JObject.canonicalEmpty
+      }.asInstanceOf[JsonEncode[M[T, U]]]
+    } else {
+      new JsonEncode[M[T, U]] {
+        def encode(x: M[T, U]) =
+          if(x.nonEmpty) {
+            // In keeping with the general philosophy of compound encoders,
+            // we'll encode as lazily as possible.
+            val keysConverted: sc.Map[String, U] = x.map { case (k, v) => tEncode.encode(k) -> v }
+            JObject(keysConverted.mapValues(uEncode.encode))
+          } else JObject.canonicalEmpty
+      }
     }
   }
 
@@ -140,18 +148,10 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
   }
 
   @deprecated(message = "Use fieldMapEncode instead", since="3.2.0")
-  def mapEncode[T, M[U, V] <: sc.Map[U, V]](implicit tEncode: JsonEncode[T]) = new JsonEncode[M[String, T]] {
-    def encode(x: M[String, T]) =
-      if(x.nonEmpty) JObject(x.mapValues(tEncode.encode))
-      else JObject.canonicalEmpty
-  }
+  def mapEncode[T, M[U, V] <: sc.Map[U, V]](implicit tEncode: JsonEncode[T]) = fieldMapEncode[String, T, M]
 
   @deprecated(message = "Use fieldJuMapEncode instead", since="3.2.0")
-  def juMapEncode[T: JsonEncode] = new JsonEncode[ju.Map[String, T]] {
-    def encode(x: ju.Map[String, T]) =
-      if(!x.isEmpty) JObject(x.asScala.mapValues(JsonEncode[T].encode))
-      else JObject.canonicalEmpty
-  }
+  def juMapEncode[T: JsonEncode] = fieldJuMapEncode[String, T]
 
   // either is right-biased; if decoding as Right fails it tries Left;
   // if Left fails the whole thing fails.

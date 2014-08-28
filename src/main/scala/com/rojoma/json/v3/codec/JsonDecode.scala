@@ -227,39 +227,11 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
   }
 
   @deprecated(message = "Use fieldMapEncode instead", since="3.2.0")
-  def mapDecode[T, M[U, V] <: sc.Map[U, V]](implicit tDecode: JsonDecode[T], buildFactory: CB[(String, T), M[String, T]]) = new JsonDecode[M[String, T]] {
-    def decode(x: JValue): DecodeResult[M[String, T]] = x match {
-      case JObject(fields) =>
-        val builder = buildFactory()
-        for((k, jv) <- fields) {
-          tDecode.decode(jv) match {
-            case Right(v) => builder += (k -> v)
-            case Left(err) => return Left(err.prefix(k))
-          }
-        }
-        Right(builder.result())
-      case other =>
-        Left(DecodeError.InvalidType(JObject, other.jsonType))
-    }
-  }
+  def mapDecode[T, M[U, V] <: sc.Map[U, V]](implicit tDecode: JsonDecode[T], buildFactory: CB[(String, T), M[String, T]]) =
+    fieldMapDecode[String, T, M]
 
   @deprecated(message = "Use fieldJuMapEncode instead", since="3.2.0")
-  def juMapDecode[T: JsonDecode] = new JsonDecode[ju.Map[String, T]] {
-    def decode(x: JValue): DecodeResult[ju.Map[String, T]] = x match {
-      case JObject(fields) =>
-        val result = new ju.LinkedHashMap[String, T]
-        val subDecode = JsonDecode[T]
-        for((k, jv) <- fields) {
-          subDecode.decode(jv) match {
-            case Right(v) => result.put(k, v)
-            case Left(err) => return Left(err.prefix(k))
-          }
-        }
-        Right(result)
-      case other =>
-        Left(DecodeError.InvalidType(JObject, other.jsonType))
-    }
-  }
+  def juMapDecode[T: JsonDecode] = fieldJuMapDecode[String, T]
 
   // either is right-biased; if decoding as Right fails it tries Left;
   // if Left fails the whole thing fails.
