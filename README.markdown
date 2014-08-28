@@ -68,6 +68,8 @@ This is implemented via scala's `Dynamic` trait; as a result,
 
  * `JsonEncode[T]`: a typeclass for converting objects to `JValue`s
  * `JsonDecode[T]`: a typeclass for converting objects from `JValue`s
+ * `FieldEncode[T]`: a typeclass for converting objects to object keys
+ * `FieldDecode[T]`: a typeclass for converting objects from object keys
 
 Encoding is assumed to always succeed; decoding can fail, returning a
 `DecodeError` containing the cause of the failure and the path at
@@ -82,27 +84,38 @@ The following types have implicit codecs in `JsonEncode`'s and
  * `JValue` and all its subclasses
  * Any `S[T] <: Seq[T]` if `T` has a `JsonCodec` and `S` has an implicit `CanBuild`
  * Any `S[T] <: Set[T]` if `T` has a `JsonCodec` and `S` has an implicit `CanBuild`
- * Any `M[String, T] <: Map[String, T]` if `T` has a `JsonCodec` and `M` has an implicit `CanBuild`
+ * Any `M[T, U] <: Map[T,U]` if `T` has a `FieldCodec`, `U` has a `JsonCodec` and `M` has an implicit `CanBuild`
  * `Either` (biased on decoding to `Right`)
  * `Unit`
  * Tuples up to `Tuple22`
  * `java.util.List[T]` if `T` has a `JsonCodec`
  * `java.util.Set[T]` if `T` has a `JsonCodec`
- * `java.util.Map[String, T]` if `T` has a `JsonCodec`
+ * `java.util.Map[T, U]` if `T` has a `FieldCodec` and `U` has a `JsonCodec`
  * Java enumerations
+ * `java.util.UUID`
+ * `java.net.URL`
+
+The "atomic" ones (`String`, `Boolean`, numbers, enums, `UUID`, and
+`URL`) also have field codecs in `FieldEncode` and `FieldDecode`.
 
 Numeric codecs are "lenient" -- that is, if a number is out of range
 of the requested type, it undergoes the normal truncation
 `BigDecimal.toXXX` does.  If this is not desired, request a
 `BigDecimal` and use the `.toXXXExact` alternatives.
 
-`JsonEncode` and `JsonDecode` themselves can be used as values that
+The codecs' companion objects themselves can be used as values that
 represent the result of an implicit search.  That is:
 
 ```scala
 JsonEncode[T] === implicitly[JsonEncode[T]]
 JsonDecode[T] === implicitly[JsonDecode[T]]
+FieldEncode[T] === implicitly[FieldEncode[T]]
+FieldDecode[T] === implicitly[FieldDecode[T]]
 ```
+
+Default `JsonEncode`s will be as lazy as possible.  Modifying the
+object that was encoded before serializing the resulting `JValue` or
+calling `forced` on it has undefined behavior.
 
 ### package com.rojoma.json.v3.io
 
