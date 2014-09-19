@@ -235,6 +235,7 @@ object JsonReaderException {
 
   implicit val jCodec: JsonEncode[JsonReaderException] with JsonDecode[JsonReaderException] = new JsonEncode[JsonReaderException] with JsonDecode[JsonReaderException] {
     private val Type = Path("type")
+    private val Phase = Path("phase")
 
     def encode(e: JsonReaderException) = e match {
       case l: JsonLexException => JsonEncode.toJValue(l)
@@ -245,7 +246,7 @@ object JsonReaderException {
     def decode(x: JValue) =
       JsonDecode.fromJValue[JsonLexException](x) match {
         case r@Right(_) => r
-        case Left(DecodeError.InvalidValue(_, Type)) =>
+        case Left(DecodeError.InvalidValue(_, Type)) | Left(DecodeError.InvalidValue(JString("parser"), Phase)) =>
           JsonDecode.fromJValue[JsonParseException](x) match {
             case r@Right(_) => r
             case Left(DecodeError.InvalidValue(_, Type)) =>
