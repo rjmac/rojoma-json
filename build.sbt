@@ -11,7 +11,7 @@ version := "3.2.2-SNAPSHOT"
 
 previousArtifact := Some("com.rojoma" % ("rojoma-json-v3_" + scalaBinaryVersion.value) % "3.2.1")
 
-scalaVersion := "2.11.2"
+scalaVersion := "2.11.4"
 
 crossScalaVersions := Seq("2.10.4", scalaVersion.value)
 
