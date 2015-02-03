@@ -416,7 +416,8 @@ case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFu
 
   def forced: JArray = {
     // not just "toSeq.map(_forced)" because the seq might be a Stream or view
-    val forcedArray: Vector[JValue] = elems.map(_.forced)(sc.breakOut)
+    val forcedArray: Vector[JValue] =
+      convertForForce(elems).map(_.forced)(sc.breakOut)
     new JArray(forcedArray) {
       override def forced = this
     }
