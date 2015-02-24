@@ -1,13 +1,17 @@
 package com.rojoma.json.v3
 package codec
 
+import ast._
+import interpolation._
+
 import org.scalatest.FunSuite
+import org.scalatest.MustMatchers
 import org.scalatest.prop.Checkers
 
 import org.scalacheck.Prop._
 import org.scalacheck.Arbitrary
 
-class JsonCodecTests extends FunSuite with Checkers {
+class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
   import JsonEncode.toJValue
   import JsonDecode.fromJValue
 
@@ -114,5 +118,13 @@ class JsonCodecTests extends FunSuite with Checkers {
       }
     }
     doCheck[ju.Map[String, String]]()
+  }
+
+  test("Given a choice of decode errors, longer path wins") {
+    JsonDecode[Either[String, Seq[Int]]].decode(j"[false]") must equal (Left(DecodeError.InvalidType(JNumber, JBoolean, Path(0))))
+    JsonDecode[Either[Seq[Int], String]].decode(j"[false]") must equal (Left(DecodeError.InvalidType(JNumber, JBoolean, Path(0))))
+    JsonDecode[Either[Seq[Int], Seq[String]]].decode(j"[false]") must equal (Left(DecodeError.Multiple(Seq(DecodeError.InvalidType(JString, JBoolean, Path(0)), DecodeError.InvalidType(JNumber, JBoolean, Path(0))))))
+    JsonDecode[Either[Either[Seq[Int], Seq[String]], String]].decode(j"[false]") must equal (Left(DecodeError.Multiple(Seq(DecodeError.InvalidType(JString, JBoolean, Path(0)), DecodeError.InvalidType(JNumber, JBoolean, Path(0))))))
+    JsonDecode[Either[String, Either[Seq[Int], Seq[String]]]].decode(j"[false]") must equal (Left(DecodeError.Multiple(Seq(DecodeError.InvalidType(JString, JBoolean, Path(0)), DecodeError.InvalidType(JNumber, JBoolean, Path(0))))))
   }
 }

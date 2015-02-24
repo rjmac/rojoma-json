@@ -26,10 +26,33 @@ object DecodeError {
   }
 
   def join(choices: Iterable[DecodeError]): DecodeError = {
+    // we want to keep only the longest choices as they are most
+    // likely to be useful.
+    val selectedChoices =
+      if(choices.isEmpty) { // shouldn't happen, but don't crash if it does
+        choices
+      } else {
+        val maxLen = choices.iterator.map {
+          case simple: Simple =>
+            simple.path.toList.length // I should've made Path cache its own length...
+          case Multiple(subchoices) =>
+            if(subchoices.isEmpty) 0 // shouldn't happen, but don't crash if it does
+            else subchoices.iterator.map(_.path.toList.length).max
+          }.max
+        choices.filter {
+          case simple: Simple =>
+            simple.path.toList.length == maxLen
+          case Multiple(subchoices) =>
+            if(subchoices.isEmpty) maxLen == 0
+            else subchoices.exists(_.path.toList.length == maxLen)
+        }
+      }
+
     val deduped =
-      if(choices.isInstanceOf[sc.Set[_]]) choices
-      else new sc.mutable.LinkedHashSet ++ choices
-    if(deduped.size == 1) choices.iterator.next()
+      if(selectedChoices.isInstanceOf[sc.Set[_]]) selectedChoices
+      else new sc.mutable.LinkedHashSet ++ selectedChoices
+
+    if(deduped.size == 1) selectedChoices.iterator.next()
     else Multiple(deduped.toSeq.flatMap {
                     case Multiple(subchoices) => subchoices
                     case simple: Simple => Seq(simple)
