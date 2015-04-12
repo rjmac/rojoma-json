@@ -221,7 +221,7 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
   }
 
   protected def writeNumber(x: JNumber) {
-    output.write(x.toString)
+    x.toWriter(output)
   }
 
   protected def writeString(s: String) {

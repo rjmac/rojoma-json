@@ -6,6 +6,9 @@ import scala.{collection => sc}
 import scala.reflect.ClassTag
 import scala.annotation.implicitNotFound
 import java.math.{BigInteger, BigDecimal => JBigDecimal}
+import java.io.Writer
+
+import extensions.DoubleWriter
 
 sealed abstract class JsonInvalidValue(msg: String) extends IllegalArgumentException(msg) {
   def value: Any
@@ -139,6 +142,7 @@ sealed abstract class JNumber extends JAtom {
 
   override final def toString = asString
   protected def asString: String
+  private[v3] def toWriter(w: Writer) = w.write(asString)
 
   override def equals(o: Any) = o match {
     case that: JNumber => this.toJBigDecimal == that.toJBigDecimal
@@ -151,6 +155,8 @@ object JNumber extends JsonType {
   final override val toString = "number"
 
   private val stdCtx = java.math.MathContext.UNLIMITED
+
+  private val doubleWriter = DoubleWriter.doubleWriter
 
   private class JIntNumber(val toInt: Int) extends JNumber {
     def toByte = toInt.toByte
@@ -165,6 +171,7 @@ object JNumber extends JsonType {
     lazy val toJBigDecimal = new JBigDecimal(toInt, stdCtx)
 
     def asString = toInt.toString
+
     override def equals(o: Any) = o match {
       case that: JIntNumber => this.toInt == that.toInt
       case that: JLongNumber => this.toLong == that.toLong
@@ -187,6 +194,7 @@ object JNumber extends JsonType {
     lazy val toJBigDecimal = new JBigDecimal(toLong, stdCtx)
 
     def asString = toLong.toString
+
     override def equals(o: Any) = o match {
       case that: JIntNumber => this.toLong == that.toLong
       case that: JLongNumber => this.toLong == that.toLong
@@ -209,6 +217,7 @@ object JNumber extends JsonType {
     def toJBigDecimal = new JBigDecimal(toBigInteger, stdCtx)
 
     def asString = toBigInt.toString
+
     override def equals(o: Any) = o match {
       case that: JIntNumber => this.toBigInt == that.toBigInt
       case that: JLongNumber => this.toBigInt == that.toBigInt
@@ -231,6 +240,7 @@ object JNumber extends JsonType {
     lazy val toJBigDecimal = new JBigDecimal(toBigInteger, stdCtx)
 
     def asString = toBigInt.toString
+
     override def equals(o: Any) = o match {
       case that: JIntNumber => this.toBigInteger == that.toBigInteger
       case that: JLongNumber => this.toBigInteger == that.toBigInteger
@@ -271,7 +281,8 @@ object JNumber extends JsonType {
     def toBigDecimal = BigDecimal(toDouble, stdCtx)
     lazy val toJBigDecimal = new JBigDecimal(toDouble, stdCtx)
 
-    def asString = toDouble.toString
+    def asString = doubleWriter.toString(toDouble)
+    override def toWriter(w: Writer) = doubleWriter.toWriter(w, toDouble)
   }
 
   private class JBigDecimalNumber(val toBigDecimal: BigDecimal) extends JNumber {

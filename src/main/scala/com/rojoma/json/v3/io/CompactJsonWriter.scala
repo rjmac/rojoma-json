@@ -44,7 +44,7 @@ class CompactJsonWriter(output: Writer) extends JsonWriter {
   }
 
   protected def writeNumber(x: JNumber) {
-    output.write(x.toString)
+    x.toWriter(output)
   }
 
   protected def writeString(s: String) {
