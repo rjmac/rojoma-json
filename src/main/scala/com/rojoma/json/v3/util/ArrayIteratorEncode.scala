@@ -27,4 +27,8 @@ object ArrayIteratorEncode {
     */
   def toText[T : JsonEncode](it : Iterator[T]): Iterator[String] =
     toTokens(it).map(_.asFragment)
+
+  @deprecated(message = "prefer ArrayIteratorEncode.toText", since = "3.3.0")
+  def apply[T : JsonEncode](it : Iterator[T]): Iterator[String] =
+    toText(it)
 }
