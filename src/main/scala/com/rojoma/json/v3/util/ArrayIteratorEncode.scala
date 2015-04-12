@@ -4,19 +4,27 @@ package util
 import io._
 import codec.JsonEncode
 
-/** A function which takes an iterator of jsonable objects and returns
-  * an iterator of chunks of the textual representation of the JSON
-  * array representing that same object stream.
+/** Converting iterators-of-jsonables to iterators that represent
+  * `JArray`s, without holding onto the contents of the iterator.
   */
 object ArrayIteratorEncode {
-  def apply[T : JsonEncode](it : Iterator[T]): Iterator[String] = {
-    val events =
-      Iterator.single(StartOfArrayEvent()(Position.Invalid)) ++
-        it.flatMap { item => JValueEventIterator(JsonEncode.toJValue(item)) } ++
-        Iterator.single(EndOfArrayEvent()(Position.Invalid))
+  /** Takes an iterator of jsonable objects and returns an iterator
+    * equivalent to `JValueEventIterator(JArray(it.toSeq))`
+    */
+  def toEvents[T : JsonEncode](it : Iterator[T]): Iterator[JsonEvent] =
+    Iterator.single(StartOfArrayEvent()(Position.Invalid)) ++
+      it.flatMap { item => JValueEventIterator(JsonEncode.toJValue(item)) } ++
+      Iterator.single(EndOfArrayEvent()(Position.Invalid))
 
-    val tokens = EventTokenIterator(events)
+  /** Takes an iterator of jsonable objects and returns an iterator
+    * equivalent to `EventTokenIterator(JValueEventIterator(JArray(it.toSeq)))`
+    */
+  def toTokens[T : JsonEncode](it : Iterator[T]): Iterator[JsonToken] =
+    EventTokenIterator(toEvents(it))
 
-    tokens.map(_.asFragment)
-  }
+  /** Takes an iterator of jsonable objects and returns an iterator of
+    * text fragments of `JArray(it.toSeq).toString`
+    */
+  def toText[T : JsonEncode](it : Iterator[T]): Iterator[String] =
+    toTokens(it).map(_.asFragment)
 }
