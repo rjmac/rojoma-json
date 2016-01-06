@@ -132,7 +132,7 @@ class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
     codec.decode(JString("haha")) must equal (Right(X.d))
   }
 
-  test("scala disallows invalid values") {
+  test("scala enum codec disallows invalid values") {
     object X extends Enumeration {
       val a, b, c = Value
     }
