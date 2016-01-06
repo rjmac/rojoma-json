@@ -78,4 +78,7 @@ object FieldEncode {
   implicit object uriEncode extends FieldEncode[jn.URI] {
     def encode(x: jn.URI) = x.toString
   }
+
+  def scalaEnumEncode[T <: Enumeration](enum: T): FieldEncode[enum.Value] =
+    FieldCodec.scalaEnumCodec(enum)
 }

@@ -55,4 +55,7 @@ object FieldDecode {
 
   implicit val uuidDecode = WrapperFieldDecode[ju.UUID](ju.UUID.fromString)
   implicit val uriDecode = WrapperFieldDecode[jn.URI](jn.URI.create)
+
+  def scalaEnumDecode[T <: Enumeration](enum: T): FieldDecode[enum.Value] =
+    FieldCodec.scalaEnumCodec(enum)
 }

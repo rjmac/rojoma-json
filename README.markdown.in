@@ -103,6 +103,12 @@ of the requested type, it undergoes the normal truncation
 `BigDecimal.toXXX` does.  If this is not desired, request a
 `BigDecimal` and use the `.toXXXExact` alternatives.
 
+In addition to the implicit codecs, Scala `Enumeration`s can have
+codecs automatically generated for them via the non-implicit methods
+`JsonEncode.scalaEnumEncode` and `JsonDecode.scalaEnumDecode` (or the
+convenience `JsonCodec.scalaEnumCodec` which defines both).  These
+methods all take the enumeration's container object as a parameter.
+
 The codecs' companion objects themselves can be used as values that
 represent the result of an implicit search.  That is:
 

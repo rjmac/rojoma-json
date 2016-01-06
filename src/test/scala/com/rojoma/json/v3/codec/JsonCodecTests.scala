@@ -120,6 +120,26 @@ class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
     doCheck[ju.Map[String, String]]()
   }
 
+  test("scala enum roundtrips") {
+    object X extends Enumeration {
+      val a, b, c = Value
+      val d = Value("haha")
+    }
+    val codec = JsonCodec.scalaEnumCodec(X)
+    codec.encode(X.a) must equal (JString("a"))
+    codec.decode(JString("b")) must equal (Right(X.b))
+    codec.encode(X.d) must equal (JString("haha"))
+    codec.decode(JString("haha")) must equal (Right(X.d))
+  }
+
+  test("scala disallows invalid values") {
+    object X extends Enumeration {
+      val a, b, c = Value
+    }
+    val codec = JsonCodec.scalaEnumCodec(X)
+    codec.decode(JString("q")) must equal (Left(DecodeError.InvalidValue(JString("q"), Path())))
+  }
+
   test("Given a choice of decode errors, longer path wins") {
     JsonDecode[Either[String, Seq[Int]]].decode(j"[false]") must equal (Left(DecodeError.InvalidType(JNumber, JBoolean, Path(0))))
     JsonDecode[Either[Seq[Int], String]].decode(j"[false]") must equal (Left(DecodeError.InvalidType(JNumber, JBoolean, Path(0))))

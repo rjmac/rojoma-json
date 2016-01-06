@@ -272,4 +272,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
 
   implicit val uuidDecode = WrapperJsonDecode[ju.UUID](ju.UUID.fromString)
   implicit val uriDecode = WrapperJsonDecode[jn.URI](jn.URI.create)
+
+  def scalaEnumDecode[T <: Enumeration](enum: T): JsonDecode[enum.Value] =
+    JsonCodec.scalaEnumCodec(enum)
 }

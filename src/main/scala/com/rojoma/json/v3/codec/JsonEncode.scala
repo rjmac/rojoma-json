@@ -173,4 +173,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
 
   implicit val uuidEncode = WrapperJsonEncode[ju.UUID](_.toString)
   implicit val uriEncode = WrapperJsonEncode[jn.URI](_.toString)
+
+  def scalaEnumEncode[T <: Enumeration](enum: T): JsonEncode[enum.Value] =
+    JsonCodec.scalaEnumCodec(enum)
 }
