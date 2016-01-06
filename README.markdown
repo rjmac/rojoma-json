@@ -6,7 +6,7 @@ Starting with version 2.0.0, rojoma-json is published on Maven
 central, so setting up SBT is as simple as
 
 ```scala
-libraryDependencies += "com.rojoma" %% "rojoma-json-v3" % "3.3.0"
+libraryDependencies += "com.rojoma" %% "rojoma-json-v3" % "3.4.0"
 ```
 
 While for Maven, the pom snippet is:
@@ -16,7 +16,7 @@ While for Maven, the pom snippet is:
   <dependency>
     <groupId>com.rojoma</groupId>
     <artifactId>rojoma-json-v3_${scala.version}</artifactId>
-    <version>3.3.0</version>
+    <version>3.4.0</version>
   </dependency>
 </dependencies>
 ```
@@ -102,6 +102,12 @@ Numeric codecs are "lenient" -- that is, if a number is out of range
 of the requested type, it undergoes the normal truncation
 `BigDecimal.toXXX` does.  If this is not desired, request a
 `BigDecimal` and use the `.toXXXExact` alternatives.
+
+In addition to the implicit codecs, Scala `Enumeration`s can have
+codecs automatically generated for them via the non-implicit methods
+`JsonEncode.scalaEnumEncode` and `JsonDecode.scalaEnumDecode` (or the
+convenience `JsonCodec.scalaEnumCodec` which defines both).  These
+methods all take the enumeration's container object as a parameter.
 
 The codecs' companion objects themselves can be used as values that
 represent the result of an implicit search.  That is:
