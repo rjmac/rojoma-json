@@ -5,6 +5,8 @@ import codec._
 import io._
 import `-impl`.util.AbstractIterator
 
+import java.io.Reader
+
 /** Helper for reading lazily reading objects out of a source of
  * `JsonEvent`s representing a JSON array.  Calling `hasNext` can throw
  * any `JsonLexException`.  Calling `next()` can throw any JSON lex or parse
@@ -20,7 +22,18 @@ import `-impl`.util.AbstractIterator
  * @throws JsonBadParse if `alreadyInArray` is false and the first event is not a `StartOfArrayEvent`
  */
 object JsonArrayIterator {
-  def apply[T : JsonDecode](input: Iterator[JsonEvent], alreadyInArray: Boolean = false): Iterator[T] = {
+  def fromReader[T : JsonDecode](reader: Reader, alreadyInArray: Boolean = false, buffer: Boolean = true): Iterator[T] = {
+    val events =
+      if(buffer) new FusedBlockJsonEventIterator(reader)
+      else new JsonEventIterator(reader)
+    fromEvents(events, alreadyInArray)
+  }
+
+  @deprecated(message = "Prefer fromEvents", since = "3.5.0")
+  def apply[T : JsonDecode](input: Iterator[JsonEvent], alreadyInArray: Boolean = false): Iterator[T] =
+    fromEvents[T](input, alreadyInArray)
+
+  def fromEvents[T : JsonDecode](input: Iterator[JsonEvent], alreadyInArray: Boolean = false): Iterator[T] = {
     val buffer = input.buffered
     var item = 0
 

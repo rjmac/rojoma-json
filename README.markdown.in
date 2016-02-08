@@ -402,6 +402,54 @@ implicit conversions which add `toV3` methods onto rojoma-json-2's
 rojoma-json-3's.  In addition, it can create rojoma-json-2
 `JsonCodec`s from instances of 3's `JsonEncode` and `JsonDecode`.
 
+## Cookbook
+
+### Producing JSON from values
+
+To a `Writer`:
+
+```scala
+def writeIndented[T : JsonEncode](x: T) =
+  JsonUtil.writeJson(x, pretty = true)
+
+def writeCompact[T : JsonEncode](x: T) =
+  JsonUtil.writeJson(x, pretty = false)
+
+def writeArrayStreaming[T : JsonEncode](x: Iterator[T]) =
+  ArrayIteratorEncode.toText(x)
+```
+
+To a `String`:
+
+```scala
+def formatIndented[T : JsonEncode](x: T) =
+  JsonUtil.renderJson(x, pretty = true)
+
+def writeCompact[T : JsonEncode](x: T) =
+  JsonUtil.renderJson(x, pretty = false)
+```
+
+### Producing values from JSON
+
+From a `Reader`:
+
+```scala
+def read[T : JsonDecode](r: Reader): Either[DecodeError, T] =
+  JsonUtil.readJson[T](r)
+
+// This will throw an `ElementDecodeException` if the JSON is a well-formed
+// array but the data cannot be interpreted as a `T`
+def readStreaming[T : JsonDecode](r: Reader): Iterator[T] =
+  JsonArrayIterator.fromReader[T](r)
+```
+
+From a `String`:
+
+```scala
+def parse[T : JsonDecode](s: String): Either[DecodeError, T] =
+  JsonUtil.parseJson[T](s)
+```
+
 ## Incompatible changes from rojoma-json 2
 
  * `JNumber` is no longer a case class.
