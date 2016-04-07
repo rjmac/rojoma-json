@@ -409,6 +409,9 @@ rojoma-json-3's.  In addition, it can create rojoma-json-2
 To a `Writer`:
 
 ```scala
+import com.rojoma.json.v3.util.{JsonUtil, ArrayIteratorEncode}
+import com.rojoma.json.v3.codec.JsonEncode
+
 def writeIndented[T : JsonEncode](x: T) =
   JsonUtil.writeJson(x, pretty = true)
 
@@ -422,6 +425,9 @@ def writeArrayStreaming[T : JsonEncode](x: Iterator[T]) =
 To a `String`:
 
 ```scala
+import com.rojoma.json.v3.util.JsonUtil
+import com.rojoma.json.v3.codec.JsonEncode
+
 def formatIndented[T : JsonEncode](x: T) =
   JsonUtil.renderJson(x, pretty = true)
 
@@ -434,6 +440,9 @@ def writeCompact[T : JsonEncode](x: T) =
 From a `Reader`:
 
 ```scala
+import com.rojoma.json.v3.util.{JsonUtil, JsonArrayIterator}
+import com.rojoma.json.v3.codec.{JsonDecode, DecodeError}
+
 def read[T : JsonDecode](r: Reader): Either[DecodeError, T] =
   JsonUtil.readJson[T](r)
 
@@ -446,6 +455,9 @@ def readStreaming[T : JsonDecode](r: Reader): Iterator[T] =
 From a `String`:
 
 ```scala
+import com.rojoma.json.v3.util.JsonUtil
+import com.rojoma.json.v3.codec.{JsonDecode, DecodeError}
+
 def parse[T : JsonDecode](s: String): Either[DecodeError, T] =
   JsonUtil.parseJson[T](s)
 ```
