@@ -448,9 +448,6 @@ def read[T : JsonDecode](r: Reader): Either[DecodeError, T] =
 
 // This will throw an `ElementDecodeException` if the JSON is a well-formed
 // array but the data cannot be interpreted as a `T`
-import com.rojoma.json.v3.util.JsonUtil
-import com.rojoma.json.v3.codec.{JsonDecode, DecodeError}
-
 def readStreaming[T : JsonDecode](r: Reader): Iterator[T] =
   JsonArrayIterator.fromReader[T](r)
 ```
@@ -458,6 +455,9 @@ def readStreaming[T : JsonDecode](r: Reader): Iterator[T] =
 From a `String`:
 
 ```scala
+import com.rojoma.json.v3.util.JsonUtil
+import com.rojoma.json.v3.codec.{JsonDecode, DecodeError}
+
 def parse[T : JsonDecode](s: String): Either[DecodeError, T] =
   JsonUtil.parseJson[T](s)
 ```
