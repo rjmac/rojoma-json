@@ -3,10 +3,11 @@ package codec
 
 import scala.{collection => sc}
 import scala.language.implicitConversions
+import scala.runtime.ScalaRunTime
 
 import ast._
 
-sealed trait DecodeError {
+sealed trait DecodeError extends RuntimeException {
   def augment(parent: Path.Entry): DecodeError
   def english: String
 }
@@ -23,6 +24,7 @@ object DecodeError {
   case class Multiple(choices: Seq[Simple]) extends DecodeError {
     def augment(parent: Path.Entry) = copy(choices = choices.map(_.augment(parent)))
     def english = choices.map(_.english).mkString(" OR ")
+    override def toString = ScalaRunTime._toString(this)
   }
 
   def join(choices: Iterable[DecodeError]): DecodeError = {
@@ -68,18 +70,21 @@ object DecodeError {
   case class InvalidType(expected: JsonType, got: JsonType, path: Path = Path.empty) extends Simple {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
     def english = "Invalid type at " + path + ": expected " + expected + "; got " + got
+    override def toString = ScalaRunTime._toString(this)
   }
 
   /** A value of the correct JSON type was found but it held undecodable value. */
   case class InvalidValue(got: JValue, path: Path = Path.empty) extends Simple {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
     def english = "Invalid value at " + path + ": got " + got
+    override def toString = ScalaRunTime._toString(this)
   }
 
   /** A required field was missing. */
   case class MissingField(field: String, path: Path = Path.empty) extends Simple {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
     def english = "Missing field at " + path + ": expected " + JString(field)
+    override def toString = ScalaRunTime._toString(this)
   }
 
   /** An unknown or uninterpretable field was present. Stock rojoma-json
@@ -89,12 +94,14 @@ object DecodeError {
   case class InvalidField(field: String, path: Path = Path.empty) extends Simple {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
     def english = "Unexpected field at " + path + ": got " + JString(field)
+    override def toString = ScalaRunTime._toString(this)
   }
 
   /** An array with the wrong number of elements was found. */
   case class InvalidLength(expected: Int, got: Int, path: Path = Path.empty) extends Simple {
     def augment(parent: Path.Entry) = copy(path = path.prepend(parent))
     def english = "Invalid length at " + path + ": expected " + expected + "; got " + got
+    override def toString = ScalaRunTime._toString(this)
   }
 
   implicit val jCodec: JsonEncode[DecodeError] with JsonDecode[DecodeError] = new JsonEncode[DecodeError] with JsonDecode[DecodeError] {
