@@ -1,7 +1,7 @@
 package com.rojoma.json.v3
 package util
 
-import java.io.{Reader, BufferedReader, InputStreamReader, FileInputStream, Writer, FilterWriter, BufferedWriter, IOException, File}
+import java.io.{Reader, BufferedReader, InputStreamReader, FileInputStream, FileOutputStream, OutputStreamWriter, Writer, FilterWriter, BufferedWriter, IOException, File}
 import java.nio.charset.Charset
 import scala.io.Codec
 
@@ -34,6 +34,7 @@ object JsonUtil {
   @throws(classOf[JsonParseException])
   def readJsonFile[T : JsonDecode](filename: String, codec: Codec): Either[DecodeError, T] = readJsonFile(filename, codec.charSet)
 
+  @deprecated(message = "Provide a Codec or Charset", since = "3.5.0")
   @throws(classOf[IOException])
   @throws(classOf[JsonParseException])
   def readJsonFile[T : JsonDecode](filename: String): Either[DecodeError, T] = readJsonFile[T](filename, Codec.default.charSet)
@@ -53,6 +54,7 @@ object JsonUtil {
   @throws(classOf[JsonParseException])
   def readJsonFile[T : JsonDecode](filename: File, codec: Codec): Either[DecodeError, T] = readJsonFile(filename, codec.charSet)
 
+  @deprecated(message = "Provide a Codec or Charset", since = "3.5.0")
   @throws(classOf[IOException])
   @throws(classOf[JsonParseException])
   def readJsonFile[T : JsonDecode](filename: File): Either[DecodeError, T] = readJsonFile[T](filename, Codec.default.charSet)
@@ -81,6 +83,56 @@ object JsonUtil {
       write(writer)
     }
   }
+
+  @throws(classOf[IOException])
+  def writeJsonFile[T : JsonEncode](filename: String, charset: Charset, jsonable: T, pretty: Boolean): Unit = {
+    val stream = new FileOutputStream(filename)
+    try {
+      val writer = new OutputStreamWriter(stream, charset)
+      try {
+        writeJson(writer, jsonable, buffer = true, pretty = pretty)
+      } finally {
+        writer.close()
+      }
+    } finally {
+      stream.close()
+    }
+  }
+  @throws(classOf[IOException])
+  def writeJsonFile[T : JsonEncode](filename: String, charset: Charset, jsonable: T): Unit =
+    writeJsonFile(filename, charset, jsonable, false)
+
+  @throws(classOf[IOException])
+  def writeJsonFile[T : JsonEncode](filename: String, codec: Codec, jsonable: T, pretty: Boolean): Unit =
+    writeJsonFile(filename, codec.charSet, jsonable, pretty = pretty)
+  @throws(classOf[IOException])
+  def writeJsonFile[T : JsonEncode](filename: String, codec: Codec, jsonable: T): Unit =
+    writeJsonFile(filename, codec, jsonable, false)
+
+  @throws(classOf[IOException])
+  def writeJsonFile[T : JsonEncode](filename: File, charset: Charset, jsonable: T, pretty: Boolean): Unit = {
+    val stream = new FileOutputStream(filename)
+    try {
+      val writer = new OutputStreamWriter(stream, charset)
+      try {
+        writeJson(writer, jsonable, buffer = true, pretty = pretty)
+      } finally {
+        writer.close()
+      }
+    } finally {
+      stream.close()
+    }
+  }
+  @throws(classOf[IOException])
+  def writeJsonFile[T : JsonEncode](filename: File, charset: Charset, jsonable: T): Unit =
+    writeJsonFile(filename, charset, jsonable, false)
+
+  @throws(classOf[IOException])
+  def writeJsonFile[T : JsonEncode](filename: File, codec: Codec, jsonable: T, pretty: Boolean): Unit =
+    writeJsonFile(filename, codec.charSet, jsonable, pretty = pretty)
+  @throws(classOf[IOException])
+  def writeJsonFile[T : JsonEncode](filename: File, codec: Codec, jsonable: T): Unit =
+    writeJsonFile(filename, codec, jsonable, false)
 
   def renderJson[T : JsonEncode](jsonable: T, pretty: Boolean = false) = {
     val json = JsonEncode.toJValue(jsonable)
