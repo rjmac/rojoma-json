@@ -5,6 +5,7 @@ import scala.language.implicitConversions
 import scala.annotation.tailrec
 
 import ast._
+import codec.Path
 
 /** A common parent representing both [[com.rojoma.json.v3.zipper.JsonZipper]]s and the
  * [[com.rojoma.json.v3.zipper.NothingZipper]]s which result from removing items from
@@ -91,6 +92,9 @@ sealed trait ZipperLike {
     case array: JArray => replace(array)
     case obj: JObject => replace(obj)
   }
+
+  private[zipper] def reversePath: List[Path.Entry]
+  def path: Path = new Path(reversePath.reverse)
 }
 
 /** A zipper referencing the hole left after a `remove` operation. */
@@ -258,6 +262,8 @@ private[zipper] class TopLevelZipperLike { this: ZipperLike =>
   def replace(newValue: JAtom) = JAtomZipper(newValue)
   def replace(newValue: JArray) = JArrayZipper(newValue)
   def replace(newValue: JObject) = JObjectZipper(newValue)
+
+  private[zipper] def reversePath = Nil
 }
 
 private[zipper] object TopLevelNothingZipper extends TopLevelZipperLike with NothingZipper {
@@ -319,6 +325,8 @@ private[zipper] abstract class ArrayElementZipperLike(p: JArrayZipper, val idxIn
   def prev : Option[JsonZipper] = up_!.down(idxInParent - 1)
 
   def sibling(field: String) = None
+
+  private[zipper] def reversePath = Path.Index(idxInParent) :: p.reversePath
 }
 
 private[zipper] abstract class ArrayElementZipper(p: JArrayZipper, i: Int) extends ArrayElementZipperLike(p, i) with ElementZipper[JArrayZipper] { this: JsonZipper =>
@@ -351,6 +359,8 @@ private[zipper] abstract class ObjectElementZipperLike(p: JObjectZipper, val fie
   def prev = None
 
   def sibling(field: String): Option[JsonZipper] = up_!.down(field)
+
+  private[zipper] def reversePath = Path.Field(fieldInParent) :: p.reversePath
 }
 
 private[zipper] abstract class ObjectElementZipper(p: JObjectZipper, f: String) extends ObjectElementZipperLike(p, f) with ElementZipper[JObjectZipper] { this: JsonZipper =>

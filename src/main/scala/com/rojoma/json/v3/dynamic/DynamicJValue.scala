@@ -26,7 +26,7 @@ sealed trait InformationalDynamicJValue extends Dynamic {
 }
 
 object InformationalDynamicJValue extends (JValue => InformationalDynamicJValue) {
-  def apply(v: JValue): InformationalDynamicJValue = new Good(JsonZipper(v), Nil)
+  def apply(v: JValue): InformationalDynamicJValue = new Good(JsonZipper(v))
 
   private class Bad(err: DecodeError.Simple) extends InformationalDynamicJValue {
     def ? = Left(err)
@@ -38,7 +38,7 @@ object InformationalDynamicJValue extends (JValue => InformationalDynamicJValue)
     def apply(field: String) = this
   }
 
-  private class Good(zipper : JsonZipper, path: List[Path.Entry]) extends InformationalDynamicJValue {
+  private class Good(zipper : JsonZipper) extends InformationalDynamicJValue {
     def ^ = Right(zipper)
     def ! = zipper.value : JValue
     def ? = Right(this.!)
@@ -47,11 +47,11 @@ object InformationalDynamicJValue extends (JValue => InformationalDynamicJValue)
     def apply(idx: Int) =
       zipper match {
         case arr: JArrayZipper if arr.value.isDefinedAt(idx) =>
-          new Good(arr.down_!(idx), Path.Index(idx) :: path)
+          new Good(arr.down_!(idx))
         case arr: JArrayZipper =>
-          new Bad(DecodeError.InvalidLength(expected = idx + 1, got = arr.value.length, path = new Path(path.reverse)))
+          new Bad(DecodeError.InvalidLength(expected = idx + 1, got = arr.value.length, path = arr.path))
         case other =>
-          new Bad(DecodeError.InvalidType(expected = JArray, got = other.value.jsonType, path = new Path(path.reverse)))
+          new Bad(DecodeError.InvalidType(expected = JArray, got = other.value.jsonType, path = other.path))
       }
 
     def apply(field: String) =
@@ -59,12 +59,12 @@ object InformationalDynamicJValue extends (JValue => InformationalDynamicJValue)
         case obj: JObjectZipper =>
           obj.down(field) match {
             case Some(result) =>
-              new Good(result, Path.Field(field) :: path)
+              new Good(result)
             case None =>
-              new Bad(DecodeError.MissingField(field, new Path(path.reverse)))
+              new Bad(DecodeError.MissingField(field, zipper.path))
           }
         case other =>
-          new Bad(DecodeError.InvalidType(expected = JObject, got = other.value.jsonType, path = new Path(path.reverse)))
+          new Bad(DecodeError.InvalidType(expected = JObject, got = other.value.jsonType, path = other.path))
       }
   }
 }
