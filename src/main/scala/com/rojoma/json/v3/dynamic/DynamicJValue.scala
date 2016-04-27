@@ -15,7 +15,7 @@ class BadPath(val error: DecodeError.Simple) extends NoSuchElementException(erro
 sealed trait InformationalDynamicJValue extends Dynamic {
   def ? : Either[DecodeError.Simple, JValue]
   def ! : JValue
-  def ^ : Either[DecodeError.Simple, JsonZipper]
+  def ^? : Either[DecodeError.Simple, JsonZipper]
   def ^! : JsonZipper
 
   def apply(idx: Int): InformationalDynamicJValue
@@ -31,7 +31,7 @@ object InformationalDynamicJValue extends (JValue => InformationalDynamicJValue)
   private class Bad(err: DecodeError.Simple) extends InformationalDynamicJValue {
     def ? = Left(err)
     def ! = throw new BadPath(err)
-    def ^ = Left(err)
+    def ^? = Left(err)
     def ^! = throw new BadPath(err)
 
     def apply(idx: Int) = this
@@ -39,9 +39,9 @@ object InformationalDynamicJValue extends (JValue => InformationalDynamicJValue)
   }
 
   private class Good(zipper : JsonZipper) extends InformationalDynamicJValue {
-    def ^ = Right(zipper)
     def ! = zipper.value : JValue
     def ? = Right(this.!)
+    def ^? = Right(zipper)
     def ^! = zipper
 
     def apply(idx: Int) =
