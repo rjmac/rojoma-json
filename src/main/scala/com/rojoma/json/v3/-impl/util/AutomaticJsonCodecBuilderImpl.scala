@@ -4,7 +4,7 @@ package `-impl`.util
 import scala.collection.mutable
 
 import codec._
-import util.{JsonKey, JsonKeys, JsonKeyStrategy, Strategy, LazyCodec, NullForNone}
+import util.{JsonKey, AlternativeJsonKey, JsonKeyStrategy, Strategy, LazyCodec, NullForNone}
 
 import MacroCompat._
 
@@ -64,34 +64,33 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
   }
 
   private def computeJsonNames(param: TermSymbol): Seq[String] = {
-    var names = Seq(nameStrategy(param, defaultNameStrategy)(param.name.decodedName.toString))
+    var names = List(nameStrategy(param, defaultNameStrategy)(param.name.decodedName.toString))
     checkAnn(param, typeOf[JsonKey])
-    checkAnn(param, typeOf[JsonKeys])
+    checkAnn(param, typeOf[AlternativeJsonKey])
 
-    def isKeyAnnotation(ann: Annotation) =
-        isType(ann.tree.tpe, typeOf[JsonKey]) || isType(ann.tree.tpe, typeOf[JsonKeys])
-
-    val keyAnnotations = param.annotations.filter(isKeyAnnotation)
+    val keyAnnotations = param.annotations.filter { ann => isType(ann.tree.tpe, typeOf[JsonKey]) }
     if(keyAnnotations.size > 1) {
-      c.abort(posOf(param, keyAnnotations(1)), "Found multiple key annotations")
+      c.abort(posOf(param, keyAnnotations(1)), "Found multiple JsonKey annotations")
     }
-
-    for(ann <- keyAnnotations if isType(ann.tree.tpe, typeOf[JsonKey]))
+    val keyAnnotation = keyAnnotations.headOption
+    for(ann <- keyAnnotation)
       findValue(ann) match {
         case Some(s: String) =>
-          names = Seq(s)
+          names = List(s)
         case _ =>
           c.abort(posOf(param, ann), "Unable to find value for JsonKey annotation")
       }
-    for(ann <- keyAnnotations if isType(ann.tree.tpe, typeOf[JsonKeys]))
+
+    val alternativeKeyAnnotations = param.annotations.filter { ann => isType(ann.tree.tpe, typeOf[AlternativeJsonKey]) }
+    for(ann <- alternativeKeyAnnotations)
       findValue(ann) match {
-        case Some(ss : Array[String]) =>
-          if(ss.isEmpty) c.abort(posOf(param, ann), "'JsonKeys' must provide at least one name")
-          names = ss
+        case Some(s : String) =>
+          names = s :: names
         case _ =>
-          c.abort(posOf(param, ann), "Unable to find value for JsonKeys annotation")
+          c.abort(posOf(param, ann), "Unable to find value for AlternativeJsonKey annotation")
       }
-    names
+
+    names.reverse
   }
 
   private def findAccessor(param: TermSymbol) =

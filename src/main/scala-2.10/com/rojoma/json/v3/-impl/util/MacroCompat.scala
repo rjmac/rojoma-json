@@ -29,7 +29,6 @@ trait MacroCompat {
   def findValue[T](ann: Annotation): Option[Any] = {
     ann.javaArgs.get(newTermName("value")) match {
       case Some(LiteralArgument(Constant(v))) => Some(v)
-      case Some(ArrayArgument(others)) => Some(others.collect { case LiteralArgument(Constant(v : String)) => v }.toArray)
       case _ => None
     }
   }

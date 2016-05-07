@@ -18,8 +18,6 @@ trait MacroCompat {
   def findValue[T](ann: Annotation): Option[Any] =
     ann.tree.children.tail.collect {
       case AssignOrNamedArg(Ident(n), Literal(Constant(v))) if n.toString == "value" => v
-      case AssignOrNamedArg(Ident(n), Apply(Ident(arr), params)) if n.toString == "value" && arr.toString == "Array" =>
-        params.collect { case Literal(Constant(v : String)) => v }.toArray
     }.headOption
 }
 

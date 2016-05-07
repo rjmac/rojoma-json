@@ -94,35 +94,37 @@ class AutomaticJsonCodecBuilderTest extends FunSuite with MustMatchers with Eith
     JsonUtil.renderJson(UnderscoreKeys("hello")) must equal ("""{"hello_world":"hello"}""")
   }
 
-  test("Multiple keys for a field render as the first key") {
-    case class Foo(@JsonKeys(Array("hello","world")) x: String)
+  test("Multiple keys for a field render as the primary key") {
+    case class Foo(@AlternativeJsonKey("hello") @AlternativeJsonKey("world") x: String)
     implicit val codec = AutomaticJsonCodecBuilder[Foo]
-    JsonUtil.renderJson(Foo("gnu")) must equal ("""{"hello":"gnu"}""")
+    JsonUtil.renderJson(Foo("gnu")) must equal ("""{"x":"gnu"}""")
   }
 
   test("Multiple keys for a field accept any key") {
-    case class Foo(@JsonKeys(Array("hello","world")) x: String)
+    case class Foo(@AlternativeJsonKey("hello") @AlternativeJsonKey("world") x: String)
     implicit val codec = AutomaticJsonCodecBuilder[Foo]
     JsonUtil.parseJson[Foo]("""{"hello":"gnu"}""") must equal (Right(Foo("gnu")))
     JsonUtil.parseJson[Foo]("""{"world":"gnat"}""") must equal (Right(Foo("gnat")))
+    JsonUtil.parseJson[Foo]("""{"x":"gnarf"}""") must equal (Right(Foo("gnarf")))
   }
 
   test("Multiple keys for an optional field accepts no key") {
-    case class Foo(@JsonKeys(Array("hello","world")) x: Option[String])
+    case class Foo(@AlternativeJsonKey("hello") @AlternativeJsonKey("world") x: Option[String])
     implicit val codec = AutomaticJsonCodecBuilder[Foo]
     JsonUtil.parseJson[Foo]("""{}""") must equal (Right(Foo(None)))
   }
 
-  test("Multiple keys for a non-optional field reports the first as misisng") {
-    case class Foo(@JsonKeys(Array("hello","world")) x: String)
+  test("Multiple keys for a non-optional field reports the primary as misisng") {
+    case class Foo(@AlternativeJsonKey("hello") world: String)
     implicit val codec = AutomaticJsonCodecBuilder[Foo]
-    JsonUtil.parseJson[Foo]("""{}""") must equal (Left(DecodeError.MissingField("hello", Path.empty)))
+    JsonUtil.parseJson[Foo]("""{}""") must equal (Left(DecodeError.MissingField("world", Path.empty)))
   }
 
-  test("Multiple options for the same field pick the earliest one") {
-    case class Foo(@JsonKeys(Array("hello","there","world")) x: String)
+  test("Multiple options for the same field pick the earliest one declared, not encountered") {
+    case class Foo(@AlternativeJsonKey("this") @AlternativeJsonKey("is") @AlternativeJsonKey("another") x: String)
     implicit val codec = AutomaticJsonCodecBuilder[Foo]
-    JsonUtil.parseJson[Foo]("""{"there":"gnu","world":"gnat"}""") must equal (Right(Foo("gnu")))
-    JsonUtil.parseJson[Foo]("""{"world":"gnat","there":"gnu"}""") must equal (Right(Foo("gnu")))
+    JsonUtil.parseJson[Foo]("""{"this":"gnu","is":"gnat"}""") must equal (Right(Foo("gnu")))
+    JsonUtil.parseJson[Foo]("""{"is":"gnat","this":"gnu"}""") must equal (Right(Foo("gnu")))
+    JsonUtil.parseJson[Foo]("""{"x":"gnat","this":"gnu"}""") must equal (Right(Foo("gnat")))
   }
 }
