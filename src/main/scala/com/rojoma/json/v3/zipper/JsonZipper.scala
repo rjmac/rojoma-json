@@ -140,6 +140,8 @@ sealed trait JsonZipper extends ZipperLike {
   def asArray = this.cast[JArrayZipper]
   /** Safe downcast to [[com.rojoma.json.v3.zipper.JObjectZipper]] */
   def asObject = this.cast[JObjectZipper]
+
+  def adjust(f: ValueType => JValue): JsonZipper = replace(f(value))
 }
 
 /** A [[com.rojoma.json.v3.zipper.JsonZipper]] that points to a [[com.rojoma.json.v3.ast.JAtom]]. */
