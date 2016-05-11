@@ -2,9 +2,10 @@ package com.rojoma.json.v3
 package io
 
 import scala.{collection => sc}
-import java.io.{Writer, StringWriter}
+import java.io.Writer
 
 import ast._
+import extensions.StringWriter
 
 private[io] case class PrettyContext(output: Writer, leftMargin: List[String], indentSize: Int, availableSpace: Int) {
   def indented = shifted(indentSize)
@@ -62,7 +63,7 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
   private def size(atom: JAtom) = atom match {
     case JNull => "null".length
     case JBoolean(x) => x.toString.length
-    case JString(s) => WriterUtils.formatString(s).length
+    case JString(s) => StringWriter.stringWriter.toString(s).length
     case n: JNumber => n.toString.length
   }
 
@@ -158,7 +159,7 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
         if(didOne) { output.write(",\n"); newContext.printMargin() }
         else didOne = true
 
-        val key = WriterUtils.formatString(k)
+        val key = StringWriter.stringWriter.toString(k)
         output.write(key)
         val spaceForValue = context.availableSpace - key.length - " : ".length
         if(willFitIn(v, spaceForValue).isDefined) {
@@ -204,7 +205,7 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
       for((k, v) <- fields) {
         if(didOne) output.write(", ")
         else didOne = true
-        WriterUtils.writeString(k, output)
+        StringWriter.stringWriter.toWriter(output, k)
         output.write(" : ")
         writeCompactly(v)
       }
@@ -225,7 +226,7 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
   }
 
   protected def writeString(s: String) {
-    WriterUtils.writeString(s, output)
+    StringWriter.stringWriter.toWriter(output, s)
   }
 }
 
@@ -240,7 +241,7 @@ object PrettyJsonWriter {
     * @return The encoded JSON object.
     * @see [[com.rojoma.json.v3.io.PrettyJsonWriter]] */
   def toString(datum: JValue) = {
-    val w = new StringWriter
+    val w = new java.io.StringWriter
     toWriter(w, datum)
     w.toString
   }

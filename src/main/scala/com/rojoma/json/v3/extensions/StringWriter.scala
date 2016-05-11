@@ -1,16 +1,23 @@
 package com.rojoma.json.v3
-package io
+package extensions
 
-import java.io.{Writer, StringWriter}
+import scala.collection.JavaConverters._
+import java.util.ServiceLoader
+import java.io.Writer
 
-private[io] object WriterUtils {
-  def formatString(s: String): String = {
-    val sw = new StringWriter
-    writeString(s, sw)
+trait StringWriter {
+  def toString(s: String): String
+  def toWriter(w: Writer, s: String): Unit
+}
+
+private[extensions] class SimpleStringWriter extends StringWriter {
+  def toString(s: String) = {
+    val sw = new java.io.StringWriter
+    toWriter(sw, s)
     sw.toString
   }
 
-  def writeString(s: String, output: Writer) {
+  def toWriter(output: Writer, s: String) {
     output.write('"')
     val fastEnd = gallop(s, 0)
     if(fastEnd == s.length) {
@@ -21,7 +28,7 @@ private[io] object WriterUtils {
     output.write('"')
   }
 
-  private def slowPath(s: String, endOfFastPrefix: Int, output: Writer) {
+  def slowPath(s: String, endOfFastPrefix: Int, output: Writer) {
     if(endOfFastPrefix != 0) output.write(s, 0, endOfFastPrefix)
     var i = endOfFastPrefix
     val len = s.length
@@ -49,14 +56,14 @@ private[io] object WriterUtils {
     } while(i != len)
   }
 
-  private def gallop(s: String, start: Int): Int = {
+  def gallop(s: String, start: Int): Int = {
     var i = start
     val end = s.length
     while(i != end && fastCopy(s.charAt(i))) i += 1
     i
   }
 
-  private def fastCopy(c: Char): Boolean = c >= ' ' && c <= '~' && c != '"' && c != '\\'
+  def fastCopy(c: Char): Boolean = c >= ' ' && c <= '~' && c != '"' && c != '\\'
 
   def shouldEscape(c: Char): Boolean = {
     val t = Character.getType(c)
@@ -64,4 +71,16 @@ private[io] object WriterUtils {
   }
 
   def unicode(c: Char, output: Writer) = output.write("\\u%04x".format(c.toInt))
+}
+
+object StringWriter {
+  val stringWriter: StringWriter = {
+    val serviceLoader = ServiceLoader.load(classOf[StringWriter])
+    serviceLoader.iterator().asScala.toStream.headOption match {
+      case None =>
+        Class.forName("com.rojoma.json.v3.extensions.SimpleStringWriter").newInstance().asInstanceOf[StringWriter]
+      case Some(l) =>
+        l
+    }
+  }
 }

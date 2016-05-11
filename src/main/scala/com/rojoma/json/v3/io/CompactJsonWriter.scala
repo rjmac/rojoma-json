@@ -3,9 +3,10 @@ package io
 
 import scala.{collection=>sc}
 
-import java.io.{Writer, StringWriter}
+import java.io.Writer
 
 import ast._
+import extensions.StringWriter
 
 /** An object that will write [[com.rojoma.json.v3.ast.JValue]]s in a non-human-friendly
   * "compact" format with no spaces or newlines.  This does many small
@@ -48,7 +49,7 @@ class CompactJsonWriter(output: Writer) extends JsonWriter {
   }
 
   protected def writeString(s: String) {
-    WriterUtils.writeString(s, output)
+    StringWriter.stringWriter.toWriter(output, s)
   }
 }
 
@@ -67,7 +68,7 @@ object CompactJsonWriter {
     * @return The encoded JSON object.
     * @see [[com.rojoma.json.v3.io.CompactJsonWriter]] */
   def toString(datum: JValue) = {
-    val w = new StringWriter
+    val w = new java.io.StringWriter
     toWriter(w, datum)
     w.toString
   }
