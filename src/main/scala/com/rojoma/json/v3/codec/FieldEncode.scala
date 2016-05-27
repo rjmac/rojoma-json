@@ -64,7 +64,7 @@ object FieldEncode {
   }
 
   implicit object jstringEncode extends FieldEncode[JString] {
-    def encode(x: JString) = x.toString
+    def encode(x: JString) = x.string
   }
 
   implicit def jlEnumEncode[T <: java.lang.Enum[T]] = new FieldEncode[T] {
