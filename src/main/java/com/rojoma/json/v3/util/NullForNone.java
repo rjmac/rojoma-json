@@ -6,6 +6,6 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.CLASS)
-@Target({ElementType.PARAMETER})
+@Target({ElementType.TYPE, ElementType.PARAMETER})
 public @interface NullForNone {
 }

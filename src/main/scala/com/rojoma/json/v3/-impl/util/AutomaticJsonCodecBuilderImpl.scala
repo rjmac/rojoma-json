@@ -46,6 +46,11 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
     }
   }
 
+  private val nfnDefault = {
+    checkAnn(T.typeSymbol, typeOf[NullForNone])
+    T.typeSymbol.annotations.exists { ann => isType(ann.tree.tpe, typeOf[NullForNone]) }
+  }
+
   private val defaultNameStrategy = nameStrategy(T.typeSymbol, identityStrat)
 
   // since v2 and v3 share the same names for their annotations, warn if we find one that isn't
@@ -109,9 +114,9 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
     val tpe = param.typeSignature.asSeenFrom(T, T.typeSymbol)
     isType(tpe.erasure, typeOf[Option[_]].erasure)
   }
-  private def hasNullForNameAnnotation(param: TermSymbol) = {
+  private def hasNullForNoneAnnotation(param: TermSymbol) = {
     checkAnn(param, typeOf[NullForNone])
-    param.annotations.exists(ann => isType(ann.tree.tpe, typeOf[NullForNone]))
+    nfnDefault || param.annotations.exists(ann => isType(ann.tree.tpe, typeOf[NullForNone]))
   }
 
   private case class FieldInfo(encName: TermName, decName: TermName, isLazy: Boolean, jsonNames: Seq[String], accessorName: TermName, missingMethodName: TermName, errorAugmenterMethodName: TermName, codecType: Type, isOption: Boolean, isNullForNone: Boolean)
@@ -150,7 +155,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
                   freshTermName(),
                   findCodecType(param),
                   isOption(param),
-                  hasNullForNameAnnotation(param)
+                  hasNullForNoneAnnotation(param)
                 )
               }
             buffer += fieldList
