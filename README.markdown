@@ -6,7 +6,7 @@ Starting with version 2.0.0, rojoma-json is published on Maven
 central, so setting up SBT is as simple as
 
 ```scala
-libraryDependencies += "com.rojoma" %% "rojoma-json-v3" % "3.6.0"
+libraryDependencies += "com.rojoma" %% "rojoma-json-v3" % "3.7.0"
 ```
 
 While for Maven, the pom snippet is:
@@ -16,7 +16,7 @@ While for Maven, the pom snippet is:
   <dependency>
     <groupId>com.rojoma</groupId>
     <artifactId>rojoma-json-v3_${scala.version}</artifactId>
-    <version>3.6.0</version>
+    <version>3.7.0</version>
   </dependency>
 </dependencies>
 ```
@@ -346,10 +346,11 @@ class's constructor's parameters.  The annotations are:
 
 The two defined strategies are `Strategy.Identity` (the default) and
 `Strategy.Underscore` (which converts camel-case names to lower-case,
-underscore-separated names).  The `@JsonKeyStrategy` annotation can
-also be used on the class level to set the default strategy for all
-fields.  If two names map to the same JSON identifier (whether
-automatically or through use of `@JsonKey`) a compiler error occurs.
+underscore-separated names).  The `@JsonKeyStrategy` and
+`@NullForNone` annotations can also be used on the class level to set
+the default strategy for all fields.  If two names map to the same
+JSON identifier (whether automatically or through use of `@JsonKey`) a
+compiler error occurs.
 
 For hierarchies of classes, there are analagous `Simple` and
 `Automatic` hierarchy codec builders.  The simple builders expect a
