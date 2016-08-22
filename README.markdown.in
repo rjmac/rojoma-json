@@ -346,10 +346,11 @@ class's constructor's parameters.  The annotations are:
 
 The two defined strategies are `Strategy.Identity` (the default) and
 `Strategy.Underscore` (which converts camel-case names to lower-case,
-underscore-separated names).  The `@JsonKeyStrategy` annotation can
-also be used on the class level to set the default strategy for all
-fields.  If two names map to the same JSON identifier (whether
-automatically or through use of `@JsonKey`) a compiler error occurs.
+underscore-separated names).  The `@JsonKeyStrategy` and
+`@NullForNone` annotations can also be used on the class level to set
+the default strategy for all fields.  If two names map to the same
+JSON identifier (whether automatically or through use of `@JsonKey`) a
+compiler error occurs.
 
 For hierarchies of classes, there are analagous `Simple` and
 `Automatic` hierarchy codec builders.  The simple builders expect a
