@@ -5,6 +5,8 @@ Directional Path
 
 NO EXCEPTIONS
   - except (heh) when implementing an API that doesn't allow Either (i.e., iterators)
+  - But all errors should EXTEND Exception so they can be thrown if the user wants to!
+     - maybe IOException?
 
 Automatic JsonEncoders should return JObject, not JValue
 
