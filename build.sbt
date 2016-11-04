@@ -11,11 +11,22 @@ version := "3.7.1-SNAPSHOT"
 
 previousArtifact := Some("com.rojoma" % ("rojoma-json-v3_" + scalaBinaryVersion.value) % "3.7.0")
 
-scalaVersion := "2.11.6"
+scalaVersion := "2.12.0"
 
-crossScalaVersions := Seq("2.10.4", scalaVersion.value)
+crossScalaVersions := Seq("2.10.6", "2.11.8", scalaVersion.value)
 
-scalacOptions ++= Seq("-deprecation", "-feature", "-optimize")
+scalacOptions ++= {
+  val SV = """(\d+)\.(\d+)\..*""".r
+  val optimizationOptions = scalaVersion.value match {
+    case SV("2","10" | "11") =>
+      List("-optimize")
+    case SV("2","12") =>
+      List("-opt:l:classpath")
+    case _ =>
+      sys.error("Need to set up scalacoptions for the current compiler")
+    }
+  Seq("-deprecation", "-feature") ++ optimizationOptions
+}
 
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 
@@ -23,18 +34,18 @@ libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
 libraryDependencies ++= Seq(
   "com.rojoma" %% "rojoma-json" % "2.4.3" % "optional",
-  "org.scalatest" %% "scalatest" % "2.2.0" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.11.4" % "optional" // optional because generators for JValues are included
+  "org.scalatest" %% "scalatest" % "3.0.0" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.13.4" % "optional" // optional because generators for JValues are included
 )
 
 libraryDependencies ++= {
   if(scalaVersion.value startsWith "2.10.")
-    List("org.scalamacros" %% "quasiquotes" % "2.0.1")
+    List("org.scalamacros" %% "quasiquotes" % "2.1.0")
   else
     Nil
 }
 
-addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.1" cross CrossVersion.full)
+addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 
 sourceGenerators in Compile <+= (sourceManaged in Compile) map SimpleJsonCodecBuilderBuilder
 
