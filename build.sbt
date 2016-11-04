@@ -3,8 +3,6 @@ import com.typesafe.tools.mima.plugin.MimaKeys.previousArtifact
 
 mimaDefaultSettings
 
-net.virtualvoid.sbt.graph.Plugin.graphSettings
-
 organization := "com.rojoma"
 
 name := "rojoma-json"
@@ -15,16 +13,26 @@ previousArtifact <<= scalaBinaryVersion { sv => Some("com.rojoma" % ("rojoma-jso
 
 scalaVersion := "2.10.4"
 
-crossScalaVersions := Seq("2.10.4", "2.11.0")
+crossScalaVersions := Seq("2.10.4", "2.11.0", "2.12.0")
 
-libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "2.1.4" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.11.3" % "optional"
-)
+libraryDependencies <++= (scalaVersion) {
+    case "2.12.0" =>
+      Seq(
+        "org.scalatest" %% "scalatest" % "3.0.0" % "test",
+        "org.scalacheck" %% "scalacheck" % "1.13.4" % "optional"
+      )
+    case _ =>
+      Seq(
+        "org.scalatest" %% "scalatest" % "2.1.4" % "test",
+        "org.scalacheck" %% "scalacheck" % "1.11.3" % "optional"
+      )
+  }
 
 libraryDependencies <++= (scalaVersion) {
   case sv if sv.startsWith("2.10.") =>
     List("org.scalamacros" %% "quasiquotes" % "2.0.0")
+  case sv if sv.startsWith("2.12.") =>
+    List("org.scala-lang.modules" %% "scala-xml" % "1.0.6")
   case sv =>
     List("org.scala-lang.modules" %% "scala-xml" % "1.0.1")
 }
@@ -52,4 +60,4 @@ sourceGenerators in Compile <+= (baseDirectory, version, crossScalaVersions) map
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 
-addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0" cross CrossVersion.full)
+addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
