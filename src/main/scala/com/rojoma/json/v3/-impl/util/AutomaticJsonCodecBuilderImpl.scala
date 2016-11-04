@@ -172,6 +172,8 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
   private val tmp2 = freshTermName()
   private val tmp3 = freshTermName()
   private val tmp4 = freshTermName()
+  private val lValue = freshTermName()
+  private val rValue = freshTermName()
 
   // the name of the thing being encoded or decoded
   private val param = freshTermName()
@@ -228,7 +230,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
 
   private def errorAugmenterMethods: List[DefDef] = fields.map { fi =>
     q"""private[this] def ${fi.errorAugmenterMethodName}($tmp3 : _root_.scala.Either[_root_.com.rojoma.json.v3.codec.DecodeError, _root_.scala.Any], $tmp4 : _root_.scala.Predef.String): _root_.scala.Left[_root_.com.rojoma.json.v3.codec.DecodeError, _root_.scala.Nothing] =
-         _root_.scala.Left($tmp3.asInstanceOf[_root_.scala.Left[_root_.com.rojoma.json.v3.codec.DecodeError, _root_.scala.Any]].a.augment(_root_.com.rojoma.json.v3.codec.Path.Field($tmp4)))"""
+         _root_.scala.Left($lValue($tmp3.asInstanceOf[_root_.scala.Left[_root_.com.rojoma.json.v3.codec.DecodeError, _root_.scala.Any]]).augment(_root_.com.rojoma.json.v3.codec.Path.Field($tmp4)))"""
   }
 
   def decoder = locally {
@@ -241,7 +243,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
           q"""val $tmp2 = $obj.get($jsonName)
               if($tmp2.isInstanceOf[_root_.scala.Some[_]]) {
                 val $tmp3 = ${fi.decName}.decode($tmp2.get)
-                if($tmp3.isInstanceOf[_root_.scala.Right[_,_]]) Some($tmp3.asInstanceOf[_root_.scala.Right[_root_.scala.Any, ${TypeTree(fi.codecType)}]].b)
+                if($tmp3.isInstanceOf[_root_.scala.Right[_,_]]) Some($rValue($tmp3.asInstanceOf[_root_.scala.Right[_root_.scala.Any, ${TypeTree(fi.codecType)}]]))
                 else if(_root_.com.rojoma.json.v3.ast.JNull == $tmp2.get) _root_.scala.None
                 else return ${fi.errorAugmenterMethodName}($tmp3, $jsonName)
               } else $otherwise"""
@@ -251,7 +253,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
           q"""val $tmp2 = ${obj}.get($jsonName)
               if($tmp2.isInstanceOf[_root_.scala.Some[_]]) {
                 val $tmp3 = ${fi.decName}.decode($tmp2.get)
-                if($tmp3.isInstanceOf[_root_.scala.Right[_,_]]) $tmp3.asInstanceOf[_root_.scala.Right[_root_.scala.Any, ${TypeTree(fi.codecType)}]].b
+                if($tmp3.isInstanceOf[_root_.scala.Right[_,_]]) $rValue($tmp3.asInstanceOf[_root_.scala.Right[_root_.scala.Any, ${TypeTree(fi.codecType)}]])
                 else return ${fi.errorAugmenterMethodName}($tmp3, $jsonName)
               } else $otherwise"""
         }
@@ -276,6 +278,25 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
           }"""
   }
 
+  val is212orAbove = {
+    val v = scala.util.Properties.versionString
+    !(v.startsWith("2.10.") || v.startsWith("2.11."))
+  }
+
+  private def lValueDef =
+    if(is212orAbove)
+      q"""@_root_.scala.inline private[this] def $lValue[K,V](a: Left[K,V]) = a.value"""
+    else
+      q"""@_root_.scala.inline private[this] def $lValue[K,V](a: Left[K,V]) = a.a"""
+
+  private def rValueDef =
+    if(is212orAbove)
+      q"""@_root_.scala.inline private[this] def $rValue[K,V](b: Right[K,V]) = b.value"""
+    else
+      q"""@_root_.scala.inline private[this] def $rValue[K,V](b: Right[K,V]) = b.b"""
+
+  private def eitherValues = List(lValueDef, rValueDef)
+
   private def encode: c.Expr[JsonEncode[T]] = {
     val tree =
       q"""(new _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] {
@@ -292,6 +313,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
   private def decode: c.Expr[JsonDecode[T]] = {
     val tree =
       q"""(new _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname] {
+            ..$eitherValues
             ..$decodes
             ..$missingMethods
             ..$errorAugmenterMethods
@@ -310,6 +332,7 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
     val x = toTermName("x")
 
     val tree = q"""(new _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname] {
+                     ..$eitherValues
                      ..$encodes
                      ..$decodes
                      ..$missingMethods

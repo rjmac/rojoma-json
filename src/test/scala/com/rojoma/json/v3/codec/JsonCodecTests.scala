@@ -95,9 +95,9 @@ class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
   test("java.util.List roundtrips") {
     import java.{util => ju}
     implicit def arbitraryJUList[T : Arbitrary] = Arbitrary {
-      import scala.collection.JavaConversions._
+      import scala.collection.JavaConverters._
       import Arbitrary.arbitrary
-      for(xs <- arbitrary[List[T]]) yield new ju.ArrayList(xs) : ju.List[T]
+      for(xs <- arbitrary[List[T]]) yield new ju.ArrayList(xs.asJava) : ju.List[T]
     }
     doCheck[ju.List[String]]()
   }
@@ -109,11 +109,11 @@ class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
   test("java.util.Map roundtrips") {
     import java.{util => ju}
     implicit def arbitraryJUMap[T : Arbitrary, U : Arbitrary] = Arbitrary {
-      import scala.collection.JavaConversions._
+      import scala.collection.JavaConverters._
       import Arbitrary.arbitrary
       for(xs <- arbitrary[Map[T, U]]) yield {
         val juMap: ju.Map[T, U] = new java.util.HashMap
-        juMap.putAll(xs)
+        juMap.putAll(xs.asJava)
         juMap
       }
     }
