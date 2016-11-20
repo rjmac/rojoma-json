@@ -20,7 +20,7 @@ scalacOptions ++= {
     case _ =>
       sys.error("Need to set up scalacoptions for the current compiler")
     }
-  Seq("-deprecation", "-feature") ++ optimizationOptions
+  Seq("-deprecation", "-feature", "-Xlint") ++ optimizationOptions
 }
 
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")

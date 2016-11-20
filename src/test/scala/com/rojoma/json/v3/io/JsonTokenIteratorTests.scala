@@ -7,7 +7,7 @@ import Tokens._
 
 class JsonTokenIteratorTests extends FunSuite with MustMatchers {
   def r(s: String) = new java.io.StringReader(s)
-  
+
   def t(s: String) = new JsonTokenIterator(r(s)).next()
 
   test("reading single tokens succeeds") {
@@ -29,15 +29,15 @@ class JsonTokenIteratorTests extends FunSuite with MustMatchers {
       (tok, reader.read().toChar)
     }
 
-    tc("\"hello\" gnu") must be (tokenString("hello"), ' ')
-    tc("true gnu") must be (tokenIdentifier("true"), 'g')
-    tc("1.432 gnu") must be (tokenNumber("1.432"), 'g')
-    tc("[ gnu") must be (tokenOpenBracket(), ' ')
-    tc("] gnu") must be (tokenCloseBracket(), ' ')
-    tc("{ gnu") must be (tokenOpenBrace(), ' ')
-    tc("} gnu") must be (tokenCloseBrace(), ' ')
-    tc(": gnu") must be (tokenColon(), ' ')
-    tc(", gnu") must be (tokenComma(), ' ')
+    tc("\"hello\" gnu") must be ((tokenString("hello"), ' '))
+    tc("true gnu") must be ((tokenIdentifier("true"), 'g'))
+    tc("1.432 gnu") must be ((tokenNumber("1.432"), 'g'))
+    tc("[ gnu") must be ((tokenOpenBracket(), ' '))
+    tc("] gnu") must be ((tokenCloseBracket(), ' '))
+    tc("{ gnu") must be ((tokenOpenBrace(), ' '))
+    tc("} gnu") must be ((tokenCloseBrace(), ' '))
+    tc(": gnu") must be ((tokenColon(), ' '))
+    tc(", gnu") must be ((tokenComma(), ' '))
   }
 
   test("EOF is allowed inside a line comment") {
