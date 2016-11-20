@@ -1,8 +1,3 @@
-import com.typesafe.tools.mima.plugin.MimaPlugin.mimaDefaultSettings
-import com.typesafe.tools.mima.plugin.MimaKeys.previousArtifact
-
-mimaDefaultSettings
-
 name := "rojoma-json-v3"
 
 organization := "com.rojoma"
