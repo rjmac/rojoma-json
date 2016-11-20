@@ -28,13 +28,13 @@ object SimpleJsonCodecBuilder {
 
   // the horror, the horror
   private def extract[A](implicit jcooA: JsonCodecOrOption[A]) = jcooA match {
-    case jc: JsonCodecVersion[A] =>
-      val varA = Variable[jc.RealType]()(jc.dec, jc.enc)
+    case jc@JsonCodecVersion(enc, dec) =>
+      val varA = Variable[jc.RealType]()(dec, enc)
       val assignA = (varA := _).asInstanceOf[Any => Pattern.Results => Pattern.Results]
       val retrieveA = varA(_: Pattern.Results).asInstanceOf[AnyRef]
       (assignA, retrieveA, varA)
-    case o: OptionVersion[A] =>
-      val varA = Variable[o.RealType]()(o.dec, o.enc)
+    case o@OptionVersion(enc, dec) =>
+      val varA = Variable[o.RealType]()(dec, enc)
       val assignA = (varA :=? _).asInstanceOf[Any => Pattern.Results => Pattern.Results]
       val retrieveA = varA.get(_: Pattern.Results).asInstanceOf[AnyRef]
       (assignA, retrieveA, POption(varA).orNull)

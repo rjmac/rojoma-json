@@ -6,13 +6,13 @@ import codec._
 sealed abstract class JsonCodecOrOption[T]
 object JsonCodecOrOption {
   implicit def jcVersion[T: JsonEncode: JsonDecode]: JsonCodecOrOption[T] =
-    new JsonCodecVersion[T](JsonEncode[T], JsonDecode[T])
+    JsonCodecVersion[T](JsonEncode[T], JsonDecode[T])
   implicit def oVersion[T: JsonEncode: JsonDecode]: JsonCodecOrOption[Option[T]] =
-    new OptionVersion[T](JsonEncode[T], JsonDecode[T])
+    OptionVersion[T](JsonEncode[T], JsonDecode[T])
 }
-class JsonCodecVersion[T](val enc: JsonEncode[T], val dec: JsonDecode[T]) extends JsonCodecOrOption[T] {
+case class JsonCodecVersion[T](enc: JsonEncode[T], dec: JsonDecode[T]) extends JsonCodecOrOption[T] {
   type RealType = T
 }
-class OptionVersion[T](val enc: JsonEncode[T], val dec: JsonDecode[T]) extends JsonCodecOrOption[Option[T]] {
+case class OptionVersion[T](enc: JsonEncode[T], dec: JsonDecode[T]) extends JsonCodecOrOption[Option[T]] {
   type RealType = T
 }
