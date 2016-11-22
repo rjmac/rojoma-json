@@ -143,15 +143,14 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
   }
 
   private def readObject(): JObject = {
-    depth += 1
-
     skipCharNotAtEOF() // skip opening '{'
     skipWhitespace()
     if(peekCharParser() == '}') {
       skipCharNotAtEOF()
-      depth -= 1
       return JObject.canonicalEmpty
     }
+
+    depth += 1
 
     val result = new mutable.LinkedHashMap[String, JValue]
     result += readMapping("field name or end of object")
@@ -192,15 +191,14 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
   }
 
   private def readArray(): JArray = {
-    depth += 1
-
     skipCharNotAtEOF() // skip opening '['
     skipWhitespace()
     if(peekCharParser() == ']') {
       skipCharNotAtEOF()
-      depth -= 1
       return JArray.canonicalEmpty
     }
+
+    depth += 1
 
     val result = new immutable.VectorBuilder[JValue]
     result += readDatum("datum or end of array")
