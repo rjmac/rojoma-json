@@ -19,3 +19,7 @@ FieldDecode like everything else)
   -- maybe.  I forget you need to provide the enum to the codec non-explicitly
 
 Make JsonUtil encoders take a `trailingNewline` boolean (default true)
+
+Decoders provide a "knownFieldNames" def (for populating a StaticFieldCache)
+
+Encode-to-events, decode-from-events?
