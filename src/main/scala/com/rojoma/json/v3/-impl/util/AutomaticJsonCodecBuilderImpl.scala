@@ -278,19 +278,14 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
           }"""
   }
 
-  val is212orAbove = {
-    val v = scala.util.Properties.versionString
-    !(v.startsWith("2.10.") || v.startsWith("2.11."))
-  }
-
   private def lValueDef =
-    if(is212orAbove)
+    if(EitherCompat.hasValue)
       q"""@_root_.scala.inline private[this] def $lValue[K,V](a: Left[K,V]) = a.value"""
     else
       q"""@_root_.scala.inline private[this] def $lValue[K,V](a: Left[K,V]) = a.a"""
 
   private def rValueDef =
-    if(is212orAbove)
+    if(EitherCompat.hasValue)
       q"""@_root_.scala.inline private[this] def $rValue[K,V](b: Right[K,V]) = b.value"""
     else
       q"""@_root_.scala.inline private[this] def $rValue[K,V](b: Right[K,V]) = b.b"""
