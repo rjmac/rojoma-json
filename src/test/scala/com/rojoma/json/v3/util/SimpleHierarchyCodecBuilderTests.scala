@@ -1,6 +1,8 @@
 package com.rojoma.json.v3
 package util
 
+import `-impl`.util.EitherCompat._
+
 import org.scalatest.{FunSuite, MustMatchers}
 
 import ast._
