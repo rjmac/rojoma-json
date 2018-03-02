@@ -103,7 +103,21 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
+  implicit object jbooleanDecode extends JsonDecode[java.lang.Boolean] {
+    def decode(x: JValue) = x match {
+      case JBoolean(b) => Right(b)
+      case other => Left(DecodeError.InvalidType(JBoolean, other.jsonType))
+    }
+  }
+
   implicit object byteDecode extends JsonDecode[Byte] {
+    def decode(x: JValue) = x match {
+      case num: JNumber => Right(num.toByte)
+      case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
+    }
+  }
+
+  implicit object jbyteDecode extends JsonDecode[java.lang.Byte] {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toByte)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
@@ -117,6 +131,13 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
+  implicit object jshortDecode extends JsonDecode[java.lang.Short] {
+    def decode(x: JValue) = x match {
+      case num: JNumber => Right(num.toShort)
+      case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
+    }
+  }
+
   implicit object intDecode extends JsonDecode[Int] {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toInt)
@@ -124,7 +145,21 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
+  implicit object jintegerDecode extends JsonDecode[java.lang.Integer] {
+    def decode(x: JValue) = x match {
+      case num: JNumber => Right(num.toInt)
+      case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
+    }
+  }
+
   implicit object longDecode extends JsonDecode[Long] {
+    def decode(x: JValue) = x match {
+      case num: JNumber => Right(num.toLong)
+      case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
+    }
+  }
+
+  implicit object jlongDecode extends JsonDecode[java.lang.Long] {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toLong)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
@@ -153,7 +188,21 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
+  implicit object jfloatDecode extends JsonDecode[java.lang.Float] {
+    def decode(x: JValue) = x match {
+      case num: JNumber => Right(num.toFloat)
+      case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
+    }
+  }
+
   implicit object doubleDecode extends JsonDecode[Double] {
+    def decode(x: JValue) = x match {
+      case num: JNumber => Right(num.toDouble)
+      case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
+    }
+  }
+
+  implicit object jdoubleDecode extends JsonDecode[java.lang.Double] {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toDouble)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))

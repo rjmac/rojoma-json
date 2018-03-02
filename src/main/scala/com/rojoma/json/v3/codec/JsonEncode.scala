@@ -75,20 +75,42 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
     def encode(x: Boolean) = if(x) jtrue else jfalse
   }
 
+  implicit object jbooleanEncode extends JsonEncode[java.lang.Boolean] {
+    private val jtrue = JBoolean.canonicalTrue
+    private val jfalse = JBoolean.canonicalFalse
+    def encode(x: java.lang.Boolean) = if(x) jtrue else jfalse
+  }
+
   implicit object byteEncode extends JsonEncode[Byte] {
     def encode(x: Byte) = JNumber(x)
+  }
+
+  implicit object jbyteEncode extends JsonEncode[java.lang.Byte] {
+    def encode(x: java.lang.Byte) = JNumber(x)
   }
 
   implicit object shortEncode extends JsonEncode[Short] {
     def encode(x: Short) = JNumber(x)
   }
 
+  implicit object jshortEncode extends JsonEncode[java.lang.Short] {
+    def encode(x: java.lang.Short) = JNumber(x)
+  }
+
   implicit object intEncode extends JsonEncode[Int] {
     def encode(x: Int) = JNumber(x)
   }
 
+  implicit object jintegerEncode extends JsonEncode[java.lang.Integer] {
+    def encode(x: java.lang.Integer) = JNumber(x)
+  }
+
   implicit object longEncode extends JsonEncode[Long] {
     def encode(x: Long) = JNumber(x)
+  }
+
+  implicit object jlongEncode extends JsonEncode[java.lang.Long] {
+    def encode(x: java.lang.Long) = JNumber(x)
   }
 
   implicit object bigintEncode extends JsonEncode[BigInt] {
@@ -103,8 +125,16 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
     def encode(x: Float) = JNumber(x)
   }
 
+  implicit object jfloatEncode extends JsonEncode[java.lang.Float] {
+    def encode(x: java.lang.Float) = JNumber(x)
+  }
+
   implicit object doubleEncode extends JsonEncode[Double] {
     def encode(x: Double) = JNumber(x)
+  }
+
+  implicit object jdoubleEncode extends JsonEncode[java.lang.Double] {
+    def encode(x: java.lang.Double) = JNumber(x)
   }
 
   implicit object bigdecimalEncode extends JsonEncode[BigDecimal] {
