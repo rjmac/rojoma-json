@@ -10,7 +10,7 @@ import java.{util => ju}
 import java.{net => jn}
 
 import ast._
-import util.WrapperJsonDecode
+import util.{WrapperJsonDecode, JsonCaseInsensitiveEnum}
 
 trait JsonDecode[T] {
   def decode(x: JValue): JsonDecode.DecodeResult[T]
@@ -297,17 +297,44 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       }
   }
 
-  implicit def jlEnumDecode[T <: java.lang.Enum[T]](implicit tag: ClassTag[T]) = new JsonDecode[T] {
-    def decode(x: JValue) = x match {
-      case str@JString(s) =>
-        try {
-          Right(java.lang.Enum.valueOf[T](tag.runtimeClass.asInstanceOf[Class[T]], s))
-        } catch {
-          case _: IllegalArgumentException =>
-            Left(DecodeError.InvalidValue(str))
+  implicit def jlEnumDecode[T <: java.lang.Enum[T]](implicit tag: ClassTag[T]) = {
+    if(tag.runtimeClass.isAnnotationPresent(classOf[JsonCaseInsensitiveEnum])) {
+      new JsonDecode[T] {
+        val nameMap =
+          tag.
+            runtimeClass.
+            asInstanceOf[Class[T]].
+            getMethod("values").
+            invoke(null).
+            asInstanceOf[Array[T]].
+            iterator.
+            map { e ⇒ e.name.toLowerCase → e }.
+            toMap
+
+        def decode(x: JValue) = x match {
+          case str@JString(s) =>
+            nameMap.get(s.toLowerCase) match {
+              case Some(e) ⇒ Right(e)
+              case None ⇒ Left(DecodeError.InvalidValue(str))
+            }
+          case other =>
+            Left(DecodeError.InvalidType(JString, other.jsonType))
         }
-      case other =>
-        Left(DecodeError.InvalidType(JString, other.jsonType))
+      }
+    } else {
+      new JsonDecode[T] {
+        def decode(x: JValue) = x match {
+          case str@JString(s) =>
+            try {
+              Right(java.lang.Enum.valueOf[T](tag.runtimeClass.asInstanceOf[Class[T]], s))
+            } catch {
+              case _: IllegalArgumentException =>
+                Left(DecodeError.InvalidValue(str))
+            }
+          case other =>
+            Left(DecodeError.InvalidType(JString, other.jsonType))
+        }
+      }
     }
   }
 
