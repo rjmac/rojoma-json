@@ -2,9 +2,9 @@ name := "rojoma-json-v3"
 
 organization := "com.rojoma"
 
-version := "3.9.0"
+version := "3.9.1"
 
-previousArtifact := Some("com.rojoma" % ("rojoma-json-v3_" + scalaBinaryVersion.value) % "3.8.0")
+previousArtifact := Some("com.rojoma" % ("rojoma-json-v3_" + scalaBinaryVersion.value) % "3.9.0")
 
 scalaVersion := "2.12.0"
 
