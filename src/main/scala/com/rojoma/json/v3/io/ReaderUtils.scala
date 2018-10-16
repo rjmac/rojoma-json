@@ -30,7 +30,12 @@ private[io] object ReaderUtils {
 
   def isBigDecimalizableUnsignedExponent(s: String, offset: Int) = {
     val lenInChars = s.length - offset
-    lenInChars < intMaxLength || (lenInChars == intMaxLength && s.toLong <= Int.MaxValue)
+    val isNeg = s.charAt(offset-1) == '-'
+    lenInChars < intMaxLength || (lenInChars == intMaxLength && (if(isNeg) {
+                                                                   s.substring(offset).toLong <= (Int.MaxValue+1L)
+                                                                 } else {
+                                                                   s.substring(offset).toLong <= Int.MaxValue
+                                                                 }))
   }
 
   def isValidIdentifier(s: String): Boolean = {
