@@ -23,3 +23,5 @@ Make JsonUtil encoders take a `trailingNewline` boolean (default true)
 Decoders provide a "knownFieldNames" def (for populating a StaticFieldCache)
 
 Encode-to-events, decode-from-events?
+
+Remove top-level annotations in favor of parameters to Automatic*Builders
