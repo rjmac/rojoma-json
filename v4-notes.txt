@@ -12,6 +12,10 @@ Automatic JsonEncoders should return JObject, not JValue
 
 A way to encode straight to a Writer without having a JValue intermediate
 
+A way to encode a JValue to an OutputStream
+
+A way to encode straight to a OutputStream without having a JValue intermediate
+
 Allow interning string (and number?) values on read
 
 kill FieldCodec (split the scala enum codec into a FieldEncode and a
