@@ -4,7 +4,7 @@ organization := "com.rojoma"
 
 version := "3.9.1"
 
-previousArtifact := Some("com.rojoma" % ("rojoma-json-v3_" + scalaBinaryVersion.value) % "3.9.0")
+mimaPreviousArtifacts := Set("com.rojoma" % ("rojoma-json-v3_" + scalaBinaryVersion.value) % "3.9.0")
 
 scalaVersion := "2.12.0"
 
@@ -42,13 +42,13 @@ libraryDependencies ++= {
 
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 
-sourceGenerators in Compile <+= (sourceManaged in Compile) map SimpleJsonCodecBuilderBuilder
+sourceGenerators in Compile += Def.task { SimpleJsonCodecBuilderBuilder((sourceManaged in Compile).value) }
 
-sourceGenerators in Compile <+= (sourceManaged in Compile) map TupleCodecBuilder
+sourceGenerators in Compile += Def.task { TupleCodecBuilder((sourceManaged in Compile).value) }
 
 // Bit of a hack; regenerate README.markdown when version is changed
 // to a non-SNAPSHOT value.
-sourceGenerators in Compile <+= (baseDirectory, version, crossScalaVersions) map READMEBuilder
+sourceGenerators in Compile += Def.task { READMEBuilder(baseDirectory.value, version.value, crossScalaVersions.value) }
 
 unmanagedSourceDirectories in Compile += locally {
   val MajorMinor = """(\d+\.\d+)\..*""".r
@@ -60,7 +60,9 @@ unmanagedSourceDirectories in Compile += locally {
 }
 
 // Include generated sources in source jar
-mappings in (Compile, packageSrc) <++= (sourceManaged in Compile, managedSources in Compile) map { (base, srcs) =>
+mappings in (Compile, packageSrc) ++= {
+  val base = (sourceManaged in Compile).value
+  val srcs = (managedSources in Compile).value
   import Path.{flat, relativeTo}
-  srcs x (relativeTo(base) | flat)
+  srcs pair (relativeTo(base) | flat)
 }
