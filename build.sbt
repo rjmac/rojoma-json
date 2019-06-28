@@ -4,11 +4,11 @@ organization := "com.rojoma"
 
 version := "3.9.1"
 
-mimaPreviousArtifacts := Set("com.rojoma" % ("rojoma-json-v3_" + scalaBinaryVersion.value) % "3.9.0")
+// mimaPreviousArtifacts := Set("com.rojoma" % ("rojoma-json-v3_" + scalaBinaryVersion.value) % "3.9.0")
 
-scalaVersion := "2.12.0"
+scalaVersion := "2.13.0"
 
-crossScalaVersions := Seq("2.10.6", "2.11.8", scalaVersion.value)
+// crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.0", scalaVersion.value)
 
 scalacOptions ++= {
   val SV = """(\d+)\.(\d+)\..*""".r
@@ -17,6 +17,8 @@ scalacOptions ++= {
       List("-optimize")
     case SV("2","12") =>
       List("-opt:l:classpath")
+    case SV("2","13") =>
+      Nil
     case _ =>
       sys.error("Need to set up scalacoptions for the current compiler")
     }
@@ -28,9 +30,9 @@ testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
 libraryDependencies ++= Seq(
-  "com.rojoma" %% "rojoma-json" % "2.4.3" % "optional",
-  "org.scalatest" %% "scalatest" % "3.0.0" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.13.4" % "optional" // optional because generators for JValues are included
+  // "com.rojoma" %% "rojoma-json" % "2.4.3" % "optional",
+  "org.scalatest" %% "scalatest" % "3.0.8" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.14.0" % "optional" // optional because generators for JValues are included
 )
 
 libraryDependencies ++= {
@@ -40,7 +42,7 @@ libraryDependencies ++= {
     Nil
 }
 
-addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+// addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 
 sourceGenerators in Compile += Def.task { SimpleJsonCodecBuilderBuilder((sourceManaged in Compile).value) }
 
