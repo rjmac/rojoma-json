@@ -409,8 +409,6 @@ object JCompound {
 /** A JSON array, implemented as a thin wrapper around a sequence of [[com.rojoma.json.v3.ast.JValue]]s.
   * In many ways this can be treated as a `Seq`, but it is in fact not one. */
 case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFunction[Int, JValue] with JCompound {
-  import `-impl`.ast.AnnoyingJArrayHack._
-
   override def size = elems.size
   def length = elems.length
   override def toList = elems.toList
@@ -428,7 +426,7 @@ case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFu
   def forced: JArray = {
     // not just "toSeq.map(_forced)" because the seq might be a Stream or view
     val forcedArray: Vector[JValue] =
-      convertForForce(elems).map(_.forced)(sc.breakOut)
+      elems.view.map(_.forced).toVector
     new JArray(forcedArray) {
       override def forced = this
     }
