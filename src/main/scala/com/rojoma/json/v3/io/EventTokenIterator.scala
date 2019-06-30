@@ -2,7 +2,6 @@ package com.rojoma.json.v3
 package io
 
 import com.rojoma.json.v3.`-impl`.util.AbstractIterator
-import com.rojoma.json.v3.`-impl`.util.FlatteningIteratorUtils._
 
 sealed abstract class MalformedEventStreamException(message: String) extends RuntimeException(message)
 object MalformedEventStreamException {
@@ -30,9 +29,9 @@ object EventTokenIterator extends (Iterator[JsonEvent] => Iterator[JsonToken]) {
 
     private def tokenizeDatum(): Iterator[JsonToken] = buffer.next() match {
       case ev@StartOfObjectEvent() =>
-        Iterator.single(TokenOpenBrace()(ev.position)) ** iteratorForObject().flatify ** Iterator.single(TokenCloseBrace()(buffer.next().position))
+        Iterator.single(TokenOpenBrace()(ev.position)) ++ iteratorForObject().flatten ++ Iterator.single(TokenCloseBrace()(buffer.next().position))
       case ev@StartOfArrayEvent() =>
-        Iterator.single(TokenOpenBracket()(ev.position)) ** iteratorForArray().flatify ** Iterator.single(TokenCloseBracket()(buffer.next().position))
+        Iterator.single(TokenOpenBracket()(ev.position)) ++ iteratorForArray().flatten ++ Iterator.single(TokenCloseBracket()(buffer.next().position))
       case ev@IdentifierEvent(identifier) =>
         Iterator.single(TokenIdentifier(identifier)(ev.position))
       case ev@NumberEvent(number) =>
@@ -65,7 +64,7 @@ object EventTokenIterator extends (Iterator[JsonEvent] => Iterator[JsonToken]) {
 
       def next() = {
         if(!hasNext) Iterator.empty.next()
-        tokenizeDatum() ** new AbstractIterator[JsonToken] {
+        tokenizeDatum() ++ new AbstractIterator[JsonToken] {
           private var emittedComma = false
           def hasNext =
             if(emittedComma) false
@@ -99,7 +98,7 @@ object EventTokenIterator extends (Iterator[JsonEvent] => Iterator[JsonToken]) {
         if(!hasNext) Iterator.empty.next()
         buffer.next() match {
           case ev@FieldEvent(field) =>
-            Iterator(TokenString(field)(ev.position), colon) ** tokenizeDatum() ** new AbstractIterator[JsonToken] {
+            Iterator(TokenString(field)(ev.position), colon) ++ tokenizeDatum() ++ new AbstractIterator[JsonToken] {
               private var emittedComma = false
               def hasNext =
                 if(emittedComma) false

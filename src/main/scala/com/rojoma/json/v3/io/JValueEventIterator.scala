@@ -1,8 +1,6 @@
 package com.rojoma.json.v3
 package io
 
-import com.rojoma.json.v3.`-impl`.util.FlatteningIteratorUtils._
-
 import ast._
 
 /** A function which converts a `JValue` into an `Iterator[JsonEvent]`.
@@ -22,9 +20,9 @@ object JValueEventIterator extends (JValue => Iterator[JsonEvent]) {
   def apply(value: JValue): Iterator[JsonEvent] =
     value match {
       case JObject(fields) =>
-        Iterator.single(SoO) ** fields.iterator.map { case (k,v) => Iterator.single(FieldEvent(k)(Position.Invalid)) ** apply(v) }.flatify ** Iterator.single(EoO)
+        Iterator.single(SoO) ++ fields.iterator.map { case (k,v) => Iterator.single(FieldEvent(k)(Position.Invalid)) ++ apply(v) }.flatten ++ Iterator.single(EoO)
       case JArray(elems) =>
-        Iterator.single(SoA) ** elems.iterator.map(apply).flatify ++ Iterator.single(EoA)
+        Iterator.single(SoA) ++ elems.iterator.map(apply).flatten ++ Iterator.single(EoA)
       case JString(string) =>
         Iterator.single(StringEvent(string)(Position.Invalid))
       case number: JNumber =>
