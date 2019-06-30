@@ -48,7 +48,7 @@ class SimpleHierarchyEncodeBuilder[Root <: AnyRef] private[util] (tagType: TagTy
             subenc.asInstanceOf[JsonEncode[Root]].encode(x) match {
               case JObject(fields) =>
                 if(fields contains typeField) throw new IllegalArgumentException("Encoded form of value already contains field " + typeField)
-                JObject(fields + (typeField -> JString(name)))
+                JObject(fields concat Map(typeField -> JString(name)))
               case _ =>
                 throw new IllegalArgumentException("Encoded form of value is not a JObject")
             }

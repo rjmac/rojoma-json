@@ -2,16 +2,12 @@ package com.rojoma.json.v3
 package io
 
 import org.scalatest.{FunSuite, MustMatchers}
-import org.scalatest.prop.Checkers
-
-import org.scalacheck.Arbitrary
-import org.scalacheck.Gen
+import org.scalatestplus.scalacheck.Checkers
 
 import org.scalacheck.Prop._
 
 import testsupport.ArbitraryJValue.ArbitraryJValue
-import testsupport.ArbitraryValidString.ArbitraryValidString
-import ast.{JValue, JString}
+import ast.JValue
 
 import Tokens._
 

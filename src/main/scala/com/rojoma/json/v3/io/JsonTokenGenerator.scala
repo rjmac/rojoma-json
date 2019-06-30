@@ -3,7 +3,7 @@ package io
 
 import util.{WrappedCharArray, WrappedCharArrayIterator}
 
-import scala.annotation.{tailrec, switch}
+import scala.annotation.switch
 import scala.util.control.ControlThrowable
 
 import JsonTokenGenerator._
@@ -584,14 +584,14 @@ private[io] object JsonTokenGeneratorImpl {
       }
     }
 
-    def readDigits(sb: StringBuilder, input: PositionedCharExtractor, atLeastOne: Boolean) {
+    def readDigits(sb: StringBuilder, input: PositionedCharExtractor, atLeastOne: Boolean): Unit = {
       if(atLeastOne) readDigit(sb, input)
       while(!input.atEnd && isDigit(input.peek())) {
         readDigit(sb, input)
       }
     }
 
-    def readDigit(sb: StringBuilder, input: PositionedCharExtractor) {
+    def readDigit(sb: StringBuilder, input: PositionedCharExtractor): Unit = {
       val row = input.nextCharRow
       val col = input.nextCharRow
       val c = input.next()

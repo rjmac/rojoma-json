@@ -6,8 +6,7 @@ import java.nio.charset.StandardCharsets
 import MacroCompat._
 import util._
 
-abstract class AutomaticJsonCodecImpl extends MacroCompat {
-  val c: Context
+abstract class AutomaticJsonCodecImpl[Ctx <: Context](c_ : Ctx) extends MacroCompat(c_) {
   import c.universe._
 
   val bs: Seq[c.Expr[Any]]
@@ -113,31 +112,28 @@ abstract class AutomaticJsonCodecImpl extends MacroCompat {
 
 object AutomaticJsonCodecImpl {
   def codec(ctx: Context)(annottees: ctx.Expr[Any]*): ctx.Expr[Any] = {
-    val b = new {
-      val c: ctx.type = ctx
+    val b = new AutomaticJsonCodecImpl[ctx.type](ctx) {
       val bs = annottees
       val requestType = classOf[AutomaticJsonCodec]
-    } with AutomaticJsonCodecImpl
+    }
 
     b.codec
   }
 
   def encode(ctx: Context)(annottees: ctx.Expr[Any]*): ctx.Expr[Any] = {
-    val b = new {
-      val c: ctx.type = ctx
+    val b = new AutomaticJsonCodecImpl[ctx.type](ctx) {
       val bs = annottees
       val requestType = classOf[AutomaticJsonEncode]
-    } with AutomaticJsonCodecImpl
+    }
 
     b.encode
   }
 
   def decode(ctx: Context)(annottees: ctx.Expr[Any]*): ctx.Expr[Any] = {
-    val b = new {
-      val c: ctx.type = ctx
+    val b = new AutomaticJsonCodecImpl[ctx.type](ctx) {
       val bs = annottees
       val requestType = classOf[AutomaticJsonDecode]
-    } with AutomaticJsonCodecImpl
+    }
 
     b.decode
   }

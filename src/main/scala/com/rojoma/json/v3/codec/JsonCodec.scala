@@ -10,15 +10,15 @@ object JsonCodec {
         val nameMap = enum.
           values.
           iterator.
-          map { e ⇒ e.toString.toLowerCase → e }.
+          map { e => e.toString.toLowerCase -> e }.
           toMap
 
         def encode(x: enum.Value) = JString(x.toString)
         def decode(x: JValue) = x match {
           case JString(s) =>
             nameMap.get(s.toLowerCase) match {
-              case Some(e) ⇒ Right(e)
-              case None ⇒ Left(DecodeError.InvalidValue(x))
+              case Some(e) => Right(e)
+              case None => Left(DecodeError.InvalidValue(x))
             }
           case other =>
             Left(DecodeError.InvalidType(expected = JString, got = other.jsonType))

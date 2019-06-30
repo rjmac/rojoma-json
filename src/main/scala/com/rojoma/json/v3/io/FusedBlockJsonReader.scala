@@ -43,7 +43,7 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
   private def atEOF(): Boolean =
     pos == end && !refill()
 
-  private def skipCharNotAtEOF() {
+  private def skipCharNotAtEOF(): Unit = {
     if(block(pos) == '\n') { nextCharRow += 1; nextCharCol = 1 }
     else { nextCharCol += 1 }
     pos += 1
@@ -72,11 +72,12 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
     result
   }
 
-  private def nextCharParser() = {
-    val result = peekCharParser()
-    skipCharNotAtEOF()
-    result
-  }
+  // commented because unused
+  // private def nextCharParser() = {
+  //   val result = peekCharParser()
+  //   skipCharNotAtEOF()
+  //   result
+  // }
 
   private def nextCharNotAtEOF() = {
     val result = block(pos)
@@ -86,13 +87,13 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
 
   private def skipToEndOfLine() = while(!atEOF() && peekCharNotAtEOF() != '\n') skipCharNotAtEOF()
 
-  private def skipBlockComment() {
+  private def skipBlockComment(): Unit = {
     var last = nextCharLexer()
     while(last != '*' || peekCharLexer() != '/') last = nextCharLexer()
     skipCharNotAtEOF() // skip final '/'
   }
 
-  private def skipComment() {
+  private def skipComment(): Unit = {
     skipCharNotAtEOF() // skip opening "/"
     peekCharLexer() match {
       case '/' => skipCharNotAtEOF(); skipToEndOfLine()
@@ -102,7 +103,7 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
   }
 
   @annotation.tailrec
-  private def skipWhitespace() {
+  private def skipWhitespace(): Unit = {
     while(!atEOF() && Character.isWhitespace(peekCharNotAtEOF())) skipCharNotAtEOF()
     if(!atEOF() && peekCharNotAtEOF() == '/') { skipComment(); skipWhitespace() }
   }
@@ -161,7 +162,7 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
     JObject(result)
   }
 
-  private def readRestOfObjectBody(result: mutable.LinkedHashMap[String, JValue]) {
+  private def readRestOfObjectBody(result: mutable.LinkedHashMap[String, JValue]): Unit = {
     skipWhitespace()
     while(peekCharParser() != '}') {
       if(peekCharParser() != ',') badToken("comma or end of object")
@@ -209,7 +210,7 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
     JArray(result.result())
   }
 
-  private def readRestOfArrayBody(result: immutable.VectorBuilder[JValue]) {
+  private def readRestOfArrayBody(result: immutable.VectorBuilder[JValue]): Unit = {
     skipWhitespace()
     while(peekCharParser() != ']') {
       if(peekCharParser() != ',') badToken("comma or end of array")
@@ -232,7 +233,7 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
     scratch.toString
   }
 
-  private def readPotentialSurrogatePair(c: Char, endOfString: Char) {
+  private def readPotentialSurrogatePair(c: Char, endOfString: Char): Unit = {
     if(c >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE) {
       readSurrogatePair(c, endOfString)
     } else {
@@ -243,7 +244,7 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
   private def badChar = 0xfffd.toChar
 
   @annotation.tailrec
-  private def readSurrogatePair(c: Char, endOfString: Char) {
+  private def readSurrogatePair(c: Char, endOfString: Char): Unit = {
     if(Character.isHighSurrogate(c)) {
       if(peekCharLexer() == endOfString) {
         scratch += badChar
@@ -328,7 +329,7 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
     JNull
   }
 
-  private def expectIdentifier(name: String) {
+  private def expectIdentifier(name: String): Unit = {
     val row = nextCharRow
     val col = nextCharCol
     val ident = readRawIdentifier()

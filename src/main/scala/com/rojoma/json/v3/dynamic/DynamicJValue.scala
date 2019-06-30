@@ -2,12 +2,10 @@ package com.rojoma.json.v3
 package dynamic
 
 import scala.language.dynamics
-import scala.{collection => sc}
 
 import `-impl`.dynamic._
 import ast._
 import codec.DecodeError
-import codec.Path
 import zipper.{JsonZipper, JArrayZipper, JObjectZipper}
 
 class BadPath(val error: DecodeError.Simple) extends NoSuchElementException(error.english)

@@ -32,7 +32,7 @@ class BlockJsonTokenIterator private (private var remaining: WrappedCharArray, r
   private var token: JsonToken = null
   private var lastPos = Position.Invalid
 
-  private def fillRemaining() {
+  private def fillRemaining(): Unit = {
     reader.read(buf) match {
       case -1 => remaining = null
       case n => remaining = WrappedCharArray(buf, 0, n)

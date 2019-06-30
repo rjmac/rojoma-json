@@ -1,7 +1,7 @@
 package com.rojoma.json.v3
 package io
 
-import java.io.{Reader, StringReader}
+import java.io.Reader
 
 import `-impl`.util.AbstractBufferedIterator
 
@@ -132,7 +132,7 @@ class JsonEventIterator(input: Iterator[JsonToken], fieldCache: FieldCache) exte
 }
 
 object JsonEventIterator {
-  private type StateStack = scala.collection.mutable.ArrayStack[State]
+  private type StateStack = scala.collection.mutable.Stack[State]
 
   private abstract class State {
     protected def error(got: JsonToken, expected: String): Nothing =

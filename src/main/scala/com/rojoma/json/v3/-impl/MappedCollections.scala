@@ -14,7 +14,9 @@ final class MappedViewSeq[A, +B](underlying: sc.Seq[A], f: A => B) extends sc.Se
 
 final class MappedViewMap[A, B, C](underlying: sc.Map[A, B], f: B => C) extends sc.Map[A, C] {
   override def iterator = underlying.iterator.map { case (a, b) => (a, f(b)) }
+  @deprecated("Use -- or removeAll on an immutable Map", "2.13.0")
   override def -(key1: A, key2: A, keys: A*) = new MappedViewMap(underlying.-(key1, key2, keys : _*), f)
+  @deprecated("Use - or remove on an immutable Map", "2.13.0")
   override def -(key: A) = new MappedViewMap(underlying - key, f)
   override def get(key: A) = underlying.get(key).map(f)
   override def foreach[U](g: ((A, C)) => U) = underlying.foreach { case (k, v) => g(k -> f(v)) }

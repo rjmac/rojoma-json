@@ -1,9 +1,6 @@
 package com.rojoma.json.v3
 package codec
 
-import ast._
-import util.WrapperFieldEncode
-
 object FieldCodec {
   def scalaEnumCodec[T <: Enumeration](enum: T): FieldEncode[enum.Value] with FieldDecode[enum.Value] =
     new FieldEncode[enum.Value] with FieldDecode[enum.Value] {

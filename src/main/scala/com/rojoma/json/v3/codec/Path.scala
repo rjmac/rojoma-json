@@ -44,7 +44,7 @@ object Path {
   def asString(xs: List[Entry]) = {
     val sb = new StringBuffer(".")
 
-    def appendEntry(e: Entry, isFirst: Boolean) {
+    def appendEntry(e: Entry, isFirst: Boolean): Unit = {
       e match {
         case Field(f) =>
           if(isSimple(f)) {

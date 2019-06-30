@@ -306,7 +306,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
             invoke(null).
             asInstanceOf[Array[T]].
             iterator.
-            map { e => e.name.toLowerCase → e }.
+            map { e => e.name.toLowerCase -> e }.
             toMap
 
         def decode(x: JValue) = x match {

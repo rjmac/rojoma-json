@@ -4,12 +4,12 @@ package io
 import scala.reflect.ClassTag
 
 import org.scalatest.{FunSuite, MustMatchers}
-import org.scalatest.prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import ast.JValue
 import testsupport.ArbitraryJValue.ArbitraryJValue
 
-class JsonEventIteratorComparisonTests extends FunSuite with MustMatchers with PropertyChecks {
+class JsonEventIteratorComparisonTests extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
   def simpleIterator(s: String) = new JsonEventIterator(new JsonTokenIterator(new java.io.StringReader(s)))
   def blockIterator(s: String) = new JsonEventIterator(new BlockJsonTokenIterator(s))
   def fusedIterator(s: String) = new FusedBlockJsonEventIterator(s)
@@ -21,11 +21,11 @@ class JsonEventIteratorComparisonTests extends FunSuite with MustMatchers with P
       case e: Exception => Left(e)
     }
 
-  def compareJsonExceptions(a: Exception, b: Exception) {
+  def compareJsonExceptions(a: Exception, b: Exception): Unit = {
     def mismatch(): Nothing =
       fail("Mismatched exceptions: " + a.getMessage + ", " + b.getMessage)
 
-    def check[T <: Exception : ClassTag](e: Exception)(f: T => Any) {
+    def check[T <: Exception : ClassTag](e: Exception)(f: T => Any): Unit = {
       if(implicitly[ClassTag[T]].runtimeClass.isInstance(e)) f(e.asInstanceOf[T])
       else mismatch()
     }
@@ -68,7 +68,7 @@ class JsonEventIteratorComparisonTests extends FunSuite with MustMatchers with P
     }
   }
 
-  def compare(a: Iterator[JsonEvent], b: Iterator[JsonEvent]) {
+  def compare(a: Iterator[JsonEvent], b: Iterator[JsonEvent]): Unit = {
     while(true) {
       val aNext = attempt(a.hasNext)
       val bNext = attempt(b.hasNext)
@@ -123,7 +123,7 @@ class JsonEventIteratorComparisonTests extends FunSuite with MustMatchers with P
     }
   }
 
-  def withTruncatedJson(f: String => Unit) {
+  def withTruncatedJson(f: String => Unit): Unit = {
     forAll { (datum: JValue, compact: Boolean) =>
       val fullS = if(compact) CompactJsonWriter.toString(datum) else PrettyJsonWriter.toString(datum)
       val halfS = fullS.substring(0, fullS.length / 2)
@@ -149,7 +149,7 @@ class JsonEventIteratorComparisonTests extends FunSuite with MustMatchers with P
     }
   }
 
-  def withBrokenJson(f: String => Unit) {
+  def withBrokenJson(f: String => Unit): Unit = {
     val punct = Array(":",",","{","}", "[","]","//","/*") // It is important that there are 8 of theses
     forAll { (datum: JValue, n: Int, i: Int) =>
       val s = PrettyJsonWriter.toString(datum)

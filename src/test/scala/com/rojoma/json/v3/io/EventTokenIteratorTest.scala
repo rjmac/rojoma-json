@@ -2,7 +2,7 @@ package com.rojoma.json.v3
 package io
 
 import org.scalatest.{FunSuite, MustMatchers}
-import org.scalatest.prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import org.scalacheck.Gen
 import org.scalacheck.Arbitrary
@@ -11,7 +11,7 @@ import testsupport.ArbitraryJValue.ArbitraryJValue
 import ast.JValue
 import Events._
 
-class EventTokenIteratorTest extends FunSuite with MustMatchers with PropertyChecks {
+class EventTokenIteratorTest extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
   def shortList[T : Arbitrary] = for {
     size <- Gen.choose(0, 5)
     list <- Gen.listOfN(size, Arbitrary.arbitrary[T])

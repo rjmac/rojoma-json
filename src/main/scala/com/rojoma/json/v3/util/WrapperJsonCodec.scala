@@ -1,9 +1,6 @@
 package com.rojoma.json.v3
 package util
 
-import ast.JValue
-import codec._
-
 import `-impl`.util._
 
 /** Creates a combined [[com.rojoma.json.v3.codec.JsonEncode]]

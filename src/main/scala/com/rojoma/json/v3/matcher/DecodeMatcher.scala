@@ -18,7 +18,7 @@ import codec._
  * }}}
  */
 class DecodeMatcher[T](implicit codec: JsonDecode[T]) {
-  def unapply(j: JValue) = codec.decode(j).right.toOption
+  def unapply(j: JValue) = codec.decode(j).toOption
 }
 
 object DecodeMatcher {

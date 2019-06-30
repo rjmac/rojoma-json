@@ -3,7 +3,6 @@ package io
 
 import ast.{JValue,JNull}
 import codec._
-import matcher._
 
 class Position(val `private once 2.10 is no more`: Long) extends AnyVal {
   def row = (`private once 2.10 is no more` >> 32).toInt
@@ -13,7 +12,7 @@ class Position(val `private once 2.10 is no more`: Long) extends AnyVal {
 
   def isValid = row != -1 || column != -1
 
-  override def toString = row + ":" + column
+  override def toString = s"$row:$column"
 }
 
 object Position {
@@ -30,7 +29,7 @@ object Position {
       if(p == Invalid) JNull
       else pairEnc.encode((p.row, p.column))
     def decode(x: JValue) =
-      pairDec.decode(x).right.map {
+      pairDec.decode(x).map {
         case Right((r,c)) =>
           Position(r, c)
         case Left(JNull) =>

@@ -88,7 +88,7 @@ final class FlatteningIterator[+T] private [util] (private[this] var first: Iter
       var toDrop = 0
       var found: Iterator[T] = null
       while(toDrop != count && found == null) {
-        val it = xs(toDrop)().toIterator
+        val it = xs(toDrop)().iterator
         if(it.hasNext) found = it
         toDrop += 1 // yes, we're still going to drop it even if found
       }

@@ -5,14 +5,12 @@ import ast._
 import testsupport.ArbitraryJValue._
 import testsupport.ArbitraryValidString._
 
-import org.scalacheck.{Gen, Arbitrary}
-
 import org.scalatest.{FunSuite, MustMatchers}
-import org.scalatest.prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import io.JsonTokenGeneratorTests._
 
-class JValueProducerTest extends FunSuite with MustMatchers with PropertyChecks {
+class JValueProducerTest extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
   def r(s: List[String]) = {
     def loop(state: JValueProducer, inputs: List[WrappedCharArray]): (JValue, String) = {
       inputs match {
@@ -30,7 +28,7 @@ class JValueProducerTest extends FunSuite with MustMatchers with PropertyChecks 
     loop(new JValueProducer.Builder().build, s.map(WrappedCharArray.fromString))
   }
 
-  def withSplitString(s: String)(f: List[String] => Unit) {
+  def withSplitString(s: String)(f: List[String] => Unit): Unit = {
     forAll(splitPoints(s)) { p =>
       whenever(p.forall { i => 0 <= i && i <= s.length }) {
         f(splitAt(s, p))
@@ -38,13 +36,13 @@ class JValueProducerTest extends FunSuite with MustMatchers with PropertyChecks 
     }
   }
 
-  def badRead[T: Manifest](s: String) {
+  def badRead[T: Manifest](s: String): Unit = {
     withSplitString(s) { ss =>
       a [T] must be thrownBy { r(ss) }
     }
   }
 
-  def checkRead(s: String, target: JValue, remainder: String = "") {
+  def checkRead(s: String, target: JValue, remainder: String = ""): Unit = {
     withSplitString(s) { ss =>
       r(ss) must equal ((target, remainder))
     }

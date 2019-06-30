@@ -23,10 +23,10 @@ object CamelSplit {
     (s.length >= 3 && s.charAt(0).isUpper && s.charAt(1).isUpper && s.charAt(2).isLower) ||
       (s.length >= 2 && s.charAt(0).isLower && s.charAt(1).isUpper)
 
-  private def findIndices[T](it: TraversableOnce[T], f: T => Boolean): List[Int] = {
+  private def findIndices[T](it: IterableOnce[T], f: T => Boolean): List[Int] = {
     val lb = new mutable.ListBuffer[Int]
     var idx = 0
-    it.foreach { place =>
+    it.iterator.foreach { place =>
       if(f(place)) lb += idx
       idx += 1
     }

@@ -1,13 +1,10 @@
 package com.rojoma.json.v3
 package util
 
-import scala.language.existentials
 import scala.reflect.ClassTag
 
 import ast._
 import codec._
-
-import com.rojoma.json.v3.`-impl`.util.ClassAwareMap
 
 class SimpleHierarchyCodecBuilder[Root <: AnyRef] private[util] (enc: SimpleHierarchyEncodeBuilder[Root], dec: SimpleHierarchyDecodeBuilder[Root]) {
   def branch[T <: Root : JsonEncode : JsonDecode : ClassTag](name: String) = {

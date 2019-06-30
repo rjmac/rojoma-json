@@ -3,14 +3,13 @@ package io
 
 import ast.JValue
 import testsupport.ArbitraryJValue._
-import testsupport.ArbitraryValidString._
 
 import org.scalatest.{FunSuite, MustMatchers}
-import org.scalatest.prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import Events._
 
-class JsonEventGeneratorTests extends FunSuite with MustMatchers with PropertyChecks {
+class JsonEventGeneratorTests extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
   def r(s: String) = new java.io.StringReader(s)
   def doParse(s: String) = {
     val it = new JsonTokenIterator(r(s))
@@ -92,27 +91,29 @@ class JsonEventGeneratorTests extends FunSuite with MustMatchers with PropertyCh
    a [JsonUnexpectedToken] must be thrownBy { parseAll("{'a':1 'b':2") }
   }
 
+  val atTopLevel = Symbol("atTopLevel")
+
   test("A brand-new parser must be at toplevel") {
-    JsonEventGenerator.newGenerator must be ('atTopLevel)
+    JsonEventGenerator.newGenerator must be (atTopLevel)
   }
 
   test("Reading an atom leaves the parser at toplevel") {
-    doParse("1")._2 must be ('atTopLevel)
-    doParse("true")._2 must be ('atTopLevel)
-    doParse("'hello'")._2 must be ('atTopLevel)
+    doParse("1")._2 must be (atTopLevel)
+    doParse("true")._2 must be (atTopLevel)
+    doParse("'hello'")._2 must be (atTopLevel)
   }
 
   test("Reading a complete compound leaves the parser at toplevel") {
-    doParse("[]")._2 must be ('atTopLevel)
-    doParse("{}")._2 must be ('atTopLevel)
-    doParse("[1,2,3]")._2 must be ('atTopLevel)
-    doParse("{a:1,b:2}")._2 must be ('atTopLevel)
+    doParse("[]")._2 must be (atTopLevel)
+    doParse("{}")._2 must be (atTopLevel)
+    doParse("[1,2,3]")._2 must be (atTopLevel)
+    doParse("{a:1,b:2}")._2 must be (atTopLevel)
   }
 
   test("Reading a partial compound leaves the parser not at toplevel") {
-    doParse("[")._2 must not be ('atTopLevel)
-    doParse("{")._2 must not be ('atTopLevel)
-    doParse("[[1,2,3]")._2 must not be ('atTopLevel)
-    doParse("{a:1,b:2")._2 must not be ('atTopLevel)
+    doParse("[")._2 must not be (atTopLevel)
+    doParse("{")._2 must not be (atTopLevel)
+    doParse("[[1,2,3]")._2 must not be (atTopLevel)
+    doParse("{a:1,b:2")._2 must not be (atTopLevel)
   }
 }

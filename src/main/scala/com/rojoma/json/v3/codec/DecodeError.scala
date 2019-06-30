@@ -122,7 +122,7 @@ object DecodeError {
         "path" -> path)
 
       def encode(v: InvalidType) = itPattern.generate(expected := v.expected, got := v.got, path := v.path)
-      def decode(v: JValue) = itPattern.matches(v).right.map { results =>
+      def decode(v: JValue) = itPattern.matches(v).map { results =>
         InvalidType(expected = expected(results), got = got(results), path(results))
       }
     }
@@ -137,7 +137,7 @@ object DecodeError {
         "path" -> path)
 
       def encode(v: InvalidValue) = ivPattern.generate(got := v.got, path := v.path)
-      def decode(v: JValue) = ivPattern.matches(v).right.map { results =>
+      def decode(v: JValue) = ivPattern.matches(v).map { results =>
         InvalidValue(got(results), path(results))
       }
     }
@@ -151,7 +151,7 @@ object DecodeError {
         "path" -> path)
 
       def encode(v: MissingField) = mfPattern.generate(field := v.field, path := v.path)
-      def decode(v: JValue) = mfPattern.matches(v).right.map { results =>
+      def decode(v: JValue) = mfPattern.matches(v).map { results =>
         MissingField(field(results), path(results))
       }
     }
@@ -165,7 +165,7 @@ object DecodeError {
         "path" -> path)
 
       def encode(v: InvalidField) = ifPattern.generate(field := v.field, path := v.path)
-      def decode(v: JValue) = ifPattern.matches(v).right.map { results =>
+      def decode(v: JValue) = ifPattern.matches(v).map { results =>
         InvalidField(field(results), path(results))
       }
     }
@@ -181,7 +181,7 @@ object DecodeError {
         "path" -> path)
 
       def encode(v: InvalidLength) = ilPattern.generate(expected := v.expected, got := v.got, path := v.path)
-      def decode(v: JValue) = ilPattern.matches(v).right.map { results =>
+      def decode(v: JValue) = ilPattern.matches(v).map { results =>
         InvalidLength(expected = expected(results), got = got(results), path(results))
       }
     }
@@ -202,7 +202,7 @@ object DecodeError {
       case s: Simple => simpleCodec.encode(s)
     }
 
-    def decode(v: JValue) = anyDecode.decode(v).right.map {
+    def decode(v: JValue) = anyDecode.decode(v).map {
       case Right(e) => e
       case Left(es) => Multiple(es)
     }

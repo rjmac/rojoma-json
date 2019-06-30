@@ -58,8 +58,6 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
     this(PrettyContext(output, List(" " * leftMargin), indentation, targetWidth))
   private def output = context.output
 
-  private def isAtom(x: JValue) = x.isInstanceOf[JAtom]
-
   private def size(atom: JAtom) = atom match {
     case JNull => "null".length
     case JBoolean(x) => x.toString.length
@@ -116,7 +114,7 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
       }
   }
 
-  private def writeCompactly(jobject: JValue) {
+  private def writeCompactly(jobject: JValue): Unit = {
     jobject match {
       case JArray(elements) =>
         writeArrayCompactly(elements)
@@ -127,7 +125,7 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
     }
   }
 
-  protected def writeArray(elements: sc.Seq[JValue]) {
+  protected def writeArray(elements: sc.Seq[JValue]): Unit = {
     if(willFitIn(JArray(elements), context.availableSpace).isDefined) {
       writeArrayCompactly(elements)
     } else {
@@ -147,7 +145,7 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
     }
   }
 
-  protected def writeObject(fields: sc.Map[String, JValue]) {
+  protected def writeObject(fields: sc.Map[String, JValue]): Unit = {
     if(willFitIn(JObject(fields), context.availableSpace).isDefined) {
       writeObjectCompactly(fields)
     } else {
@@ -181,7 +179,7 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
     }
   }
 
-  private def writeArrayCompactly(elements: sc.Seq[JValue]) {
+  private def writeArrayCompactly(elements: sc.Seq[JValue]): Unit = {
     if(elements.isEmpty) {
       output.write("[]")
     } else {
@@ -196,7 +194,7 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
     }
   }
 
-  private def writeObjectCompactly(fields: sc.Map[String, JValue]) {
+  private def writeObjectCompactly(fields: sc.Map[String, JValue]): Unit = {
     if(fields.isEmpty) {
       output.write("{}")
     } else {
@@ -213,19 +211,19 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
     }
   }
 
-  protected def writeBoolean(b: Boolean) {
+  protected def writeBoolean(b: Boolean): Unit = {
     output.write(if(b) "true" else "false")
   }
 
-  protected def writeNull() {
+  protected def writeNull(): Unit = {
     output.write("null")
   }
 
-  protected def writeNumber(x: JNumber) {
+  protected def writeNumber(x: JNumber): Unit = {
     x.toWriter(output)
   }
 
-  protected def writeString(s: String) {
+  protected def writeString(s: String): Unit = {
     StringWriter.stringWriter.toWriter(output, s)
   }
 }

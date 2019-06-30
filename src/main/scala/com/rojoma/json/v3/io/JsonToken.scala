@@ -130,13 +130,15 @@ object JsonToken {
     private val Pos = "position"
 
     def encode(e: JsonToken) = {
-      val JObject(fields) = sansPositionCodec.encode(e)
-      JObject(fields + (Pos -> JsonEncode.toJValue(e.position)))
+      val JObject(fields) = sansPositionCodec.encode(e).cast[JObject].getOrElse {
+        throw new AssertionError("Encoded JsonToken was not a JObject")
+      }
+      JObject(fields concat Map(Pos -> JsonEncode.toJValue(e.position)))
     }
 
     def decode(x: JValue) = x match {
       case obj: JObject =>
-        sansPositionCodec.decode(obj).right.flatMap { token =>
+        sansPositionCodec.decode(obj).flatMap { token =>
           obj.get(Pos) match {
             case Some(jsonPos) =>
               JsonDecode.fromJValue[Position](jsonPos) match {

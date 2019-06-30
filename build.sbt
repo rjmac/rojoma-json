@@ -14,15 +14,15 @@ scalacOptions ++= {
   val SV = """(\d+)\.(\d+)\..*""".r
   val optimizationOptions = scalaVersion.value match {
     case SV("2","10" | "11") =>
-      List("-optimize")
+      List("-optimize", "-Xlint")
     case SV("2","12") =>
-      List("-opt:l:classpath")
+      List("-opt:l:classpath", "-Xlint")
     case SV("2","13") =>
-      Nil
+      List("-opt:l:inline", "-Xfatal-warnings", "-Xlint", "-Xlint:-nonlocal-return", "-Xlog-free-types")
     case _ =>
       sys.error("Need to set up scalacoptions for the current compiler")
     }
-  Seq("-deprecation", "-feature", "-Xlint") ++ optimizationOptions
+  Seq("-deprecation", "-feature") ++ optimizationOptions
 }
 
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")

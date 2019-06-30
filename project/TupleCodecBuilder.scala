@@ -20,7 +20,7 @@ object TupleCodecBuilder extends (File => Seq[File]) {
 package `-impl`.codec
 
 import com.rojoma.json.v3.codec._
-import com.rojoma.json.v3.ast.{JValue, JArray}
+import com.rojoma.json.v3.ast.JArray
 
 class TupleEncode {
 """)

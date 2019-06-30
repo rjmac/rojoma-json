@@ -7,7 +7,7 @@ private[io] object pos {
   def apply(position: Position, restOfMessage: String, restOfMessageArgs: Any*) = {
     val message = restOfMessage.format(restOfMessageArgs:_*)
     if(position.row == -1 && position.column == -1) message
-    else position + ": " + message
+    else s"$position: $message"
   }
 }
 
@@ -84,7 +84,7 @@ object JsonLexException {
         position := e.position
       )
 
-      def decode(x: JValue) = pattern.matches(x).right.map { r =>
+      def decode(x: JValue) = pattern.matches(x).map { r =>
         new JsonUnexpectedCharacter(character(r), expected(r), position.getOrElse(r, Position.Invalid))
       }
     }
@@ -102,7 +102,7 @@ object JsonLexException {
         position := e.position
       )
 
-      def decode(x: JValue) = pattern.matches(x).right.map { r =>
+      def decode(x: JValue) = pattern.matches(x).map { r =>
         new JsonNumberOutOfRange(number(r), position.getOrElse(r, Position.Invalid))
       }
     }
@@ -118,7 +118,7 @@ object JsonLexException {
         position := e.position
       )
 
-      def decode(x: JValue) = pattern.matches(x).right.map { r =>
+      def decode(x: JValue) = pattern.matches(x).map { r =>
         new JsonLexerEOF(position.getOrElse(r, Position.Invalid))
       }
     }
@@ -153,7 +153,7 @@ object JsonParseException {
         position := e.token.position
       )
 
-      def decode(x: JValue) = pattern.matches(x).right.map { r =>
+      def decode(x: JValue) = pattern.matches(x).map { r =>
         new JsonUnexpectedToken(token(r).positionedAt(position.getOrElse(r, Position.Invalid)), expected(r))
       }
     }
@@ -171,7 +171,7 @@ object JsonParseException {
         position := e.position
       )
 
-      def decode(x: JValue) = pattern.matches(x).right.map { r =>
+      def decode(x: JValue) = pattern.matches(x).map { r =>
         new JsonUnknownIdentifier(identifier(r), position.getOrElse(r, Position.Invalid))
       }
     }
@@ -187,7 +187,7 @@ object JsonParseException {
         position := e.position
       )
 
-      def decode(x: JValue) = pattern.matches(x).right.map { r =>
+      def decode(x: JValue) = pattern.matches(x).map { r =>
         new JsonParserEOF(position.getOrElse(r, Position.Invalid))
       }
     }
@@ -219,7 +219,7 @@ object JsonReadException {
         position := e.event.position
       )
 
-      def decode(x: JValue) = pattern.matches(x).right.map { r =>
+      def decode(x: JValue) = pattern.matches(x).map { r =>
         new JsonBadParse(event(r).positionedAt(position.getOrElse(r, Position.Invalid)))
       }
     }

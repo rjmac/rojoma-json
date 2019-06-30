@@ -34,38 +34,38 @@ class AutomaticJsonCodecBuilderTest extends FunSuite with MustMatchers with Eith
   test("Undecorated Options decode as None when nothing is there") {
     case class O(x: Option[Int])
     implicit val codec = AutomaticJsonCodecBuilder[O]
-    JsonUtil.parseJson[O]("{}").right.value must equal (O(None))
+    JsonUtil.parseJson[O]("{}") must equal (Right(O(None)))
   }
 
   test("Undecorated Options decode as None when null is there") {
     case class O(x: Option[Int])
     implicit val codec = AutomaticJsonCodecBuilder[O]
-    JsonUtil.parseJson[O]("{x:null}").right.value must equal (O(None))
+    JsonUtil.parseJson[O]("{x:null}") must equal (Right(O(None)))
   }
 
   test("Options decorated with @NullForNone decode as None when nothing is there") {
     case class O(@NullForNone x: Option[Int])
     implicit val codec = AutomaticJsonCodecBuilder[O]
-    JsonUtil.parseJson[O]("{}").right.value must equal (O(None))
+    JsonUtil.parseJson[O]("{}") must equal (Right(O(None)))
   }
 
   test("Options decorated with @NullForNone decode as None when null is there") {
     case class O(x: Option[Int])
     implicit val codec = AutomaticJsonCodecBuilder[O]
-    JsonUtil.parseJson[O]("{x:null}").right.value must equal (O(None))
+    JsonUtil.parseJson[O]("{x:null}") must equal (Right(O(None)))
   }
 
   test("`null' resolves to JNull when appropriate, even when wrapped in an option") {
     case class O(x: Option[JNull])
     implicit val codec = AutomaticJsonCodecBuilder[O]
-    JsonUtil.parseJson[O]("{x:null}").right.value must equal (O(Some(JNull)))
+    JsonUtil.parseJson[O]("{x:null}") must equal (Right(O(Some(JNull))))
   }
 
   test("`null' resolves to JNull when appropriate, even when wrapped in an option and @NullForNone is set") {
     // this is a stupid thing to do, but the behaviour is nonetheless defined.
     case class O(@NullForNone x: Option[JNull])
     implicit val codec = AutomaticJsonCodecBuilder[O]
-    JsonUtil.parseJson[O]("{x:null}").right.value must equal (O(Some(JNull)))
+    JsonUtil.parseJson[O]("{x:null}") must equal (Right(O(Some(JNull))))
   }
 
   test("Recursive encodes properly") {

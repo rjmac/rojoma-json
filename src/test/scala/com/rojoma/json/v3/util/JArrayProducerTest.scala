@@ -6,13 +6,11 @@ import testsupport.ArbitraryJValue._
 import testsupport.ArbitraryValidString._
 
 import org.scalatest.{FunSuite, MustMatchers}
-import org.scalatest.prop.PropertyChecks
-
-import org.scalacheck.{Gen, Arbitrary}
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import io.JsonTokenGeneratorTests._
 
-class JArrayProducerTest extends FunSuite with MustMatchers with PropertyChecks {
+class JArrayProducerTest extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
   def r(targets: List[JValue], s: List[String]) = {
     def loop(state: JArrayProducer, targets: List[JValue], inputs: List[WrappedCharArray]): String = {
       inputs match {
@@ -44,7 +42,7 @@ class JArrayProducerTest extends FunSuite with MustMatchers with PropertyChecks 
     loop(new JArrayProducer.Builder().build, targets, s.map(WrappedCharArray.fromString))
   }
 
-  def withSplitString(s: String)(f: List[String] => Unit) {
+  def withSplitString(s: String)(f: List[String] => Unit): Unit = {
     forAll(splitPoints(s)) { p =>
       whenever(p.forall { i => 0 <= i && i <= s.length }) {
         f(splitAt(s, p))
@@ -52,7 +50,7 @@ class JArrayProducerTest extends FunSuite with MustMatchers with PropertyChecks 
     }
   }
 
-  def badRead[T: Manifest](expected: List[JValue], s: String) {
+  def badRead[T: Manifest](expected: List[JValue], s: String): Unit = {
     withSplitString(s) { ss =>
       a [T] must be thrownBy { r(expected, ss) }
     }

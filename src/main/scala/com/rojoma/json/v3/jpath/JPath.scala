@@ -26,24 +26,24 @@ import JPathImpl._
  *   z.asArray.map(_.value.toSeq.contains(JString(s))).getOrElse(false)
  *
  * JPath(v).down("array").finish
- *    // --> Stream(JArray(JNumber(1), JNumber(2), JNumber(3)))
+ *    // --> LazyList(JArray(JNumber(1), JNumber(2), JNumber(3)))
  * JPath(v).down("object").*.downFirst.finish
- *    // --> Stream(JString("Paris"), JString("Berlin"), JString("Rome"))
+ *    // --> LazyList(JString("Paris"), JString("Berlin"), JString("Rome"))
  * JPath(v).*.down("France").downFirst.finish
- *    // --> Stream(JString("Paris"))
+ *    // --> LazyList(JString("Paris"))
  * JPath(v).**.downFirst.finish
- *   // --> Stream(JNumber(1), JString("Paris"), JString("Berlin"), JString("Rome"))
+ *   // --> LazyList(JNumber(1), JString("Paris"), JString("Berlin"), JString("Rome"))
  * JPath(v).*.having(_.*.where(contains(_, "Lyon"))).finish
- *   // --> Stream(JObject("France" -> ..., "Germany" -> ..., "Italy" -> ...))
+ *   // --> LazyList(JObject("France" -> ..., "Germany" -> ..., "Italy" -> ...))
  * JPath(v).*.*.where(contains(_, "Lyon")).finish
- *   // --> Stream(JArray(JString("Paris"), JString("Lyon"), JString("Bordeaux")))
+ *   // --> LazyList(JArray(JString("Paris"), JString("Lyon"), JString("Bordeaux")))
  * }}} */
-class JPath private (cursors: Stream[JsonZipper]) {
-  def this(input: JValue) = this(Stream(JsonZipper(input)))
+class JPath private (cursors: LazyList[JsonZipper]) {
+  def this(input: JValue) = this(LazyList(JsonZipper(input)))
 
-  /** Produce a `Stream` of [[com.rojoma.json.v3.ast.JValue]]s, one
+  /** Produce a `LazyList` of [[com.rojoma.json.v3.ast.JValue]]s, one
    * for each current point. */
-  def finish: Stream[JValue] = cursors.map(_.value)
+  def finish: LazyList[JValue] = cursors.map(_.value)
 
   private def step(op: Stage): JPath = {
     if(cursors.isEmpty) this
@@ -102,7 +102,7 @@ class JPath private (cursors: Stream[JsonZipper]) {
    * but also works if one of the inner steps is "rec", where
    * no fixed number of final `up` steps would suffice.
    */
-  def having(pred: JPath => JPath) = where(z => pred(new JPath(Stream(z))).finish.nonEmpty)
+  def having(pred: JPath => JPath) = where(z => pred(new JPath(LazyList(z))).finish.nonEmpty)
 
   /** Go up to the parents of the current points.  Any that were
    * already at the top of the tree will be dropped. */
@@ -124,44 +124,44 @@ object JPath extends (JValue => JPath) {
 }
 
 private [jpath] object JPathImpl {
-  type Stage = JsonZipper => Stream[JsonZipper]
+  type Stage = JsonZipper => LazyList[JsonZipper]
 
-   def downOp(target: String)(input: JsonZipper): Stream[JsonZipper] = input match {
-    case obj: JObjectZipper => obj.down(target).toStream
-    case _ => Stream.empty
+   def downOp(target: String)(input: JsonZipper): LazyList[JsonZipper] = input match {
+    case obj: JObjectZipper => obj.down(target).to(LazyList)
+    case _ => LazyList.empty
   }
 
-   def downOp(target: Int)(input: JsonZipper): Stream[JsonZipper] = input match {
-    case arr: JArrayZipper => arr.down(target).toStream
-    case _ => Stream.empty
+   def downOp(target: Int)(input: JsonZipper): LazyList[JsonZipper] = input match {
+    case arr: JArrayZipper => arr.down(target).to(LazyList)
+    case _ => LazyList.empty
   }
 
    val downAllOp: Stage = _ match {
-    case _: JAtomZipper => Stream.empty
-    case arr: JArrayZipper => Stream.range(0, arr.size).map(arr.down_!)
-    case obj: JObjectZipper => (obj.value.fields.keys).toStream.map(obj.down_!)
+    case _: JAtomZipper => LazyList.empty
+    case arr: JArrayZipper => LazyList.range(0, arr.size).map(arr.down_!)
+    case obj: JObjectZipper => (obj.value.fields.keys).to(LazyList).map(obj.down_!)
   }
 
    val downLastOp: Stage = _ match {
-    case arr: JArrayZipper => arr.down(arr.size - 1).toStream
-    case _ => Stream.empty
+    case arr: JArrayZipper => arr.down(arr.size - 1).to(LazyList)
+    case _ => LazyList.empty
   }
 
    val downFirstOp: Stage = _ match {
-    case arr: JArrayZipper => arr.down(0).toStream
-    case _ => Stream.empty
+    case arr: JArrayZipper => arr.down(0).to(LazyList)
+    case _ => LazyList.empty
   }
 
    val recOp: Stage = input => input #:: downAllOp(input).flatMap(recOp)
 
-   def whereOp(pref: JsonZipper => Boolean)(input: JsonZipper): Stream[JsonZipper] = {
-    if(pref(input)) Stream(input)
-    else Stream.empty
+   def whereOp(pref: JsonZipper => Boolean)(input: JsonZipper): LazyList[JsonZipper] = {
+    if(pref(input)) LazyList(input)
+    else LazyList.empty
   }
 
-   val upOp: Stage = _.up.toStream
+   val upOp: Stage = _.up.to(LazyList)
 
-   val nextOp: Stage = _.next.toStream
+   val nextOp: Stage = _.next.to(LazyList)
 
-   val prevOp: Stage = _.prev.toStream
+   val prevOp: Stage = _.prev.to(LazyList)
 }

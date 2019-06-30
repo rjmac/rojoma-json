@@ -1,12 +1,14 @@
 package com.rojoma.json.v3
 package codec
 
+import scala.jdk.CollectionConverters._
+
 import ast._
 import interpolation._
 
 import org.scalatest.FunSuite
 import org.scalatest.MustMatchers
-import org.scalatest.prop.Checkers
+import org.scalatestplus.scalacheck.Checkers
 
 import org.scalacheck.Prop._
 import org.scalacheck.Arbitrary
@@ -15,7 +17,7 @@ class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
   import JsonEncode.toJValue
   import JsonDecode.fromJValue
 
-  def doCheck[T : Arbitrary : JsonEncode : JsonDecode]() {
+  def doCheck[T : Arbitrary : JsonEncode : JsonDecode](): Unit = {
     check(forAll { x: T =>
       fromJValue[T](toJValue(x)) == Right(x)
     })
@@ -88,14 +90,13 @@ class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
   test("array roundtrips") {
     check(forAll { x: Array[String] =>
       // YAY JAVA
-      java.util.Arrays.equals(fromJValue[Array[String]](toJValue(x)).right.get.asInstanceOf[Array[Object]], x.asInstanceOf[Array[Object]])
+      java.util.Arrays.equals(fromJValue[Array[String]](toJValue(x)).getOrElse(fail("ack")).asInstanceOf[Array[Object]], x.asInstanceOf[Array[Object]])
     })
   }
 
   test("java.util.List roundtrips") {
     import java.{util => ju}
     implicit def arbitraryJUList[T : Arbitrary] = Arbitrary {
-      import scala.collection.JavaConverters._
       import Arbitrary.arbitrary
       for(xs <- arbitrary[List[T]]) yield new ju.ArrayList(xs.asJava) : ju.List[T]
     }
@@ -109,7 +110,6 @@ class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
   test("java.util.Map roundtrips") {
     import java.{util => ju}
     implicit def arbitraryJUMap[T : Arbitrary, U : Arbitrary] = Arbitrary {
-      import scala.collection.JavaConverters._
       import Arbitrary.arbitrary
       for(xs <- arbitrary[Map[T, U]]) yield {
         val juMap: ju.Map[T, U] = new java.util.HashMap

@@ -1,11 +1,10 @@
 package com.rojoma.json.v3
 package util
 
-import java.io.{Reader, BufferedReader, InputStreamReader, FileInputStream, FileOutputStream, OutputStreamWriter, Writer, FilterWriter, BufferedWriter, IOException, File}
+import java.io.{Reader, InputStreamReader, FileInputStream, FileOutputStream, OutputStreamWriter, Writer, FilterWriter, BufferedWriter, IOException, File}
 import java.nio.charset.Charset
 import scala.io.Codec
 
-import ast._
 import io._
 import codec._
 
@@ -66,15 +65,15 @@ object JsonUtil {
   def writeJson[T : JsonEncode](writer: Writer, jsonable: T, pretty: Boolean = false, buffer: Boolean = true): Unit = {
     val json = JsonEncode.toJValue(jsonable)
 
-    def write(finalWriter: Writer) {
+    def write(finalWriter: Writer): Unit = {
       if(pretty) PrettyJsonWriter.toWriter(finalWriter, json)
       else CompactJsonWriter.toWriter(finalWriter, json)
     }
 
     if(buffer) {
       val barrier = new FilterWriter(writer) {
-        override def close() {}
-        override def flush() {}
+        override def close(): Unit = {}
+        override def flush(): Unit = {}
       }
       val buffer = new BufferedWriter(barrier)
       write(buffer)

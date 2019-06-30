@@ -13,7 +13,7 @@ trait JsonWriter {
     * @throws [[com.rojoma.json.v3.io.JsonInvalidFloat]] if a NaN or infinite floating-point value is written.
     */
   @throws(classOf[java.io.IOException])
-  def write(jobject: JValue) {
+  def write(jobject: JValue): Unit = {
     jobject match {
       case JArray(elements) =>
         writeArray(elements)
@@ -30,10 +30,10 @@ trait JsonWriter {
     }
   }
 
-  protected def writeArray(elements: sc.Seq[JValue])
-  protected def writeObject(fields: sc.Map[String, JValue])
-  protected def writeString(s: String)
-  protected def writeBoolean(b: Boolean)
-  protected def writeNull()
-  protected def writeNumber(num: JNumber)
+  protected def writeArray(elements: sc.Seq[JValue]): Unit
+  protected def writeObject(fields: sc.Map[String, JValue]): Unit
+  protected def writeString(s: String): Unit
+  protected def writeBoolean(b: Boolean): Unit
+  protected def writeNull(): Unit
+  protected def writeNumber(num: JNumber): Unit
 }

@@ -2,10 +2,9 @@ package com.rojoma.json.v3
 package ast
 
 import org.scalatest.FunSuite
-import org.scalatest.prop.Checkers
+import org.scalatestplus.scalacheck.Checkers
 
 import org.scalacheck.Prop._
-import org.scalacheck.Arbitrary
 
 import testsupport.ArbitraryJValue._
 
@@ -54,7 +53,7 @@ class JValueTests extends FunSuite with Checkers {
 
   test("JArrays with underlying streams can be forced") {
     check(forAll { xs: List[JValue] =>
-      JArray(xs.toStream).forced.elems == xs
+      JArray(xs.to(LazyList)).forced.elems == xs
     })
   }
 }

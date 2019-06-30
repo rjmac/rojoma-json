@@ -4,12 +4,11 @@ package io
 import ast._
 import codec.JsonEncode
 import testsupport.ArbitraryJValue._
-import testsupport.ArbitraryValidString._
 import util.JsonUtil.renderJson
 import util.WrappedCharArray
 
 import org.scalatest.{FunSuite, MustMatchers}
-import org.scalatest.prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import org.scalacheck.{Gen, Arbitrary}
 
@@ -18,8 +17,8 @@ import scala.collection.mutable.ListBuffer
 import JsonTokenGeneratorTests._
 import Tokens._
 
-class JsonTokenGeneratorTests extends FunSuite with MustMatchers with PropertyChecks {
-  def arbTest[T <: JValue : Arbitrary : JsonEncode] {
+class JsonTokenGeneratorTests extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
+  def arbTest[T <: JValue : Arbitrary : JsonEncode]: Unit = {
     forAll(splittableJson[T]) { case (x, whitespace, positions) =>
       val asString = renderJson(x, pretty = whitespace)
       whenever(positions.forall { i => 0 <= i && i <= asString.length }) {
@@ -31,7 +30,7 @@ class JsonTokenGeneratorTests extends FunSuite with MustMatchers with PropertyCh
     }
   }
 
-  def withSplitString(s: String)(f: Seq[String] => Unit) {
+  def withSplitString(s: String)(f: Seq[String] => Unit): Unit = {
     forAll(splitPoints(s)) { positions =>
       whenever(positions.forall { i => 0 <= i && i <= s.length }) {
         f(splitAt(s, positions))
@@ -54,7 +53,7 @@ class JsonTokenGeneratorTests extends FunSuite with MustMatchers with PropertyCh
   }
 
   test("reading a token leaves the first not-part-of-the-token unconsumed") {
-    def tc(jsonFragment: String, expected: JsonToken, remaining: String) {
+    def tc(jsonFragment: String, expected: JsonToken, remaining: String): Unit = {
       withSplitString(jsonFragment) { fragments =>
         firstToken(fragments) must be ((expected, remaining))
       }
@@ -83,7 +82,7 @@ class JsonTokenGeneratorTests extends FunSuite with MustMatchers with PropertyCh
     }
   }
 
-  def t(jsonFragment: String, expected: JsonToken*) {
+  def t(jsonFragment: String, expected: JsonToken*): Unit = {
     withSplitString(jsonFragment) { fragments =>
       toTokenList(fragments) must equal (expected)
     }

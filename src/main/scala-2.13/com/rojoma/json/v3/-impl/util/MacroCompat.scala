@@ -3,10 +3,7 @@ package `-impl`.util
 
 // 2.13 version of MacroCompat
 
-trait MacroCompat {
-  import MacroCompat._
-
-  val c: Context
+abstract class MacroCompat[Ctx <: MacroCompat.Context](val c: Ctx) {
   import c.universe._
 
   def toTermName(s: String) = TermName(s)

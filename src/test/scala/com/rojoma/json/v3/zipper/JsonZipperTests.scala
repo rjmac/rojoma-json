@@ -6,7 +6,7 @@ import ast._
 import org.scalatest.{FunSuite, MustMatchers, EitherValues}
 
 class JsonZipperTests extends FunSuite with MustMatchers with EitherValues {
-  def r[T : codec.JsonDecode](s: String) = util.JsonUtil.parseJson[T](s).right.value
+  def r[T : codec.JsonDecode](s: String) = util.JsonUtil.parseJson[T](s).getOrElse(fail("ack"))
 
   test("Can descend into an array") {
     JsonZipper(r[JArray]("[1,2,3]")).down_!(1).value must be (JNumber(2))

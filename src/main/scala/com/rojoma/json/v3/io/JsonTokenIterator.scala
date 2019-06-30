@@ -74,13 +74,13 @@ class JsonTokenIterator(reader: Reader) extends AbstractBufferedIterator[JsonTok
 
   private def skipToEndOfLine() = while(!atEOF() && peekChar() != '\n') nextChar()
 
-  private def skipBlockComment() {
+  private def skipBlockComment(): Unit = {
     var last = nextChar()
     while(last != '*' || peekChar() != '/') last = nextChar()
     nextChar() // skip final '/'
   }
 
-  private def skipComment() {
+  private def skipComment(): Unit = {
     nextChar() // skip opening "/"
     val row = nextCharRow
     val col = nextCharCol
@@ -92,7 +92,7 @@ class JsonTokenIterator(reader: Reader) extends AbstractBufferedIterator[JsonTok
   }
 
   @annotation.tailrec
-  private def skipWhitespace() {
+  private def skipWhitespace(): Unit = {
     while(!atEOF() && Character.isWhitespace(peekChar())) nextChar()
     if(!atEOF() && peekChar() == '/') { skipComment(); skipWhitespace() }
   }
@@ -113,7 +113,7 @@ class JsonTokenIterator(reader: Reader) extends AbstractBufferedIterator[JsonTok
     result
   }
 
-  private def advance() {
+  private def advance(): Unit = {
     skipWhitespace()
     if(atEOF()) { nextToken = null; return }
     val tokenPosition = Position(nextCharRow, nextCharCol)
@@ -215,7 +215,7 @@ class JsonTokenIterator(reader: Reader) extends AbstractBufferedIterator[JsonTok
     TokenString(scratch.toString)(startPos)
   }
 
-  private def readPotentialSurrogatePair(c: Char, endOfString: Char) {
+  private def readPotentialSurrogatePair(c: Char, endOfString: Char): Unit = {
     if(c >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE) {
       readSurrogatePair(c, endOfString)
     } else {
@@ -226,7 +226,7 @@ class JsonTokenIterator(reader: Reader) extends AbstractBufferedIterator[JsonTok
   private def badChar = 0xfffd.toChar
 
   @annotation.tailrec
-  private def readSurrogatePair(c: Char, endOfString: Char) {
+  private def readSurrogatePair(c: Char, endOfString: Char): Unit = {
     if(Character.isHighSurrogate(c)) {
       if(peekChar() == endOfString) {
         scratch += badChar

@@ -1,7 +1,7 @@
 package com.rojoma.json.v3
 package extensions
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import java.util.ServiceLoader
 import java.io.Writer
 
@@ -17,7 +17,7 @@ private[extensions] class SimpleStringWriter extends StringWriter {
     sw.toString
   }
 
-  def toWriter(output: Writer, s: String) {
+  def toWriter(output: Writer, s: String): Unit = {
     output.write('"')
     val fastEnd = gallop(s, 0)
     if(fastEnd == s.length) {
@@ -28,7 +28,7 @@ private[extensions] class SimpleStringWriter extends StringWriter {
     output.write('"')
   }
 
-  def slowPath(s: String, endOfFastPrefix: Int, output: Writer) {
+  def slowPath(s: String, endOfFastPrefix: Int, output: Writer): Unit = {
     if(endOfFastPrefix != 0) output.write(s, 0, endOfFastPrefix)
     var i = endOfFastPrefix
     val len = s.length
@@ -76,7 +76,7 @@ private[extensions] class SimpleStringWriter extends StringWriter {
 object StringWriter {
   val stringWriter: StringWriter = {
     val serviceLoader = ServiceLoader.load(classOf[StringWriter])
-    serviceLoader.iterator().asScala.toStream.headOption match {
+    serviceLoader.iterator().asScala.nextOption() match {
       case None =>
         Class.forName("com.rojoma.json.v3.extensions.SimpleStringWriter").newInstance().asInstanceOf[StringWriter]
       case Some(l) =>

@@ -78,5 +78,5 @@ object JsonArrayIterator {
     }
   }
 
-  class ElementDecodeException(val position: Position, val error: DecodeError) extends RuntimeException((if (position.isValid) position + ": " else "") + error.english)
+  class ElementDecodeException(val position: Position, val error: DecodeError) extends RuntimeException((if (position.isValid) s"$position: " else "") + error.english)
 }

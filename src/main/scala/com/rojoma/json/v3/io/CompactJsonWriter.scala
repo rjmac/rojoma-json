@@ -12,7 +12,7 @@ import extensions.StringWriter
   * "compact" format with no spaces or newlines.  This does many small
   * writes, so it is probably a good idea to wrap the `Writer` in a `BufferedWriter`. */
 class CompactJsonWriter(output: Writer) extends JsonWriter {
-  protected def writeArray(elements: sc.Seq[JValue]) {
+  protected def writeArray(elements: sc.Seq[JValue]): Unit = {
     output.write('[')
     var didOne = false
     for(element <- elements) {
@@ -23,7 +23,7 @@ class CompactJsonWriter(output: Writer) extends JsonWriter {
     output.write(']')
   }
 
-  protected def writeObject(fields: sc.Map[String, JValue]) {
+  protected def writeObject(fields: sc.Map[String, JValue]): Unit = {
     output.write('{')
     var didOne = false
     for((k, v) <- fields) {
@@ -36,19 +36,19 @@ class CompactJsonWriter(output: Writer) extends JsonWriter {
     output.write('}')
   }
 
-  protected def writeBoolean(b: Boolean) {
+  protected def writeBoolean(b: Boolean): Unit = {
     output.write(if(b) "true" else "false")
   }
 
-  protected def writeNull() {
+  protected def writeNull(): Unit = {
     output.write("null")
   }
 
-  protected def writeNumber(x: JNumber) {
+  protected def writeNumber(x: JNumber): Unit = {
     x.toWriter(output)
   }
 
-  protected def writeString(s: String) {
+  protected def writeString(s: String): Unit = {
     StringWriter.stringWriter.toWriter(output, s)
   }
 }

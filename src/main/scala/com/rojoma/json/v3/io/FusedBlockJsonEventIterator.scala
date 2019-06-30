@@ -40,8 +40,8 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     else "possibly-empty iterator"
   }
 
-  private def push(intoArray: Boolean) {
-    def growStack() {
+  private def push(intoArray: Boolean): Unit = {
+    def growStack(): Unit = {
       val newStack = new Array[Boolean](stack.length * 2)
       System.arraycopy(stack, 0, newStack, 0, stack.length)
       stack = newStack
@@ -51,7 +51,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     stack(stackPtr) = intoArray
   }
 
-  private def pop() { assert(stackPtr >= 0); stackPtr -= 1 }
+  private def pop(): Unit = { assert(stackPtr >= 0); stackPtr -= 1 }
 
   // Meaningful only if the stack is not empty and the meaning
   // varies depending on the kind on the top of the stack:
@@ -89,7 +89,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   private def atEOF(): Boolean =
     pos == end && !refill()
 
-  private def skipCharNotAtEOF() {
+  private def skipCharNotAtEOF(): Unit = {
     if(block(pos) == '\n') { nextCharRow += 1; nextCharCol = 1 }
     else { nextCharCol += 1 }
     pos += 1
@@ -116,13 +116,13 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
 
   private def skipToEndOfLine() = while(!atEOF() && peekCharNotAtEOF() != '\n') skipCharNotAtEOF()
 
-  private def skipBlockComment() {
+  private def skipBlockComment(): Unit = {
     var last = nextChar()
     while(last != '*' || peekChar() != '/') last = nextChar()
     skipCharNotAtEOF() // skip final '/'
   }
 
-  private def skipComment() {
+  private def skipComment(): Unit = {
     skipCharNotAtEOF() // skip opening "/"
     peekChar() match {
       case '/' => skipCharNotAtEOF(); skipToEndOfLine()
@@ -132,12 +132,12 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   }
 
   @annotation.tailrec
-  private def skipWhitespace() {
+  private def skipWhitespace(): Unit = {
     while(!atEOF() && Character.isWhitespace(peekCharNotAtEOF())) skipCharNotAtEOF()
     if(!atEOF() && peekCharNotAtEOF() == '/') { skipComment(); skipWhitespace() }
   }
 
-  private def advance() {
+  private def advance(): Unit = {
     atTop = stackPtr == -1
     skipWhitespace()
     if(!atEOF()) available = readEvent()
@@ -357,7 +357,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     scratch.toString
   }
 
-  private def readPotentialSurrogatePair(c: Char, endOfString: Char) {
+  private def readPotentialSurrogatePair(c: Char, endOfString: Char): Unit = {
     if(c >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE) {
       readSurrogatePair(c, endOfString)
     } else {
@@ -368,7 +368,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   private def badChar = 0xfffd.toChar
 
   @annotation.tailrec
-  private def readSurrogatePair(c: Char, endOfString: Char) {
+  private def readSurrogatePair(c: Char, endOfString: Char): Unit = {
     if(Character.isHighSurrogate(c)) {
       if(peekChar() == endOfString) {
         scratch += badChar

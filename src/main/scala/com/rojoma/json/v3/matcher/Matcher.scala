@@ -21,7 +21,7 @@ object OptPattern extends LowPriorityImplicits {
   implicit def litifyJValue(x: JValue): Pattern = x match {
     case atom: JAtom => Literal(atom)
     case JArray(arr) => PArray(arr.view.map(litifyJValue).toVector : _*)
-    case JObject(obj) => PObject(obj.mapValues(litifyJValue).toSeq : _*)
+    case JObject(obj) => PObject(obj.view.mapValues(litifyJValue).to(Vector) : _*)
   }
 
   /** Converts an object with a [[com.rojoma.json.v3.codec.JsonDecode]]
@@ -127,7 +127,7 @@ trait Pattern extends OptPattern {
    * }
    * }}}
    */
-  def unapply(x: JValue): Option[Pattern.Results] = matches(x).right.toOption
+  def unapply(x: JValue): Option[Pattern.Results] = matches(x).toOption
 }
 
 object Pattern {

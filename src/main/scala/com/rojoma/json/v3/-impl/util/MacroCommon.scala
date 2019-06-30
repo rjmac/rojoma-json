@@ -1,7 +1,7 @@
 package com.rojoma.json.v3
 package `-impl`.util
 
-trait MacroCommon { this: MacroCompat =>
+trait MacroCommon[Ctx <: MacroCompat.Context] { this: MacroCompat[Ctx] =>
   import c.universe._
 
   protected def isType(t: Type, w: Type) = {

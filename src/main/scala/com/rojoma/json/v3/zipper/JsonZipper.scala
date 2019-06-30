@@ -287,7 +287,7 @@ private[zipper] class TopLevelArrayZipper(val value: JArray) extends TopLevelZip
   def collect(f: PartialFunction[JValue, JValue]) = new TopLevelArrayZipper(JArray(value.toSeq.collect(f)))
 }
 private[zipper] class TopLevelObjectZipper(val value: JObject) extends TopLevelZipper with JObjectZipper {
-  def set(newField: String, newValue: JValue): JObjectZipper = new TopLevelObjectZipper(JObject(value.fields + (newField -> newValue)))
+  def set(newField: String, newValue: JValue): JObjectZipper = new TopLevelObjectZipper(JObject(value.fields concat Map(newField -> newValue)))
   def map(f: ((String, JValue)) => JValue) = new TopLevelObjectZipper(JObject(value.fields.map { kv => (kv._1, f(kv)) }))
 }
 
@@ -343,7 +343,7 @@ private[zipper] trait ArrayElementArrayZipper { this: ArrayElementZipper with JA
 }
 
 private[zipper] trait ArrayElementObjectZipper { this: ArrayElementZipper with JObjectZipper =>
-  def set(newField: String, newValue: JValue): JObjectZipper = new ChangedArrayElementObjectZipper(JObject(value.fields + (newField -> newValue)), up_!, idxInParent)
+  def set(newField: String, newValue: JValue): JObjectZipper = new ChangedArrayElementObjectZipper(JObject(value.fields concat Map(newField -> newValue)), up_!, idxInParent)
 
   def map(f: ((String, JValue)) => JValue) = new ChangedArrayElementObjectZipper(JObject(value.fields.map { kv => (kv._1, f(kv)) }), up_!, idxInParent)
 }
@@ -377,7 +377,7 @@ private[zipper] trait ObjectElementArrayZipper { this: ObjectElementZipper with 
 }
 
 private[zipper] trait ObjectElementObjectZipper { this: ObjectElementZipper with JObjectZipper =>
-  def set(newField: String, newValue: JValue): JObjectZipper = new ChangedObjectElementObjectZipper(JObject(value.fields + (newField -> newValue)), up_!, fieldInParent)
+  def set(newField: String, newValue: JValue): JObjectZipper = new ChangedObjectElementObjectZipper(JObject(value.fields concat Map(newField -> newValue)), up_!, fieldInParent)
 
   def map(f: ((String, JValue)) => JValue) = new ChangedObjectElementObjectZipper(JObject(value.fields.map { kv => (kv._1, f(kv)) }), up_!, fieldInParent)
 }
@@ -425,7 +425,7 @@ private[zipper] class ChangedArrayElementNothingZipper(parent: JArrayZipper, i: 
 // OBJECT ELEMENT AND CHANGED
 
 private[zipper] abstract class ChangedObjectElementZipper(p: JObjectZipper, f: String) extends ObjectElementZipper(p, f) with ElementZipper[JObjectZipper] { this: JsonZipper =>
-  override def up_! = super.up_!.replace(JObject(super.up_!.value.fields + (fieldInParent -> value)))
+  override def up_! = super.up_!.replace(JObject(super.up_!.value.fields concat Map(fieldInParent -> value)))
 }
 
 private[zipper] class ChangedObjectElementAtomZipper(val value: JAtom, p: JObjectZipper, f: String) extends ChangedObjectElementZipper(p, f) with JAtomZipper
@@ -433,5 +433,5 @@ private[zipper] class ChangedObjectElementArrayZipper(val value: JArray, p: JObj
 private[zipper] class ChangedObjectElementObjectZipper(val value: JObject, p: JObjectZipper, f: String) extends ChangedObjectElementZipper(p, f) with ObjectElementObjectZipper with JObjectZipper
 
 private[zipper] class ChangedObjectElementNothingZipper(parent: JObjectZipper, field: String) extends ObjectElementZipperLike(parent, field) with ElementNothingZipper[JObjectZipper] with NothingZipper {
-  override def up_! = super.up_!.replace(JObject(super.up_!.value.fields - field))
+  override def up_! = super.up_!.replace(JObject(super.up_!.value.fields.view.filter(_._1 != field).toMap))
 }
