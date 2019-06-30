@@ -4,7 +4,6 @@ package ast
 import scala.language.implicitConversions
 import scala.{collection => sc}
 import scala.reflect.ClassTag
-import scala.annotation.implicitNotFound
 import java.math.{BigInteger, BigDecimal => JBigDecimal}
 import java.io.Writer
 
@@ -412,7 +411,6 @@ case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFu
   override def size = elems.size
   def length = elems.length
   override def toList = elems.toList
-  override def toStream = elems.toStream
   override def toVector = elems.toVector
   override def toArray[B >: JValue : ClassTag] = elems.toArray[B]
 
@@ -467,7 +465,6 @@ case class JObject(val fields: sc.Map[String, JValue]) extends Iterable[(String,
   def keySet = fields.keySet
   def values = fields.values
   def valuesIterator = fields.valuesIterator
-  def mapValues[C](f: JValue => C): sc.Map[String, C] = fields.mapValues(f)
   override def toSeq = fields.toSeq
   override def toMap[T, U] (implicit ev: <:<[(String, JValue), (T, U)]): Map[T, U] = fields.toMap
 

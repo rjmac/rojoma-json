@@ -3,8 +3,6 @@ package codec
 
 import scala.language.higherKinds
 import scala.{collection => sc}
-import sc.JavaConversions._
-import sc.{mutable => scm}
 import scala.reflect.ClassTag
 import java.{util => ju}
 import java.{net => jn}
@@ -18,7 +16,7 @@ trait JsonDecode[T] {
 
 /** Generally-useful json implicits. */
 object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
-  private type CB[A, B] = sc.generic.CanBuild[A, B]
+  private type CB[A, B] = sc.Factory[A, B]
   type DecodeResult[T] = Either[DecodeError, T]
 
   def apply[T](implicit a: JsonDecode[T]): a.type = a
@@ -27,7 +25,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
   private class IterableDecode[T, S](tDecode: JsonDecode[T], buildFactory: CB[T, S]) extends JsonDecode[S] {
     def decode(xs: JValue): DecodeResult[S] = xs match {
       case JArray(jElems) =>
-        val builder = buildFactory()
+        val builder = buildFactory.newBuilder
         for ((jElem, idx) <- jElems.iterator.zipWithIndex) {
           tDecode.decode(jElem) match {
             case Right(elem) =>
@@ -236,7 +234,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
   implicit def fieldMapDecode[T, U, M[A, B] <: sc.Map[A, B]](implicit tDecode: FieldDecode[T], uDecode: JsonDecode[U], buildFactory: CB[(T, U), M[T, U]]) = new JsonDecode[M[T, U]] {
     def decode(x: JValue): DecodeResult[M[T, U]] = x match {
       case JObject(fields) =>
-        val builder = buildFactory()
+        val builder = buildFactory.newBuilder
         for((kv, jv) <- fields) {
           tDecode.decode(kv) match {
             case Right(k) =>
@@ -308,14 +306,14 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
             invoke(null).
             asInstanceOf[Array[T]].
             iterator.
-            map { e ⇒ e.name.toLowerCase → e }.
+            map { e => e.name.toLowerCase → e }.
             toMap
 
         def decode(x: JValue) = x match {
           case str@JString(s) =>
             nameMap.get(s.toLowerCase) match {
-              case Some(e) ⇒ Right(e)
-              case None ⇒ Left(DecodeError.InvalidValue(str))
+              case Some(e) => Right(e)
+              case None => Left(DecodeError.InvalidValue(str))
             }
           case other =>
             Left(DecodeError.InvalidType(JString, other.jsonType))

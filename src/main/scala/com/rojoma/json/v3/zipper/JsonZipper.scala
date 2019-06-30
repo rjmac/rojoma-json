@@ -247,7 +247,7 @@ object JsonZipper {
 
   def unapply(zipper: JsonZipper): Option[JValue] = Some(zipper.value)
 
-  implicit def toCastable[T <: JsonZipper](x: T): com.rojoma.`json-impl`.DownCaster[T] = new com.rojoma.`json-impl`.DownCaster(x)
+  implicit def toCastable[T <: JsonZipper](x: T): com.rojoma.json.v3.`-impl`.GenericDownCaster[T] = new com.rojoma.json.v3.`-impl`.GenericDownCaster(x)
 }
 
 // TOP LEVEL
@@ -425,7 +425,7 @@ private[zipper] class ChangedArrayElementNothingZipper(parent: JArrayZipper, i: 
 // OBJECT ELEMENT AND CHANGED
 
 private[zipper] abstract class ChangedObjectElementZipper(p: JObjectZipper, f: String) extends ObjectElementZipper(p, f) with ElementZipper[JObjectZipper] { this: JsonZipper =>
-  override def up_! = super.up_!.replace(JObject(super.up_!.value.fields.updated(fieldInParent, value)))
+  override def up_! = super.up_!.replace(JObject(super.up_!.value.fields + (fieldInParent -> value)))
 }
 
 private[zipper] class ChangedObjectElementAtomZipper(val value: JAtom, p: JObjectZipper, f: String) extends ChangedObjectElementZipper(p, f) with JAtomZipper

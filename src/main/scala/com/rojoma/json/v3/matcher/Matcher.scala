@@ -20,7 +20,7 @@ sealed trait OptPattern
 object OptPattern extends LowPriorityImplicits {
   implicit def litifyJValue(x: JValue): Pattern = x match {
     case atom: JAtom => Literal(atom)
-    case JArray(arr) => PArray(arr.map(litifyJValue) : _*)
+    case JArray(arr) => PArray(arr.view.map(litifyJValue).toVector : _*)
     case JObject(obj) => PObject(obj.mapValues(litifyJValue).toSeq : _*)
   }
 

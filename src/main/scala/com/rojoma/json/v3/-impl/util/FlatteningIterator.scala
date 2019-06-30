@@ -1,19 +1,18 @@
 package com.rojoma.json.v3.`-impl`.util
 
-import scala.collection.GenTraversableOnce
-import scala.annotation.tailrec
+import scala.collection.IterableOnce
 
 object FlatteningIteratorUtils {
   implicit class Fit[T](val underlying: Iterator[T]) extends AnyVal {
-    def **[T2 >: T](that: => GenTraversableOnce[T2]): Iterator[T2] = underlying match {
+    def **[T2 >: T](that: => IterableOnce[T2]): Iterator[T2] = underlying match {
       case f: FlatteningIterator[T] => f ++ that
-      case _ => new FlatteningIterator(underlying, Vector(() => that.toIterator))
+      case _ => new FlatteningIterator(underlying, Vector(() => that.iterator))
     }
 
-    def flatify[A](implicit ev: T <:< GenTraversableOnce[A]): Iterator[A] =
+    def flatify[A](implicit ev: T <:< IterableOnce[A]): Iterator[A] =
       if(!underlying.hasNext) Iterator.empty
       else {
-        val hd = underlying.next().toIterator
+        val hd = underlying.next().iterator
         hd ** underlying.flatify
       }
   }
@@ -33,7 +32,7 @@ object FlatteningIterator {
 
 import FlatteningIteratorUtils._
 
-final class FlatteningIterator[+T] private [util] (private[this] var first: Iterator[T], private[this] var xs: Vector[() => GenTraversableOnce[T]]) extends AbstractIterator[T] {
+final class FlatteningIterator[+T] private [util] (private[this] var first: Iterator[T], private[this] var xs: Vector[() => IterableOnce[T]]) extends AbstractIterator[T] {
   def this(it: Iterator[T]) = this(it, Vector.empty)
 
   // accessors for shiftIterators to use
@@ -73,10 +72,7 @@ final class FlatteningIterator[+T] private [util] (private[this] var first: Iter
     else snoc
   }
 
-  override def ++[T2 >: T](that: =>GenTraversableOnce[T2]): Iterator[T2] =
-    new FlatteningIterator(first, xs :+ (() => that))
-
-  override def flatMap[B](f: T => GenTraversableOnce[B]): Iterator[B] =
+  override def flatMap[B](f: T => IterableOnce[B]): Iterator[B] =
     map(f).flatify
 
   def hasNext: Boolean = {

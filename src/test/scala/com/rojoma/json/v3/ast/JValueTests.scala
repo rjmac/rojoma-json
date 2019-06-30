@@ -57,10 +57,4 @@ class JValueTests extends FunSuite with Checkers {
       JArray(xs.toStream).forced.elems == xs
     })
   }
-
-  test("JArrays with underlying views can be forced") {
-    check(forAll { xs: List[JValue] =>
-      JArray(xs.view).forced.elems == xs
-    })
-  }
 }

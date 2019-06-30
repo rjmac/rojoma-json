@@ -1,7 +1,7 @@
 package com.rojoma.json.v3
 package `-impl`.util
 
-// 2.11 version of MacroCompat
+// 2.13 version of MacroCompat
 
 trait MacroCompat {
   import MacroCompat._
@@ -17,7 +17,7 @@ trait MacroCompat {
 
   def findValue[T](ann: Annotation): Option[Any] =
     ann.tree.children.tail.collect {
-      case AssignOrNamedArg(Ident(n), Literal(Constant(v))) if n.toString == "value" => v
+      case NamedArg(Ident(n), Literal(Constant(v))) if n.toString == "value" => v
     }.headOption
 }
 

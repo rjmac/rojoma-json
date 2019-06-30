@@ -3,12 +3,12 @@ package codec
 
 import scala.language.higherKinds
 import scala.{collection => sc}
-import sc.JavaConverters._
-import sc.{mutable => scm}
+import scala.jdk.CollectionConverters._
 import scala.reflect.ClassTag
 import java.{util => ju}
 import java.{net => jn}
 
+import `-impl`.{MappedViewSeq, MappedViewMap}
 import ast._
 import util.WrapperJsonEncode
 
@@ -24,7 +24,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
   implicit def seqEncode[T, S[X] <: sc.Seq[X]](implicit tEncode: JsonEncode[T]) = new JsonEncode[S[T]] {
     def encode(x: S[T]): JValue = {
       if(x.nonEmpty)
-        JArray(x.view.map(tEncode.encode))
+        JArray(x.view.map(tEncode.encode).toVector)
       else
         JArray.canonicalEmpty
     }
@@ -33,7 +33,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
   implicit def arrayEncode[T: JsonEncode: ClassTag] = new JsonEncode[Array[T]] {
     def encode(x: Array[T]): JValue =
       if(x.length > 0)
-        JArray(x.view.map(JsonEncode[T].encode))
+        JArray(x.view.map(JsonEncode[T].encode).toVector)
       else
         JArray.canonicalEmpty
   }
@@ -41,7 +41,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
   implicit def setEncode[T, S[X] <: sc.Set[X]](implicit tEncode: JsonEncode[T]) = new JsonEncode[S[T]] {
     def encode(x: S[T]): JValue = {
       if(x.nonEmpty)
-        JArray(x.toSeq.view.map(tEncode.encode))
+        JArray(x.iterator.map(tEncode.encode).toVector)
       else
         JArray.canonicalEmpty
     }
@@ -50,7 +50,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
   implicit def juListEncode[T: JsonEncode] = new JsonEncode[ju.List[T]] {
     def encode(x: ju.List[T]): JValue = {
       if(!x.isEmpty)
-        JArray(x.asScala.view.map(JsonEncode[T].encode))
+        JArray(x.asScala.view.map(JsonEncode[T].encode).toVector)
       else
         JArray.canonicalEmpty
     }
@@ -59,7 +59,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
   implicit def juSetEncode[T: JsonEncode] = new JsonEncode[ju.Set[T]] {
     def encode(x: ju.Set[T]): JValue = {
       if(!x.isEmpty)
-        JArray(x.asScala.toSeq.view.map(JsonEncode[T].encode))
+        JArray(new MappedViewSeq(x.asScala.toSeq, JsonEncode[T].encode))
       else
         JArray.canonicalEmpty
     }
@@ -156,7 +156,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
       // encoded has undefined effects on the encodee up to ".forced".
       new JsonEncode[M[String, U]] {
         def encode(x: M[String, U]) =
-          if(x.nonEmpty) JObject(x.mapValues(uEncode.encode))
+          if(x.nonEmpty) JObject(new MappedViewMap(x, uEncode.encode))
           else JObject.canonicalEmpty
       }.asInstanceOf[JsonEncode[M[T, U]]]
     } else {
@@ -166,7 +166,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
             // In keeping with the general philosophy of compound encoders,
             // we'll encode as lazily as possible.
             val keysConverted: sc.Map[String, U] = x.map { case (k, v) => tEncode.encode(k) -> v }
-            JObject(keysConverted.mapValues(uEncode.encode))
+            JObject(new MappedViewMap(keysConverted, uEncode.encode))
           } else JObject.canonicalEmpty
       }
     }
