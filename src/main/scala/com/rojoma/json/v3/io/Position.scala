@@ -4,9 +4,9 @@ package io
 import ast.{JValue,JNull}
 import codec._
 
-class Position(val `private once 2.10 is no more`: Long) extends AnyVal {
-  def row = (`private once 2.10 is no more` >> 32).toInt
-  def column = `private once 2.10 is no more`.toInt
+class Position(private val rowCol: Long) extends AnyVal {
+  def row = (rowCol >> 32).toInt
+  def column = rowCol.toInt
 
   def copy(row: Int = row, column: Int = column) = Position(row, column)
 

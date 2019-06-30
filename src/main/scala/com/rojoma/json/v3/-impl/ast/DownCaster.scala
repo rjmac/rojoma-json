@@ -3,9 +3,9 @@ package `-impl`.ast
 
 import ast._
 
-class DownCaster[T <: JValue](val `private once 2.10 is no more` : T) extends AnyVal {
+class DownCaster[T <: JValue](private val x: T) extends AnyVal {
   def cast[U <: T](implicit j: Json[U]): Option[U] = {
-    if(j.jsonTypes(`private once 2.10 is no more`.jsonType)) Some(`private once 2.10 is no more`.asInstanceOf[U])
+    if(j.jsonTypes(x.jsonType)) Some(x.asInstanceOf[U])
     else None
   }
 }
