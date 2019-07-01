@@ -109,7 +109,8 @@ object JsonInterpolatorImpl {
       def next(tokens: Tokens, data: Data): (Either[Tree, State], Tokens, Data) =
         tokens match {
           case (ti@TokenInfo(TokenCloseBracket() :: _)) :: tl2 =>
-            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JArray(_root_.scala.collection.immutable.Vector(..${elemsRev.reverse}))", ti.pop :: tl2, data)
+            def ascribeJValue(v: Tree): Tree = q"$v : _root_.com.rojoma.json.v3.ast.JValue"
+            parentState.substateCompleted(q"_root_.com.rojoma.json.v3.ast.JArray(_root_.scala.collection.immutable.Vector(..${elemsRev.reverse.map { v => ascribeJValue(v) }}))", ti.pop :: tl2, data)
           case (ti@TokenInfo(TokenComma() :: _)) :: tl2 =>
             (Right(ExpectingDatum(this)), ti.pop :: tl2, data)
           case (ti@TokenInfo(t :: _)) :: _ =>
