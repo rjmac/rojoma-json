@@ -3,6 +3,7 @@ package ast
 
 import scala.language.implicitConversions
 import scala.{collection => sc}
+import scala.collection.immutable.SeqMap
 import scala.reflect.ClassTag
 import java.math.{BigInteger, BigDecimal => JBigDecimal}
 import java.io.Writer
@@ -469,16 +470,7 @@ case class JObject(val fields: sc.Map[String, JValue]) extends Iterable[(String,
   override def toMap[T, U] (implicit ev: <:<[(String, JValue), (T, U)]): Map[T, U] = fields.toMap
 
   def forced: JObject = {
-    // would be nice to freeze this into an actual immutable Map in
-    // order to preserve ordering and yet be actually unchangable, but
-    // instead we'll just trust that the Bad People who are relying on
-    // the ordering of fields in their JSON objects are not *so* bad
-    // that they'll downcast an sc.Map to an scm.Map.  Unchangability
-    // of the result isn't part of "forced"'s contract anyway; merely
-    // full evaluation.
-    val forcedMap = new sc.mutable.LinkedHashMap[String, JValue]
-    for((k, v) <- fields) forcedMap += k -> v.forced
-    new JObject(forcedMap) {
+    new JObject(fields.view.mapValues(_.forced).to(SeqMap)) {
       override def forced = this
     }
   }
