@@ -21,7 +21,7 @@ While for Maven, the pom snippet is:
 </dependencies>
 ```
 
-rojoma-json-v3 is published for Scala version 2.10, 2.11, and 2.12.
+rojoma-json-v3 is published for Scala version 2.10, 2.11, 2.12, and 2.13.
 
 ## Documentation
 
