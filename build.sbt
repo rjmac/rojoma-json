@@ -25,6 +25,9 @@ scalacOptions ++= {
   Seq("-deprecation", "-feature") ++ optimizationOptions
 }
 
+Compile / console / scalacOptions -= "-Xfatal-warnings"
+Compile / console / scalacOptions += "-Xlint:-unused"
+
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 
 libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
