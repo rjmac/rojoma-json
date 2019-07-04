@@ -28,6 +28,8 @@ scalacOptions ++= {
 Compile / console / scalacOptions -= "-Xfatal-warnings"
 Compile / console / scalacOptions += "-Xlint:-unused"
 
+Compile / doc / scalacOptions -= "-Xfatal-warnings"
+
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 
 libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
