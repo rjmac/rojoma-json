@@ -366,10 +366,10 @@ case class JBoolean(boolean: Boolean) extends JAtom {
 }
 
 object JBoolean extends scala.runtime.AbstractFunction1[Boolean, JBoolean] with JsonType {
-  // wish I could override apply(Boolean) to use these.  At least
-  // JsonReader will, though.
-  val canonicalTrue = JBoolean(true)
-  val canonicalFalse = JBoolean(false)
+  val canonicalTrue = new JBoolean(true)
+  val canonicalFalse = new JBoolean(false)
+
+  def apply(boolean: Boolean) = if(boolean) canonicalTrue else canonicalFalse
 
   override final val toString = "boolean"
 
