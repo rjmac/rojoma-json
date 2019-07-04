@@ -416,25 +416,25 @@ case class JArray(elems: sc.Seq[JValue]) extends sc.Seq[JValue] with JCompound {
   override def iterator = elems.iterator
 
   // overloads of final methods to produce JArrays if statically determinable
-  final def ++(suffix: IterableOnce[JValue]) = JArray(elems ++ suffix)
-  final def ++:(prefix: IterableOnce[JValue]) = JArray(prefix ++: elems)
-  final def +:(elem: JValue) = JArray(elem +: elems)
-  final def :+(elem: JValue) = JArray(elems :+ elem)
-  final def :++(suffix: IterableOnce[JValue]) = JArray(elems :++ suffix)
-  final def concat(suffix: sc.Seq[JValue]) = JArray(elems.concat(suffix))
+  final def ++(suffix: IterableOnce[JValue]) = new JArray(elems ++ suffix)
+  final def ++:(prefix: IterableOnce[JValue]) = new JArray(prefix ++: elems)
+  final def +:(elem: JValue) = new JArray(elem +: elems)
+  final def :+(elem: JValue) = new JArray(elems :+ elem)
+  final def :++(suffix: IterableOnce[JValue]) = new JArray(elems :++ suffix)
+  final def concat(suffix: sc.Seq[JValue]) = new JArray(elems.concat(suffix))
 
   // And now we delegate all Seq members to elems, rather than letting
   // default implementations provide them in terms of the above three
   override def appended[B >: JValue](elem: B): sc.Seq[B] = elems.appended(elem)
-  final def appended(elem: JValue) = JArray(elems.appended(elem))
+  final def appended(elem: JValue) = new JArray(elems.appended(elem))
 
   override def appendedAll[B >: JValue](elems: IterableOnce[B]): sc.Seq[B] = this.elems.appendedAll(elems)
-  final def appendedAll(elems: IterableOnce[JValue]) = JArray(this.elems.appendedAll(elems))
+  final def appendedAll(elems: IterableOnce[JValue]) = new JArray(this.elems.appendedAll(elems))
 
   override def applyOrElse[A1 <: Int, B1 >: JValue](x: A1, default: A1 => B1) = elems.applyOrElse(x, default)
   override def canEqual(that: Any) = elems.canEqual(that)
   override def collect[B](pf: PartialFunction[JValue, B]) = elems.collect(pf)
-  final def collect(pf: PartialFunction[JValue, JValue]) = JArray(elems.collect(pf))
+  final def collect(pf: PartialFunction[JValue, JValue]) = new JArray(elems.collect(pf))
   override def collectFirst[B](pf: PartialFunction[JValue, B]) = elems.collectFirst(pf)
   override def combinations(n: Int): Iterator[JArray] = elems.combinations(n).map(JArray)
   override def compose[R](k: PartialFunction[R, Int]) = elems.compose(k)
@@ -449,22 +449,22 @@ case class JArray(elems: sc.Seq[JValue]) extends sc.Seq[JValue] with JCompound {
   override def diff[B >: JValue](that: sc.Seq[B]) = elems.diff(that)
   override def distinct = elems.distinct
   override def distinctBy[B](f: JValue => B) = elems.distinctBy(f)
-  override def drop(n: Int) = JArray(elems.drop(n))
-  override def dropRight(n: Int) = JArray(elems.dropRight(n))
-  override def dropWhile(p: JValue => Boolean) = JArray(elems.dropWhile(p))
+  override def drop(n: Int) = new JArray(elems.drop(n))
+  override def dropRight(n: Int) = new JArray(elems.dropRight(n))
+  override def dropWhile(p: JValue => Boolean) = new JArray(elems.dropWhile(p))
   override def elementWise = elems.elementWise
   override def empty = JArray.empty
   override def endsWith[B >: JValue](that: Iterable[B]) = elems.endsWith(that)
   override def equals(o: Any) = elems.equals(o)
   override def exists(p: JValue => Boolean) = elems.exists(p)
-  override def filter(p: JValue => Boolean) = JArray(elems.filter(p))
-  override def filterNot(p: JValue => Boolean) = JArray(elems.filterNot(p))
+  override def filter(p: JValue => Boolean) = new JArray(elems.filter(p))
+  override def filterNot(p: JValue => Boolean) = new JArray(elems.filterNot(p))
   override def find(p: JValue => Boolean) = elems.find(p)
   override def findLast(p: JValue => Boolean) = elems.findLast(p)
   override def flatMap[B](f: JValue => IterableOnce[B]) = elems.flatMap(f)
-  final def flatMap(f: JValue => IterableOnce[JValue]) = JArray(elems.flatMap(f))
+  final def flatMap(f: JValue => IterableOnce[JValue]) = new JArray(elems.flatMap(f))
   override def flatten[B](implicit asIterable: JValue => IterableOnce[B]) = elems.flatten
-  final def flatten[B](implicit asIterable: JValue => IterableOnce[JValue]) = JArray(elems.flatten)
+  final def flatten[B](implicit asIterable: JValue => IterableOnce[JValue]) = new JArray(elems.flatten)
   override def fold[A >: JValue](z: A)(op: (A, A) => A) = elems.fold(z)(op)
   override def foldLeft[B](z: B)(op: (B, JValue) => B) = elems.foldLeft(z)(op)
   override def foldRight[B](z: B)(op: (JValue, B) => B) = elems.foldRight(z)(op)
@@ -482,9 +482,9 @@ case class JArray(elems: sc.Seq[JValue]) extends sc.Seq[JValue] with JCompound {
   override def indexOfSlice[B >: JValue](that: sc.Seq[B], from: Int) = elems.indexOfSlice(that, from)
   override def indexWhere(p: JValue => Boolean, from: Int) = elems.indexWhere(p, from)
   override def indices = elems.indices
-  override def init = JArray(elems.init)
+  override def init = new JArray(elems.init)
   override def inits = elems.inits.map(JArray)
-  override def intersect[B >: JValue](that: sc.Seq[B]) = JArray(elems.intersect(that))
+  override def intersect[B >: JValue](that: sc.Seq[B]) = new JArray(elems.intersect(that))
   override def isDefinedAt(idx: Int) = elems.isDefinedAt(idx)
   override def isEmpty = elems.isEmpty
   override def isTraversableAgain = elems.isTraversableAgain
@@ -500,7 +500,7 @@ case class JArray(elems: sc.Seq[JValue]) extends sc.Seq[JValue] with JCompound {
   override def lengthCompare(len: Int) = elems.lengthCompare(len)
   override def lift = elems.lift
   override def map[B](f: JValue => B) = elems.map(f)
-  final def map(f: JValue => JValue) = JArray(elems.map(f))
+  final def map(f: JValue => JValue) = new JArray(elems.map(f))
   override def max[B >: JValue : math.Ordering] = elems.max[B]
   override def maxBy[B : math.Ordering](f: JValue => B) = elems.maxBy(f)
   override def maxByOption[B : math.Ordering](f: JValue => B) = elems.maxByOption(f)
@@ -511,19 +511,19 @@ case class JArray(elems: sc.Seq[JValue]) extends sc.Seq[JValue] with JCompound {
   override def minOption[B >: JValue : math.Ordering] = elems.minOption[B]
   override def orElse[A1 <: Int, B1 >: JValue](that: PartialFunction[A1, B1]) = elems.orElse(that)
   override def padTo[B >: JValue](len: Int, elem: B) = elems.padTo(len, elem)
-  final def padTo(len: Int, elem: JValue) = JArray(elems.padTo(len, elem))
+  final def padTo(len: Int, elem: JValue) = new JArray(elems.padTo(len, elem))
   override def partition(p: JValue => Boolean) = {
     val (a, b) = elems.partition(p)
-    (JArray(a), JArray(b))
+    (new JArray(a), new JArray(b))
   }
   override def partitionMap[A1, A2](f: JValue => Either[A1, A2]) = elems.partitionMap(f)
   override def patch[B >: JValue](from: Int, other: IterableOnce[B], replaced: Int) = elems.patch(from, other, replaced)
-  final def patch(from: Int, other: IterableOnce[JValue], replaced: Int) = JArray(elems.patch(from, other, replaced))
+  final def patch(from: Int, other: IterableOnce[JValue], replaced: Int) = new JArray(elems.patch(from, other, replaced))
   override def permutations = elems.permutations.map(JArray)
   override def prepended[B >: JValue](elem: B) = elems.prepended(elem)
-  final def prepended(elem: JValue) = JArray(elems.prepended(elem))
+  final def prepended(elem: JValue) = new JArray(elems.prepended(elem))
   override def prependedAll[B >: JValue](prefix: IterableOnce[B]) = elems.prependedAll(prefix)
-  final def prependedAll(prefix: IterableOnce[JValue]) = JArray(elems.prependedAll(prefix))
+  final def prependedAll(prefix: IterableOnce[JValue]) = new JArray(elems.prependedAll(prefix))
   override def product[B >: JValue : math.Numeric] = elems.product[B]
   override def reduce[B >: JValue](op: (B, B) => B) = elems.reduce(op)
   override def reduceLeft[B >: JValue](op: (B, JValue) => B) = elems.reduceLeft(op)
@@ -531,7 +531,7 @@ case class JArray(elems: sc.Seq[JValue]) extends sc.Seq[JValue] with JCompound {
   override def reduceOption[B >: JValue](op: (B, B) => B) = elems.reduceOption(op)
   override def reduceRight[B >: JValue](op: (JValue, B) => B) = elems.reduceRight(op)
   override def reduceRightOption[B >: JValue](op: (JValue, B) => B) = elems.reduceRightOption(op)
-  override def reverse = JArray(elems.reverse)
+  override def reverse = new JArray(elems.reverse)
   override def reverseIterator = elems.reverseIterator
   override def runWith[U](action: JValue => U) = elems.runWith(action)
   override def sameElements[B >: JValue](that: IterableOnce[B]) = elems.sameElements(that)
@@ -543,29 +543,29 @@ case class JArray(elems: sc.Seq[JValue]) extends sc.Seq[JValue] with JCompound {
   override def search[B >: JValue : Ordering](elem: B, from: Int, to: Int) = elems.search(elem, from, to)
   override def search[B >: JValue : Ordering](elem: B) = elems.search(elem)
   override def segmentLength(p: JValue => Boolean, from: Int) = elems.segmentLength(p, from)
-  override def slice(from: Int, until: Int) = JArray(elems.slice(from, until))
+  override def slice(from: Int, until: Int) = new JArray(elems.slice(from, until))
   override def sliding(size: Int, step: Int) = elems.sliding(size, step).map(JArray)
   override def sliding(size: Int) = elems.sliding(size).map(JArray)
-  override def sortBy[B : Ordering](f: JValue => B) = JArray(elems.sortBy(f))
-  override def sortWith(lt: (JValue, JValue) => Boolean) = JArray(elems.sortWith(lt))
+  override def sortBy[B : Ordering](f: JValue => B) = new JArray(elems.sortBy(f))
+  override def sortWith(lt: (JValue, JValue) => Boolean) = new JArray(elems.sortWith(lt))
   override def sorted[B >: JValue : Ordering] = elems.sorted[B]
   override def span(p: JValue => Boolean) = {
     val (a, b) = elems.span(p)
-    (JArray(a), JArray(b))
+    (new JArray(a), new JArray(b))
   }
   override def splitAt(n: Int) = {
     val (a, b) = elems.splitAt(n)
-    (JArray(a), JArray(b))
+    (new JArray(a), new JArray(b))
   }
   override def startsWith[B >: JValue](that: IterableOnce[B], offset: Int = 0) = elems.startsWith(that)
   override def stepper[S <: sc.Stepper[_]](implicit shape: sc.StepperShape[JValue, S]) = elems.stepper[S]
   override def sum[B >: JValue : math.Numeric] = elems.sum[B]
-  override def tail = JArray(elems.tail)
+  override def tail = new JArray(elems.tail)
   override def tails = elems.tails.map(JArray)
-  override def take(n: Int) = JArray(elems.take(n))
-  override def takeRight(n: Int) = JArray(elems.takeRight(n))
-  override def takeWhile(p: JValue => Boolean) = JArray(elems.takeWhile(p))
-  override def tapEach[U](f: JValue => U) = JArray(elems.tapEach(f))
+  override def take(n: Int) = new JArray(elems.take(n))
+  override def takeRight(n: Int) = new JArray(elems.takeRight(n))
+  override def takeWhile(p: JValue => Boolean) = new JArray(elems.takeWhile(p))
+  override def tapEach[U](f: JValue => U) = new JArray(elems.tapEach(f))
   override def to[C1](factory: sc.Factory[JValue, C1]) = elems.to(factory)
   override def toArray[B >: JValue : ClassTag] = elems.toArray[B]
   override def toIndexedSeq = elems.toIndexedSeq
@@ -580,7 +580,7 @@ case class JArray(elems: sc.Seq[JValue]) extends sc.Seq[JValue] with JCompound {
   override def unzip[A1, A2](implicit asPair: JValue => (A1, A2)) = elems.unzip[A1, A2]
   override def unzip3[A1, A2, A3](implicit asPair: JValue => (A1, A2, A3)) = elems.unzip3[A1, A2, A3]
   override def updated[B >: JValue](index: Int, elem: B) = elems.updated(index, elem)
-  final def updated(index: Int, elem: JValue) = JArray(elems.updated(index, elem))
+  final def updated(index: Int, elem: JValue) = new JArray(elems.updated(index, elem))
   override def view = elems.view
   override def withFilter(p: JValue => Boolean) = elems.withFilter(p)
   override def zip[B](that: IterableOnce[B]) = elems.zip(that)
@@ -600,8 +600,15 @@ case class JArray(elems: sc.Seq[JValue]) extends sc.Seq[JValue] with JCompound {
 }
 
 object JArray extends scala.runtime.AbstractFunction1[sc.Seq[JValue], JArray] with sc.Factory[JValue, JArray] with JsonType {
-  val canonicalEmpty = JArray(Vector.empty) // Vector because JsonReader is guaranteed to return JArrays which contain Vectors.
+  val canonicalEmpty = new JArray(Vector.empty) // Vector because JsonReader is guaranteed to return JArrays which contain Vectors.
   val empty = canonicalEmpty
+
+  override def apply(elems: sc.Seq[JValue]) =
+    elems match {
+      case arr: JArray => arr
+      case other if other.isEmpty => canonicalEmpty
+      case other => new JArray(other)
+    }
 
   override final val toString = "array"
   implicit object Concrete extends Json[JArray] {
@@ -627,9 +634,9 @@ case class JObject(val fields: sc.Map[String, JValue]) extends sc.Map[String, JV
   override def iterator = fields.iterator
 
   @deprecated("Use - or removed on an immutable Map", "2.13.0")
-  def -(key: String) = JObject(fields - key)
+  def -(key: String) = new JObject(fields - key)
   @deprecated("Use -- or removedAll on an immutable Map", "2.13.0")
-  def -(key1: String, key2: String, keys: String*) = JObject(fields-(key1, key2, keys : _*))
+  def -(key1: String, key2: String, keys: String*) = new JObject(fields-(key1, key2, keys : _*))
 
   override def ++[V2 >: JValue](xs: IterableOnce[(String, V2)]) = fields ++ xs
   override def andThen[C](k: PartialFunction[JValue, C]) = fields.andThen(k)
@@ -638,12 +645,12 @@ case class JObject(val fields: sc.Map[String, JValue]) extends sc.Map[String, JV
   override def applyOrElse[K1 <: String, V1 >: JValue](x: K1, default: K1 => V1) = fields.applyOrElse(x, default)
   override def canEqual(that: Any) = fields.canEqual(that)
   override def collect[K2, V2](pf: PartialFunction[(String, JValue), (K2, V2)]) = fields.collect(pf)
-  final def collect(pf: PartialFunction[(String, JValue), (String, JValue)]) = JObject(fields.collect(pf))
+  final def collect(pf: PartialFunction[(String, JValue), (String, JValue)]) = new JObject(fields.collect(pf))
   override def collect[B](pf: PartialFunction[(String, JValue), B]) = fields.collect(pf)
   override def collectFirst[B](pf: PartialFunction[(String, JValue), B]) = fields.collectFirst(pf)
   override def compose[A](f: A => String) = fields.compose(f)
   override def concat[V2 >: JValue](suffix: IterableOnce[(String, V2)]) = fields.concat(suffix)
-  final def concat[V2 <: JValue](suffix: sc.Map[String, V2]) = JObject(fields.concat(suffix))
+  final def concat[V2 <: JValue](suffix: sc.Map[String, V2]) = new JObject(fields.concat(suffix))
   override def concat[B >: (String, JValue)](suffix: IterableOnce[B]) = fields.concat(suffix)
   override def contains(key: String) = fields.contains(key)
   override def copyToArray[B >: (String, JValue)](xs: Array[B], start: Int, len: Int) = fields.copyToArray(xs, start, len)
@@ -652,18 +659,18 @@ case class JObject(val fields: sc.Map[String, JValue]) extends sc.Map[String, JV
   override def corresponds[B](that: IterableOnce[B])(p: ((String, JValue), B) => Boolean) = fields.corresponds(that)(p)
   override def count(p: ((String, JValue)) => Boolean) = fields.count(p)
   override def default(key: String) = fields.default(key)
-  override def drop(n: Int) = JObject(fields.drop(n))
-  override def dropRight(n: Int) = JObject(fields.dropRight(n))
-  override def dropWhile(p: ((String, JValue)) => Boolean) = JObject(fields.dropWhile(p))
+  override def drop(n: Int) = new JObject(fields.drop(n))
+  override def dropRight(n: Int) = new JObject(fields.dropRight(n))
+  override def dropWhile(p: ((String, JValue)) => Boolean) = new JObject(fields.dropWhile(p))
   override def elementWise = fields.elementWise
   override def empty = JObject.empty
   override def equals(o: Any) = fields.equals(o)
   override def exists(p: ((String, JValue)) => Boolean) = fields.exists(p)
-  override def filter(pred: ((String, JValue)) => Boolean) = JObject(fields.filter(pred))
-  override def filterNot(pred: ((String, JValue)) => Boolean) = JObject(fields.filterNot(pred))
+  override def filter(pred: ((String, JValue)) => Boolean) = new JObject(fields.filter(pred))
+  override def filterNot(pred: ((String, JValue)) => Boolean) = new JObject(fields.filterNot(pred))
   override def find(p: ((String, JValue)) => Boolean) = fields.find(p)
   override def flatMap[K2, V2](f: ((String, JValue)) => IterableOnce[(K2, V2)]) = fields.flatMap(f)
-  final def flatMap(f: ((String, JValue)) => IterableOnce[(String, JValue)]) = JObject(fields.flatMap(f))
+  final def flatMap(f: ((String, JValue)) => IterableOnce[(String, JValue)]) = new JObject(fields.flatMap(f))
   override def flatMap[B](f: ((String, JValue)) => IterableOnce[B]) = fields.flatMap(f)
   override def flatten[B](implicit asIterable: ((String, JValue)) => IterableOnce[B]) = fields.flatten[B]
   override def fold[A >: (String, JValue)](z: A)(op: (A, A) => A) = fields.fold(z)(op)
@@ -680,7 +687,7 @@ case class JObject(val fields: sc.Map[String, JValue]) extends sc.Map[String, JV
   override def hashCode() = fields.hashCode()
   override def head = fields.head
   override def headOption = fields.headOption
-  override def init = JObject(fields.init)
+  override def init = new JObject(fields.init)
   override def inits = fields.inits.map(JObject)
   override def isDefinedAt(key: String) = fields.isDefinedAt(key)
   override def isEmpty = fields.isEmpty
@@ -696,7 +703,7 @@ case class JObject(val fields: sc.Map[String, JValue]) extends sc.Map[String, JV
   // lazyZip gets inherited
   override def lift = fields.lift
   override def map[K2, V2](f: ((String, JValue)) => (K2, V2)) = fields.map(f)
-  final def map(f: ((String, JValue)) => (String, JValue)) = JObject(fields.map(f))
+  final def map(f: ((String, JValue)) => (String, JValue)) = new JObject(fields.map(f))
   override def map[B](f: ((String, JValue)) => B) = fields.map(f)
   override def mapFactory = fields.mapFactory
   override def max[B >: (String, JValue) : math.Ordering] = fields.max[B]
@@ -710,7 +717,7 @@ case class JObject(val fields: sc.Map[String, JValue]) extends sc.Map[String, JV
   override def orElse[A1 <: String, B1 >: JValue](that: PartialFunction[A1, B1]) = fields.orElse(that)
   override def partition(p: ((String, JValue)) => Boolean) = {
     val (a, b) = fields.partition(p)
-    (JObject(a), JObject(b))
+    (new JObject(a), new JObject(b))
   }
   override def partitionMap[A1, A2](f: ((String, JValue)) => Either[A1, A2]) = fields.partitionMap(f)
   override def product[B >: (String, JValue) : math.Numeric] = fields.product[B]
@@ -727,25 +734,25 @@ case class JObject(val fields: sc.Map[String, JValue]) extends sc.Map[String, JV
   override def size = fields.size
   override def sizeCompare(that: Iterable[_]) = fields.sizeCompare(that)
   override def sizeCompare(otherSize: Int) = fields.sizeCompare(otherSize)
-  override def slice(from: Int, until: Int) = JObject(fields.slice(from, until))
+  override def slice(from: Int, until: Int) = new JObject(fields.slice(from, until))
   override def sliding(size: Int, step: Int) = fields.sliding(size, step).map(JObject)
   override def sliding(size: Int) = fields.sliding(size).map(JObject)
   override def span(p: ((String, JValue)) => Boolean) = {
     val (a, b) = fields.span(p)
-    (JObject(a), JObject(b))
+    (new JObject(a), new JObject(b))
   }
   override def splitAt(n: Int) = {
     val (a, b) = fields.splitAt(n)
-    (JObject(a), JObject(b))
+    (new JObject(a), new JObject(b))
   }
   override def stepper[S <: sc.Stepper[_]](implicit shape: sc.StepperShape[(String, JValue), S]) = fields.stepper[S]
   override def sum[B >: (String, JValue) : Numeric] = fields.sum[B]
-  override def tail = JObject(fields.tail)
+  override def tail = new JObject(fields.tail)
   override def tails = fields.tails.map(JObject)
-  override def take(n: Int) = JObject(fields.take(n))
-  override def takeRight(n: Int) = JObject(fields.takeRight(n))
-  override def takeWhile(p: ((String, JValue)) => Boolean) = JObject(fields.takeWhile(p))
-  override def tapEach[U](f: ((String, JValue)) => U) = JObject(fields.tapEach(f))
+  override def take(n: Int) = new JObject(fields.take(n))
+  override def takeRight(n: Int) = new JObject(fields.takeRight(n))
+  override def takeWhile(p: ((String, JValue)) => Boolean) = new JObject(fields.takeWhile(p))
+  override def tapEach[U](f: ((String, JValue)) => U) = new JObject(fields.tapEach(f))
   override def to[C1](factory: sc.Factory[(String, JValue), C1]) = fields.to(factory)
   override def toArray[B >: (String, JValue) : ClassTag] = fields.toArray[B]
   override def toIndexedSeq = fields.toIndexedSeq
@@ -777,12 +784,19 @@ case class JObject(val fields: sc.Map[String, JValue]) extends sc.Map[String, JV
 }
 
 object JObject extends scala.runtime.AbstractFunction1[sc.Map[String, JValue], JObject] with sc.Factory[(String, JValue), JObject] with JsonType {
-  val canonicalEmpty = JObject(SeqMap.empty) // _Not_ LinkedHashMap because all JsonReader guarantees is ordering of elements, which this satisfies.
+  val canonicalEmpty = new JObject(SeqMap.empty)
   val empty = canonicalEmpty
   override final val toString = "object"
   implicit object Concrete extends Json[JObject] {
     val jsonTypes = Set[JsonType](JObject)
   }
+
+  override def apply(fields: sc.Map[String, JValue]) =
+    fields match {
+      case arr: JObject => arr
+      case other if other.isEmpty => canonicalEmpty
+      case other => new JObject(other)
+    }
 
   private class JObjectBuilder extends sc.mutable.Builder[(String, JValue), JObject] {
     private val underlying = SeqMap.newBuilder[String, JValue]
