@@ -111,6 +111,9 @@ object JValue {
   }
 }
 
+/** A [[com.rojoma.json.v3.ast.JValue]] that is not a [[com.rojoma.json.v3.ast.JNull]]. */
+sealed trait JNotNullValue extends JValue
+
 /** A JSON "atom" — anything except arrays or objects.  This and [[com.rojoma.json.v3.ast.JCompound]] form
   * a partition of the set of valid [[com.rojoma.json.v3.ast.JValue]]s. */
 sealed abstract class JAtom extends JValue {
@@ -126,7 +129,7 @@ object JAtom {
 }
 
 /** A number. */
-sealed abstract class JNumber extends JAtom {
+sealed abstract class JNumber extends JAtom with JNotNullValue {
   def toByte: Byte
   def toShort: Short
   def toInt: Int
@@ -349,7 +352,7 @@ object JNumber extends JsonType {
 
 /** A JSON string.  This does not yet enforce well-formedness with
   * respect to surrogate pairs, but it probably should. */
-case class JString(string: String) extends JAtom {
+case class JString(string: String) extends JAtom with JNotNullValue {
   def jsonType = JString
 }
 
@@ -362,7 +365,7 @@ object JString extends scala.runtime.AbstractFunction1[String, JString] with Jso
 }
 
 /** A boolean */
-case class JBoolean(boolean: Boolean) extends JAtom {
+case class JBoolean(boolean: Boolean) extends JAtom with JNotNullValue {
   def jsonType = JBoolean
 }
 
@@ -393,7 +396,7 @@ case object JNull extends JNull with JsonType {
 
 /** The common superclass of arrays and objects.  This and [[com.rojoma.json.v3.ast.JAtom]] form
   * a partition of the set of valid [[com.rojoma.json.v3.ast.JValue]]s. */
-sealed trait JCompound extends JValue {
+sealed trait JCompound extends JNotNullValue {
   def forced: JCompound
   def size: Int
 }
