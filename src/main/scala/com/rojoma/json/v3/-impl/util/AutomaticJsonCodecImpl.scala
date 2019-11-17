@@ -13,7 +13,13 @@ abstract class AutomaticJsonCodecImpl[Ctx <: Context](c_ : Ctx) extends MacroCom
 
   val requestType: Class[_]
 
-  def defaultCompanion(cls: ClassDef) =
+  def defaultCompanion(cls: ClassDef) = {
+    val objModFlags = Seq(Flag.PRIVATE, Flag.PROTECTED, Flag.LOCAL).foldLeft(NoFlags) { (set, flag) =>
+      if(cls.mods.hasFlag(flag)) set | flag
+      else set
+    }
+    val objMod = Modifiers(objModFlags, cls.mods.privateWithin, Nil)
+
     if(cls.mods.hasFlag(Flag.CASE)) {
       // if the primary ctor has one argument list, we want to
       // extend AbstractFunctionN and Serializable, otherwise
@@ -42,29 +48,13 @@ abstract class AutomaticJsonCodecImpl[Ctx <: Context](c_ : Ctx) extends MacroCom
         case _ => List(tq"_root_.scala.Serializable")
       }
 
-      // I REALLY need to find a way to add modifiers after the fact!
-      if(cls.mods.hasFlag(Flag.PRIVATE)) {
-        q"""private object ${cls.name.toTermName} extends ..$parents {
-              override def toString = ${cls.name.decodedName.toString}
-            }"""
-      } else if(cls.mods.hasFlag(Flag.PROTECTED)) {
-        q"""protected object ${cls.name.toTermName} extends ..$parents {
-              override def toString = ${cls.name.decodedName.toString}
-            }"""
-      } else {
-        q"""object ${cls.name.toTermName} extends ..$parents {
-              override def toString = ${cls.name.decodedName.toString}
-            }"""
-      }
+      q"""$objMod object ${cls.name.toTermName} extends ..$parents {
+             override def toString = ${cls.name.decodedName.toString}
+          }"""
     } else {
-      if(cls.mods.hasFlag(Flag.PRIVATE)) {
-        q"private object ${cls.name.toTermName} {}"
-      } else if(cls.mods.hasFlag(Flag.PROTECTED)) {
-        q"protected object ${cls.name.toTermName} {}"
-      } else {
-        q"object ${cls.name.toTermName} {}"
-      }
+      q"$objMod object ${cls.name.toTermName} {}"
     }
+  }
 
   val (cls, companion) = bs.map(_.tree) match {
     case List(cls: ClassDef) => (cls, defaultCompanion(cls))
