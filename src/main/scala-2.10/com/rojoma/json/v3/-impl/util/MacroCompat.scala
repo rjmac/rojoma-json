@@ -3,6 +3,8 @@ package `-impl`.util
 
 // 2.10 version of MacroCompat
 
+import scala.annotation.StaticAnnotation
+
 trait MacroCompat {
   import MacroCompat._
 
@@ -36,8 +38,12 @@ trait MacroCompat {
   object termNames {
     val ROOTPKG = "_root_"
   }
+
+  lazy val syntheticFlag = NoFlags
 }
 
 object MacroCompat {
   type Context = scala.reflect.macros.Context
+
+  class compileTimeOnly(value: String) extends StaticAnnotation
 }

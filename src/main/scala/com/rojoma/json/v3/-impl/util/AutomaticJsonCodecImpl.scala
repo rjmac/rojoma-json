@@ -15,7 +15,7 @@ abstract class AutomaticJsonCodecImpl extends MacroCompat {
   val requestType: Class[_]
 
   def defaultCompanion(cls: ClassDef) = {
-    val objModFlags = Seq(Flag.PRIVATE, Flag.PROTECTED, Flag.LOCAL).foldLeft(NoFlags) { (set, flag) =>
+    val objModFlags = Seq(Flag.PRIVATE, Flag.PROTECTED, Flag.LOCAL).foldLeft(syntheticFlag) { (set, flag) =>
       if(cls.mods.hasFlag(flag)) set | flag
       else set
     }
@@ -33,7 +33,7 @@ abstract class AutomaticJsonCodecImpl extends MacroCompat {
       }
 
       val parents = ctorInfo match {
-        case Some(List(paramList)) if paramList.length < 23 =>
+        case Some(List(paramList)) if paramList.length < 23 && cls.tparams.isEmpty =>
           val afn = toTypeName("AbstractFunction" + paramList.length)
           val params = paramList.map { param =>
             val Scala = toTermName("Scala") // 2.10 grr
@@ -57,16 +57,14 @@ abstract class AutomaticJsonCodecImpl extends MacroCompat {
     }
   }
 
-  val (cls, companion) = bs.map(_.tree) match {
+  lazy val (cls, companion) = bs.map(_.tree) match {
     case List(cls: ClassDef) => (cls, defaultCompanion(cls))
     case List(cls: ClassDef, companion: ModuleDef) => (cls, companion)
     case _ =>
       c.abort(c.enclosingPosition, s"${requestType.getSimpleName} must be used on a class")
   }
 
-  if(cls.tparams.nonEmpty) {
-    c.abort(cls.tparams.head.pos, s"Cannot use ${requestType.getSimpleName} with a generic class")
-  }
+  lazy val tparamNames = cls.tparams.map(_.name)
 
   // Hm.  I'm not sure a freshName would be guaranteed to be stable.
   // So we'll do this instead:
@@ -74,27 +72,45 @@ abstract class AutomaticJsonCodecImpl extends MacroCompat {
     val md = java.security.MessageDigest.getInstance("SHA1")
     md.digest(s.getBytes(StandardCharsets.UTF_8)).map(_.toInt & 0xff).map("%02x".format(_)).mkString
   }
-  val generatedName = toTermName("automatically generated json codec " + sha1sum(cls.name.encodedName.toString))
+  lazy val generatedName = toTermName("automatically generated json codec " + sha1sum(cls.name.encodedName.toString))
 
-  def augmentedCompanion(t: Tree) =
-    ModuleDef(companion.mods, companion.name, Template(companion.impl.parents, companion.impl.self, companion.impl.body :+ q"implicit val $generatedName = $t"))
+  def augmentedCompanion(t: Tree, params: Seq[Tree], resultType: Tree) = {
+    val addition =
+      if(params.isEmpty) q"implicit val $generatedName: $resultType = $t"
+      else q"implicit def $generatedName[..${cls.tparams}](implicit ..$params): $resultType = $t"
+
+    ModuleDef(companion.mods, companion.name, Template(companion.impl.parents, companion.impl.self, companion.impl.body :+ addition))
+  }
 
   def codec = {
-    val newCompanion = augmentedCompanion(q"_root_.com.rojoma.json.v3.util.AutomaticJsonCodecBuilder.apply[${cls.name}]")
+    val newCompanion = augmentedCompanion(q"_root_.com.rojoma.json.v3.util.AutomaticJsonCodecBuilder.apply[${cls.name}[..$tparamNames]]",
+                                          tparamNames.zipWithIndex.flatMap { case (t, i) =>
+                                            List(ValDef(Modifiers(syntheticFlag), toTermName(s"e$i"), tq"_root_.com.rojoma.json.v3.codec.JsonEncode[$t]", q""),
+                                                 ValDef(Modifiers(syntheticFlag), toTermName(s"d$i"), tq"_root_.com.rojoma.json.v3.codec.JsonDecode[$t]", q""))
+                                          },
+                                          tq"_root_.com.rojoma.json.v3.codec.JsonEncode[${cls.name}[..$tparamNames]] with _root_.com.rojoma.json.v3.codec.JsonDecode[${cls.name}[..$tparamNames]]")
     val tree = q"$cls; $newCompanion"
     // println(tree)
     c.Expr[Any](tree)
   }
 
   def encode = {
-    val newCompanion = augmentedCompanion(q"_root_.com.rojoma.json.v3.util.AutomaticJsonEncodeBuilder.apply[${cls.name}]")
+    val newCompanion = augmentedCompanion(q"_root_.com.rojoma.json.v3.util.AutomaticJsonEncodeBuilder.apply[${cls.name}[..$tparamNames]]",
+                                          tparamNames.zipWithIndex.map { case (t, i) =>
+                                            ValDef(Modifiers(syntheticFlag), toTermName(s"e$i"), tq"_root_.com.rojoma.json.v3.codec.JsonEncode[$t]", q"")
+                                          },
+                                          tq"_root_.com.rojoma.json.v3.codec.JsonEncode[${cls.name}[..$tparamNames]]")
     val tree = q"$cls; $newCompanion"
     // println(tree)
     c.Expr[Any](tree)
   }
 
   def decode = {
-    val newCompanion = augmentedCompanion(q"_root_.com.rojoma.json.v3.util.AutomaticJsonDecodeBuilder.apply[${cls.name}]")
+    val newCompanion = augmentedCompanion(q"_root_.com.rojoma.json.v3.util.AutomaticJsonDecodeBuilder.apply[${cls.name}[..$tparamNames]]",
+                                          tparamNames.zipWithIndex.map { case (t, i) =>
+                                            ValDef(Modifiers(syntheticFlag), toTermName(s"d$i"), tq"_root_.com.rojoma.json.v3.codec.JsonDecode[$t]", q"")
+                                          },
+                                          tq"_root_.com.rojoma.json.v3.codec.JsonDecode[${cls.name}[..$tparamNames]]")
     val tree = q"$cls; $newCompanion"
     // println(tree)
     c.Expr[Any](tree)
