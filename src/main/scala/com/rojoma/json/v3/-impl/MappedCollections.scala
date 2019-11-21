@@ -20,6 +20,7 @@ final class MappedViewMap[A, B, C](underlying: sc.Map[A, B], f: B => C) extends 
   override def -(key: A) = new MappedViewMap(underlying - key, f)
   override def get(key: A) = underlying.get(key).map(f)
   override def foreach[U](g: ((A, C)) => U) = underlying.foreach { case (k, v) => g(k -> f(v)) }
+  override def valuesIterator: Iterator[C] = underlying.valuesIterator.map(f)
 
   def force = underlying.view.mapValues(f).to(sc.Map)
 }
