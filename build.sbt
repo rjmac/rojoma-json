@@ -18,7 +18,7 @@ scalacOptions ++= {
     case SV("2","12") =>
       List("-opt:l:classpath", "-Xlint")
     case SV("2","13") =>
-      List("-opt:l:inline", "-Xfatal-warnings", "-Xlint", "-Xlint:-nonlocal-return", "-Xlog-free-types")
+      List("-opt:l:inline", "-Xlint", "-Xlint:-nonlocal-return", "-Xlog-free-types", "-Ymacro-annotations")
     case _ =>
       sys.error("Need to set up scalacoptions for the current compiler")
     }
