@@ -16,8 +16,11 @@ abstract class MacroCompat[Ctx <: MacroCompat.Context](val c: Ctx) {
     ann.tree.children.tail.collect {
       case NamedArg(Ident(n), Literal(Constant(v))) if n.toString == "value" => v
     }.headOption
+
+  lazy val syntheticFlag = Flag.SYNTHETIC
 }
 
 object MacroCompat {
   type Context = scala.reflect.macros.whitebox.Context
+  type compileTimeOnly = scala.annotation.compileTimeOnly
 }
