@@ -2,9 +2,9 @@ name := "rojoma-json-v3"
 
 organization := "com.rojoma"
 
-version := "3.9.3"
+version := "3.10.0"
 
-mimaPreviousArtifacts := Set("com.rojoma" % ("rojoma-json-v3_" + scalaBinaryVersion.value) % "3.9.0")
+mimaPreviousArtifacts := Set("com.rojoma" % ("rojoma-json-v3_" + scalaBinaryVersion.value) % "3.9.3")
 
 scalaVersion := "2.12.0"
 
