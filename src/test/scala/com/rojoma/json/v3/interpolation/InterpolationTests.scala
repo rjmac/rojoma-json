@@ -22,6 +22,29 @@ class InterpolationTests extends FunSuite with MustMatchers {
     json"""false""" must be theSameInstanceAs (JBoolean.canonicalFalse)
   }
 
+
+  test("Optional array item") {
+    json"""[?${Some(2)}]""" must be (json"""[2]""")
+    json"""[1, ?${Some(2)}]""" must be (json"""[1, 2]""")
+    json"""[?${Some(2)}, 3]""" must be (json"""[2, 3]""")
+    json"""[1, ?${Some(2)}, 3]""" must be (json"""[1, 2, 3]""")
+    json"""[?${Option.empty[Int]}]""" must be (json"""[]""")
+    json"""[?${Option.empty[Int]}, 3]""" must be (json"""[3]""")
+    json"""[1,?${Option.empty[Int]}]""" must be (json"""[1]""")
+    json"""[1,?${Option.empty[Int]}, 3]""" must be (json"""[1, 3]""")
+  }
+
+  test("Optional map item") {
+    json"""{b : ?${Some(2)}}""" must be (json"""{b:2}""")
+    json"""{a:1, b: ?${Some(2)}}""" must be (json"""{a:1, b:2}""")
+    json"""{b:?${Some(2)}, c:3}""" must be (json"""{b:2, c:3}""")
+    json"""{a:1, b:?${Some(2)}, c:3}""" must be (json"""{a:1, b:2, c:3}""")
+    json"""{b:?${Option.empty[Int]}}""" must be (json"""{}""")
+    json"""{b:?${Option.empty[Int]}, c:3}""" must be (json"""{c:3}""")
+    json"""{a:1,b:?${Option.empty[Int]}}""" must be (json"""{a:1}""")
+    json"""{a:1,b:?${Option.empty[Int]}, c:3}""" must be (json"""{a:1, c:3}""")
+  }
+
   test("Workout") {
     val interpolatedMap = Map(new URI("https://www.example.com/one") -> "smiling",
                               new URI("https://www.example.com/two") -> "gnus",
