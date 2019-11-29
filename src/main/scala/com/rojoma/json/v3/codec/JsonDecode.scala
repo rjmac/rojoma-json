@@ -1,7 +1,6 @@
 package com.rojoma.json.v3
 package codec
 
-import scala.language.higherKinds
 import scala.{collection => sc}
 import scala.reflect.ClassTag
 import java.{util => ju}

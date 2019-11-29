@@ -4,9 +4,9 @@ organization := "com.rojoma"
 
 version := "3.9.3"
 
-// mimaPreviousArtifacts := Set("com.rojoma" % ("rojoma-json-v3_" + scalaBinaryVersion.value) % "3.9.0")
+mimaPreviousArtifacts := Set("com.rojoma" % ("rojoma-json-v3_" + scalaBinaryVersion.value) % "3.9.3")
 
-scalaVersion := "2.13.0"
+scalaVersion := "2.13.1"
 
 // crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.0", scalaVersion.value)
 
