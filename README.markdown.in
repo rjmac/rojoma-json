@@ -303,10 +303,15 @@ The package includes helpers for building `JsonEncode` and
 `JsonDecode` instances.  For single classes, there is the macro-based
 `AutomaticJsonCodecBuilder` (also `AutomaticJsonEncodeBuilder` and
 `AutomaticJsonDecodeBuilder` for unidirectional conversion) which can
-produce instances for case-like classes automatically.  There is also
-the older `SimpleJsonCodecBuilder` (with encode and decode variants)
-that requires the programmer to say how to (de)construct objects.
-They are very straightforward to use:
+produce instances for case-like classes automatically, as well as
+annotation macros `@AutomaticJsonCodec`, `@AutomaticJsonEncode` and
+`@AutomaticJsonDecode`.  There is also the older
+`SimpleJsonCodecBuilder` (with encode and decode variants) that
+requires the programmer to say how to (de)construct objects.  They are
+very straightforward to use (note that the macro annotations require
+using the [macro-paradise compiler
+plugin](https://docs.scala-lang.org/overviews/macros/paradise.html) on
+Scala 2.10, 2.11, and 2.12, or `-Ymacro-annotations` on Scala 2.13):
 
 ```scala
 case class Foo(a: Int, b: Option[String])
@@ -314,6 +319,13 @@ object Foo {
   implicit val jCodec = AutomaticJsonCodecBuilder[Foo]
   // alternately: SimpleJsonCodecBuilder[Foo].build("a", _.a, "b", _.b)
 }
+```
+
+or
+
+```scala
+@AutomaticJsonCodec
+case class Foo(a: Int, b: Option[String])
 ```
 
 These can be used to build codecs for any classes which have accessors
@@ -352,6 +364,23 @@ the default strategy for all fields.  If two names map to the same
 JSON identifier (whether automatically or through use of `@JsonKey`) a
 compiler error occurs.
 
+For classes with type parameters, the annotation macros will build
+implicit encoders and/or decoders which require that encoders or
+decoders be implicitly available at the point of use:
+
+```scala
+@AutomaticJsonCodec
+case class Foo[T](things: Seq[T])
+
+// is (approximately) equivalent to
+
+case class Foo[T](things: Seq[T])
+object Foo {
+  implicit def encode[T: JsonEncode] = AutomaticJsonEncodeBuilder[Foo[T]]
+  implicit def decode[T: JsonDecode] = AutomaticJsonDecodeBuilder[Foo[T]]
+}
+```
+
 For hierarchies of classes, there are analagous `Simple` and
 `Automatic` hierarchy codec builders.  The simple builders expect a
 chain of branches; the automatic ones derives the chain automatically.
@@ -389,7 +418,21 @@ j"""{ "a" : ${A(5)} }""" // { "a" : { "x" : 5 } }
 ```
 
 The interpolators are implemented as macros.  The well-formedness of
-the template is checked at compile time.
+the template is checked at compile time.  Optional and spliced
+parameters are allowed as well:
+
+```scala
+import com.rojoma.json.v3.interpolation._
+
+val a = "one"
+val b: Option[String] = Some("two")
+val c: Option[String] = None
+val d = List("a","b","c")
+val e = Map("f" -> 1, "g" -> 2)
+
+/// yields { "a" : "one", "b" : "two", "d" : [1,2,3,"a","b","c"], "f": 1, "g": 2}
+j"""{ "a" : $a, b: ?$b, c: ?$c, d: [1, 2, 3, ..$d], ..$e }"""
+```
 
 ### package com.rojoma.json.v3.conversions.v2
 
