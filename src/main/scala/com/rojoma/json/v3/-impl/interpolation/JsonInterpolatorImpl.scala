@@ -136,25 +136,34 @@ object JsonInterpolatorImpl {
     def withThing(thing: Tokenized, expecting: String)(f: PartialFunction[Tokenized, Either[State, Tree]]): Either[State, Tree] =
       f.applyOrElse(thing, unexpectedTokenized(_ : Tokenized, expecting))
 
+    class ExpectingArrayDatum(ctors: List[TermName => Tree], returnState: Tree => State, expecting: String) extends State {
+      def step(thing: Tokenized) =
+        thing match {
+          case UnquoteSplice(items) =>
+            Left(new ExpectingCommaOrEndOfArray(arrayItems(items.tree) :: ctors, returnState))
+          case other =>
+            new ExpectingDatum({ v => new ExpectingCommaOrEndOfArray(arrayItem(v) :: ctors, returnState) }, expecting).step(other)
+        }
+    }
+
+
     class ExpectingCommaOrEndOfArray(ctors: List[TermName => Tree], returnState: Tree => State) extends State {
       def step(thing: Tokenized) =
         withThing(thing, "comma or end of array") {
           case Token(TokenCloseBracket()) =>
             Left(returnState(finishArray(ctors)))
           case Token(TokenComma()) =>
-            Left(new ExpectingDatumOrEndOfArray(ctors, returnState))
+            Left(new ExpectingArrayDatum(ctors, returnState, "datum"))
         }
     }
 
     class ExpectingDatumOrEndOfArray(ctors: List[TermName => Tree], returnState: Tree => State) extends State {
       def step(thing: Tokenized) =
-        withThing(thing, "datum or end of array") {
+        thing match {
           case Token(TokenCloseBracket()) =>
             Left(returnState(finishArray(ctors)))
-          case UnquoteSplice(items) =>
-            Left(new ExpectingCommaOrEndOfArray(arrayItems(items.tree) :: ctors, returnState))
           case other =>
-            new ExpectingDatum({ v => new ExpectingCommaOrEndOfArray(arrayItem(v) :: ctors, returnState) }).step(other)
+            new ExpectingArrayDatum(ctors, returnState, "datum or end of array").step(other)
         }
     }
 
@@ -164,7 +173,15 @@ object JsonInterpolatorImpl {
           case Token(TokenCloseBrace()) =>
             Left(returnState(finishObject(ctors)))
           case Token(TokenComma()) =>
-            Left(new ExpectingFieldOrEndOfObject(ctors, returnState))
+            Left(new ExpectingField(ctors, returnState))
+        }
+    }
+
+    class ExpectingFieldValue(field: Tree, ctors: List[TermName => Tree], returnState: Tree => State) extends State {
+      def step(thing: Tokenized) =
+        thing match {
+          case other =>
+            new ExpectingDatum({ v => new ExpectingCommaOrEndOfObject(objectItem(field, v) :: ctors, returnState) }).step(other)
         }
     }
 
@@ -172,7 +189,21 @@ object JsonInterpolatorImpl {
       def step(thing: Tokenized) =
         withThing(thing, "colon") {
           case Token(TokenColon()) =>
-            Left(new ExpectingDatum({ v => new ExpectingCommaOrEndOfObject(objectItem(field, v) :: ctors, returnState) }))
+            Left(new ExpectingFieldValue(field, ctors, returnState))
+        }
+    }
+
+    class ExpectingField(ctors: List[TermName => Tree], returnState: Tree => State) extends State {
+      def step(thing: Tokenized) =
+        withThing(thing, "field name") {
+          case UnquoteSplice(items) =>
+            Left(new ExpectingCommaOrEndOfObject(objectItems(items.tree) :: ctors, returnState))
+          case Unquote(s) =>
+            Left(new ExpectingColon(q"_root_.com.rojoma.json.v3.codec.FieldEncode.toField($s)", ctors, returnState))
+          case Token(TokenString(s)) =>
+            Left(new ExpectingColon(q"$s", ctors, returnState))
+          case Token(TokenIdentifier(s)) =>
+            Left(new ExpectingColon(q"$s", ctors, returnState))
         }
     }
 
@@ -192,9 +223,9 @@ object JsonInterpolatorImpl {
         }
     }
 
-    class ExpectingDatum(returnState: Tree => State) extends State {
+    class ExpectingDatum(returnState: Tree => State, expecting: String = "datum") extends State {
       def step(thing: Tokenized) =
-        withThing(thing, "datum") {
+        withThing(thing, expecting) {
           case End(pos) =>
             c.abort(pos, new JsonParserEOF(Position.Invalid).message)
           case Unquote(item) =>
