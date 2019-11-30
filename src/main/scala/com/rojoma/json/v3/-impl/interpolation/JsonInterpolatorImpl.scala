@@ -302,7 +302,7 @@ object JsonInterpolatorImpl {
         }
         things = things.tail
       }
-      throw new Exception("Should have gotten to an end")
+      abort("Internal error: Should have gotten to an end")
     }
 
     c.prefix.tree match {
