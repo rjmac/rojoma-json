@@ -111,11 +111,7 @@ object JsonInterpolatorImpl {
     }
 
     def optionalArrayItem(v: c.Expr[Any]): TermName => Tree = { termName =>
-      val temp = freshTermName()
-      q"""_root_.com.rojoma.json.v3.`-impl`.interpolation.Convert.option($v) match {
-            case _root_.scala.Some($temp) => $termName += $temp
-            case _root_.scala.None => {}
-          }"""
+      q"$termName ++= _root_.com.rojoma.json.v3.`-impl`.interpolation.Convert.option($v)"
     }
 
     def arrayItems(v: Tree): TermName => Tree = { termName =>
