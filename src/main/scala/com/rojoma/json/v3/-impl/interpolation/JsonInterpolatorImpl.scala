@@ -112,17 +112,14 @@ object JsonInterpolatorImpl {
 
     def optionalArrayItem(v: c.Expr[Any]): TermName => Tree = { termName =>
       val temp = freshTermName()
-      q"""{
-            val $temp = $v
-            ($temp : _root_.scala.Option[_]) match {
-              case _root_.scala.Some(_) => $termName += _root_.com.rojoma.json.v3.codec.JsonEncode.toJValue($temp.get)
-              case _root_.scala.None => {}
-            }
+      q"""_root_.com.rojoma.json.v3.`-impl`.interpolation.Convert.option($v) match {
+            case _root_.scala.Some($temp) => $termName += $temp
+            case _root_.scala.None => {}
           }"""
     }
 
     def arrayItems(v: Tree): TermName => Tree = { termName =>
-      q"$termName ++= _root_.com.rojoma.json.v3.`-impl`.interpolation.ConvertArrayItems($v)"
+      q"$termName ++= _root_.com.rojoma.json.v3.`-impl`.interpolation.Convert.array($v)"
     }
 
     def objectItem(k: Tree, v: Tree): TermName => Tree = { termName =>
@@ -134,16 +131,15 @@ object JsonInterpolatorImpl {
       val temp = freshTermName()
       q"""{
             val $kTemp = $k
-            val $temp = $v
-            ($temp : _root_.scala.Option[_]) match {
-              case _root_.scala.Some(_) => $termName += (($kTemp, _root_.com.rojoma.json.v3.codec.JsonEncode.toJValue($temp.get)))
+            _root_.com.rojoma.json.v3.`-impl`.interpolation.Convert.option($v) match {
+              case _root_.scala.Some($temp) => $termName += (($kTemp, $temp))
               case _root_.scala.None => {}
             }
           }"""
     }
 
     def objectItems(v: Tree): TermName => Tree = { termName =>
-      q"""$termName ++= _root_.com.rojoma.json.v3.`-impl`.interpolation.ConvertMapItems($v)"""
+      q"""$termName ++= _root_.com.rojoma.json.v3.`-impl`.interpolation.Convert.map($v)"""
     }
 
     def unexpectedTokenized(thing: Tokenized, expecting: String): Nothing =
