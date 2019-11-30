@@ -255,12 +255,8 @@ object JsonInterpolatorImpl {
     class ExpectingDatum(returnState: Tree => State, expecting: String = "datum") extends State {
       def step(thing: Tokenized) =
         withThing(thing, expecting) {
-          case End(pos) =>
-            c.abort(pos, new JsonParserEOF(Position.Invalid).message)
           case Unquote(item) =>
             Left(returnState(q"_root_.com.rojoma.json.v3.codec.JsonEncode.toJValue($item)"))
-          case t@UnquoteSplice(_) =>
-            c.abort(t.position, "Unexpected multi-splice")
           case Token(TokenOpenBracket()) =>
             Left(new ExpectingDatumOrEndOfArray(Nil, returnState))
           case Token(TokenOpenBrace()) =>
