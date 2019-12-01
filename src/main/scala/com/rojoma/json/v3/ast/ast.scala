@@ -600,7 +600,9 @@ case class JArray(elems: sc.Seq[JValue]) extends sc.Seq[JValue] with JCompound {
 }
 
 object JArray extends scala.runtime.AbstractFunction1[sc.Seq[JValue], JArray] with sc.Factory[JValue, JArray] with JsonType {
-  val canonicalEmpty = new JArray(Vector.empty) // Vector because JsonReader is guaranteed to return JArrays which contain Vectors.
+  val canonicalEmpty: JArray = new JArray(Vector.empty) { // Vector because JsonReader is guaranteed to return JArrays which contain Vectors.
+    override def forced = this
+  }
   val empty = canonicalEmpty
 
   override def apply(elems: sc.Seq[JValue]) =
@@ -784,7 +786,9 @@ case class JObject(val fields: sc.Map[String, JValue]) extends sc.Map[String, JV
 }
 
 object JObject extends scala.runtime.AbstractFunction1[sc.Map[String, JValue], JObject] with sc.Factory[(String, JValue), JObject] with JsonType {
-  val canonicalEmpty = new JObject(SeqMap.empty)
+  val canonicalEmpty: JObject = new JObject(SeqMap.empty) {
+    override def forced = this
+  }
   val empty = canonicalEmpty
   override final val toString = "object"
   implicit object Concrete extends Json[JObject] {
