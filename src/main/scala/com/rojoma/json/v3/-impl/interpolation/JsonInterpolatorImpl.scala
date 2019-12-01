@@ -25,14 +25,14 @@ object JsonInterpolatorImpl {
     case class Token(token: JsonToken)(pos: => c.universe.Position) extends Tokenized {
       lazy val position = pos
     }
-    case class Unquote(expr: c.Expr[Any]) extends Tokenized {
-      def position = expr.tree.pos
+    case class Unquote(tree: Tree) extends Tokenized {
+      def position = tree.pos
     }
-    case class UnquoteSplice(expr: c.Expr[Any]) extends Tokenized {
-      def position = expr.tree.pos
+    case class UnquoteSplice(tree: Tree) extends Tokenized {
+      def position = tree.pos
     }
-    case class OptionalUnquote(expr: c.Expr[Any]) extends Tokenized {
-      def position = expr.tree.pos
+    case class UnquoteOptional(tree: Tree) extends Tokenized {
+      def position = tree.pos
     }
     case class DeferredError(position: c.universe.Position, message: String) extends Tokenized
     case class End(position: c.universe.Position) extends Tokenized
@@ -66,7 +66,7 @@ object JsonInterpolatorImpl {
        c.abort(relativize(pos, s, e.position), stripPos(e.message))
     }
 
-    case class TokenInfo(tokens: List[JsonToken])(val nextUnquote: c.Expr[Any] => Tokenized, val orig: String, val origPos: c.universe.Position) {
+    case class TokenInfo(tokens: List[JsonToken])(val nextUnquote: Tree => Tokenized, val orig: String, val origPos: c.universe.Position) {
       def pop = TokenInfo(tokens.tail)(nextUnquote, orig, origPos)
       def position = tokens.headOption match {
         case Some(hd) => relativize(origPos, orig, hd.position)
@@ -110,7 +110,7 @@ object JsonInterpolatorImpl {
       q"$termName += $v"
     }
 
-    def optionalArrayItem(v: c.Expr[Any]): TermName => Tree = { termName =>
+    def optionalArrayItem(v: Tree): TermName => Tree = { termName =>
       q"$termName ++= _root_.com.rojoma.json.v3.`-impl`.interpolation.Convert.option($v)"
     }
 
@@ -122,7 +122,7 @@ object JsonInterpolatorImpl {
       q"$termName += (($k, $v))"
     }
 
-    def optionalObjectItem(k: Tree, v: c.Expr[Any]): TermName => Tree = { termName =>
+    def optionalObjectItem(k: Tree, v: Tree): TermName => Tree = { termName =>
       val kTemp = freshTermName
       val temp = freshTermName()
       q"""{
@@ -148,7 +148,7 @@ object JsonInterpolatorImpl {
           c.abort(pos, new JsonParserEOF(Position.Invalid).message)
         case UnquoteSplice(t) =>
           c.abort(thing.position, s"Expected $expecting; got splicing unquote")
-        case OptionalUnquote(t) =>
+        case UnquoteOptional(t) =>
           c.abort(thing.position, s"Expected $expecting; got optional unquote")
         case Unquote(t) =>
           c.abort(thing.position, s"Expected $expecting; got unquote")
@@ -161,8 +161,8 @@ object JsonInterpolatorImpl {
       def step(thing: Tokenized) =
         thing match {
           case UnquoteSplice(items) =>
-            Left(new ExpectingCommaOrEndOfArray(arrayItems(items.tree) :: ctors, returnState))
-          case OptionalUnquote(item) =>
+            Left(new ExpectingCommaOrEndOfArray(arrayItems(items) :: ctors, returnState))
+          case UnquoteOptional(item) =>
             Left(new ExpectingCommaOrEndOfArray(optionalArrayItem(item) :: ctors, returnState))
           case other =>
             new ExpectingDatum({ v => new ExpectingCommaOrEndOfArray(arrayItem(v) :: ctors, returnState) }, expecting).step(other)
@@ -196,14 +196,14 @@ object JsonInterpolatorImpl {
           case Token(TokenCloseBrace()) =>
             Left(returnState(finishObject(ctors)))
           case Token(TokenComma()) =>
-            Left(new ExpectingField(ctors, returnState))
+            Left(new ExpectingFieldName(ctors, returnState))
         }
     }
 
     class ExpectingFieldValue(field: Tree, ctors: List[TermName => Tree], returnState: Tree => State) extends State {
       def step(thing: Tokenized) =
         thing match {
-          case OptionalUnquote(item) =>
+          case UnquoteOptional(item) =>
             Left(new ExpectingCommaOrEndOfObject(optionalObjectItem(field, item) :: ctors, returnState))
           case other =>
             new ExpectingDatum({ v => new ExpectingCommaOrEndOfObject(objectItem(field, v) :: ctors, returnState) }).step(other)
@@ -218,11 +218,11 @@ object JsonInterpolatorImpl {
         }
     }
 
-    class ExpectingField(ctors: List[TermName => Tree], returnState: Tree => State) extends State {
+    class ExpectingFieldName(ctors: List[TermName => Tree], returnState: Tree => State, expecting: String = "field name") extends State {
       def step(thing: Tokenized) =
-        withThing(thing, "field name") {
+        withThing(thing, expecting) {
           case UnquoteSplice(items) =>
-            Left(new ExpectingCommaOrEndOfObject(objectItems(items.tree) :: ctors, returnState))
+            Left(new ExpectingCommaOrEndOfObject(objectItems(items) :: ctors, returnState))
           case Unquote(s) =>
             Left(new ExpectingColon(q"_root_.com.rojoma.json.v3.codec.FieldEncode.toField($s)", ctors, returnState))
           case Token(TokenString(s)) =>
@@ -234,17 +234,11 @@ object JsonInterpolatorImpl {
 
     class ExpectingFieldOrEndOfObject(ctors: List[TermName => Tree], returnState: Tree => State) extends State {
       def step(thing: Tokenized) =
-        withThing(thing, "field name or end of object") {
+        thing match {
           case Token(TokenCloseBrace()) =>
             Left(returnState(finishObject(ctors)))
-          case UnquoteSplice(items) =>
-            Left(new ExpectingCommaOrEndOfObject(objectItems(items.tree) :: ctors, returnState))
-          case Unquote(s) =>
-            Left(new ExpectingColon(q"_root_.com.rojoma.json.v3.codec.FieldEncode.toField($s)", ctors, returnState))
-          case Token(TokenString(s)) =>
-            Left(new ExpectingColon(q"$s", ctors, returnState))
-          case Token(TokenIdentifier(s)) =>
-            Left(new ExpectingColon(q"$s", ctors, returnState))
+          case other =>
+            new ExpectingFieldName(ctors, returnState, "field name or end of object").step(other)
         }
     }
 
@@ -307,7 +301,7 @@ object JsonInterpolatorImpl {
           case node@Literal(Constant(rawPart: String)) =>
             val (part, nextUnquote) =
               if(rawPart.endsWith("..")) (rawPart.dropRight(2), UnquoteSplice)
-              else if(rawPart.endsWith("?")) (rawPart.dropRight(1), OptionalUnquote)
+              else if(rawPart.endsWith("?")) (rawPart.dropRight(1), UnquoteOptional)
               else (rawPart, Unquote)
             try {
               TokenInfo(tokens(part, node.pos))(nextUnquote, part, node.pos)
@@ -340,7 +334,7 @@ object JsonInterpolatorImpl {
                 builder += Token(remaining.tokens.head)(left.position)
                 remaining = remaining.pop
               }
-              builder += remaining.nextUnquote(piece)
+              builder += remaining.nextUnquote(piece.tree)
               interweave(rest, pieces)
             case _ =>
               abort("Internal error: pieces and parts didn't line up")
