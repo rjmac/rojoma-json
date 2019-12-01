@@ -447,7 +447,9 @@ case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFu
 }
 
 object JArray extends scala.runtime.AbstractFunction1[sc.Seq[JValue], JArray] with JsonType {
-  val canonicalEmpty = JArray(Vector.empty) // Vector because JsonReader is guaranteed to return JArrays which contain Vectors.
+  val canonicalEmpty: JArray = new JArray(Vector.empty) { // Vector because JsonReader is guaranteed to return JArrays which contain Vectors.
+    override def forced = this
+  }
   override final val toString = "array"
   implicit object Concrete extends Json[JArray] {
     val jsonTypes = Set[JsonType](JArray)
@@ -492,7 +494,9 @@ case class JObject(val fields: sc.Map[String, JValue]) extends Iterable[(String,
 }
 
 object JObject extends scala.runtime.AbstractFunction1[sc.Map[String, JValue], JObject] with JsonType {
-  val canonicalEmpty = JObject(Map.empty) // _Not_ LinkedHashMap because all JsonReader guarantees is ordering of elements, which this satisfies.
+  val canonicalEmpty: JObject = new JObject(Map.empty) { // _Not_ LinkedHashMap because all JsonReader guarantees is ordering of elements, which this satisfies.
+    override def forced = this
+  }
   override final val toString = "object"
   implicit object Concrete extends Json[JObject] {
     val jsonTypes = Set[JsonType](JObject)
