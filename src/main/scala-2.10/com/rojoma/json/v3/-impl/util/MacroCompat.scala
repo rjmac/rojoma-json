@@ -16,6 +16,8 @@ trait MacroCompat {
 
   def posOf(param: Symbol, ann: Annotation) = param.pos
 
+  def isDefined(pos: Position) = pos.isDefined
+
   implicit class EnhContext(underlying: Context) {
     def freshName() = underlying.fresh()
   }
