@@ -45,8 +45,12 @@ object JsonInterpolatorImpl {
     }
 
     def move(pos: c.universe.Position, offset: Int): c.universe.Position =
-      if(pos.isRange) pos.withStart(pos.start + offset)
-      else pos.withPoint(pos.point + offset)
+      if(isDefined(pos)) {
+        if(pos.isRange) pos.withEnd(pos.end + offset).withPoint(pos.point + offset).withStart(pos.start + offset)
+        else pos.withPoint(pos.point + offset)
+      } else {
+        pos
+      }
 
     def offsetOf(s: String, p: io.Position) = {
       val before = s.split("\n", -1).take(p.row - 1).map(_.length + 1).sum
