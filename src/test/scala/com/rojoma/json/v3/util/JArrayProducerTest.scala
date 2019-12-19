@@ -6,13 +6,13 @@ import testsupport.ArbitraryJValue._
 import testsupport.ArbitraryValidString._
 
 import org.scalatest.{FunSuite, MustMatchers}
-import org.scalatest.prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import org.scalacheck.{Gen, Arbitrary}
 
 import io.JsonTokenGeneratorTests._
 
-class JArrayProducerTest extends FunSuite with MustMatchers with PropertyChecks {
+class JArrayProducerTest extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
   def r(targets: List[JValue], s: List[String]) = {
     def loop(state: JArrayProducer, targets: List[JValue], inputs: List[WrappedCharArray]): String = {
       inputs match {

@@ -2,7 +2,7 @@ package com.rojoma.json.v3
 package io
 
 import org.scalatest.{FunSuite, MustMatchers}
-import org.scalatest.prop.Checkers
+import org.scalatestplus.scalacheck.Checkers
 
 import org.scalacheck.Arbitrary
 import org.scalacheck.Gen

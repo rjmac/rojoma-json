@@ -29,7 +29,7 @@ libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
 libraryDependencies ++= Seq(
   "com.rojoma" %% "rojoma-json" % "2.4.3" % "optional",
-  "org.scalatest" %% "scalatest" % "3.0.0" % "test",
+  "org.scalatest" %% "scalatest" % "3.0.8" % "test",
   "org.scalacheck" %% "scalacheck" % "1.13.4" % "optional" // optional because generators for JValues are included
 )
 

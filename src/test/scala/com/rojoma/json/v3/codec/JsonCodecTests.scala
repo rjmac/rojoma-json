@@ -6,7 +6,7 @@ import interpolation._
 
 import org.scalatest.FunSuite
 import org.scalatest.MustMatchers
-import org.scalatest.prop.Checkers
+import org.scalatestplus.scalacheck.Checkers
 
 import org.scalacheck.Prop._
 import org.scalacheck.Arbitrary

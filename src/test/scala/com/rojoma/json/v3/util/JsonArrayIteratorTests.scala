@@ -8,11 +8,11 @@ import io._
 import testsupport.ArbitraryJValue._
 
 import org.scalatest.{FunSuite, MustMatchers}
-import org.scalatest.prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import Events._
 
-class JsonArrayIteratorTests extends FunSuite with MustMatchers with PropertyChecks {
+class JsonArrayIteratorTests extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
   test("Eventifying an array and decoding it with a JsonArrayIterator is an identity operation") {
     forAll() { xs: List[String] =>
       JsonArrayIterator.fromEvents[String](JValueEventIterator(JsonEncode.toJValue(xs))).toList must equal (xs)

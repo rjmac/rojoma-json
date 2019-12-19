@@ -8,11 +8,11 @@ import testsupport.ArbitraryValidString._
 import org.scalacheck.{Gen, Arbitrary}
 
 import org.scalatest.{FunSuite, MustMatchers}
-import org.scalatest.prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import io.JsonTokenGeneratorTests._
 
-class JValueProducerTest extends FunSuite with MustMatchers with PropertyChecks {
+class JValueProducerTest extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
   def r(s: List[String]) = {
     def loop(state: JValueProducer, inputs: List[WrappedCharArray]): (JValue, String) = {
       inputs match {

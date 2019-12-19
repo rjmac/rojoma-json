@@ -2,13 +2,13 @@ package com.rojoma.json.v3
 package io
 
 import org.scalatest.{FunSuite, MustMatchers, EitherValues}
-import org.scalatest.prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import testsupport.ArbitraryJValue._
 import ast._
 import codec._
 
-class JsonTokenTests extends FunSuite with MustMatchers with PropertyChecks with EitherValues {
+class JsonTokenTests extends FunSuite with MustMatchers with ScalaCheckPropertyChecks with EitherValues {
   test("JSON tokens roundtrip without loss") {
     forAll { (v: JValue) =>
       val tokens = new BlockJsonTokenIterator(v.toString).toList

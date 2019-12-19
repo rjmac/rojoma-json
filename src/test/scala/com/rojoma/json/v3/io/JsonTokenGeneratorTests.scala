@@ -9,7 +9,7 @@ import util.JsonUtil.renderJson
 import util.WrappedCharArray
 
 import org.scalatest.{FunSuite, MustMatchers}
-import org.scalatest.prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import org.scalacheck.{Gen, Arbitrary}
 
@@ -18,7 +18,7 @@ import scala.collection.mutable.ListBuffer
 import JsonTokenGeneratorTests._
 import Tokens._
 
-class JsonTokenGeneratorTests extends FunSuite with MustMatchers with PropertyChecks {
+class JsonTokenGeneratorTests extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
   def arbTest[T <: JValue : Arbitrary : JsonEncode] {
     forAll(splittableJson[T]) { case (x, whitespace, positions) =>
       val asString = renderJson(x, pretty = whitespace)

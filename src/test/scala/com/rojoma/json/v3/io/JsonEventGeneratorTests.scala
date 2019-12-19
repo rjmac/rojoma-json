@@ -6,11 +6,11 @@ import testsupport.ArbitraryJValue._
 import testsupport.ArbitraryValidString._
 
 import org.scalatest.{FunSuite, MustMatchers}
-import org.scalatest.prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import Events._
 
-class JsonEventGeneratorTests extends FunSuite with MustMatchers with PropertyChecks {
+class JsonEventGeneratorTests extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
   def r(s: String) = new java.io.StringReader(s)
   def doParse(s: String) = {
     val it = new JsonTokenIterator(r(s))
