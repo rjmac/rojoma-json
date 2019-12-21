@@ -58,8 +58,6 @@ class PrettyJsonWriter private (context: PrettyContext) extends JsonWriter {
     this(PrettyContext(output, List(" " * leftMargin), indentation, targetWidth))
   private def output = context.output
 
-  private def isAtom(x: JValue) = x.isInstanceOf[JAtom]
-
   private def size(atom: JAtom) = atom match {
     case JNull => "null".length
     case JBoolean(x) => x.toString.length

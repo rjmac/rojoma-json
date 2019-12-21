@@ -322,10 +322,6 @@ abstract class AutomaticJsonCodecBuilderImpl[T] extends MacroCompat with MacroCo
   }
 
   private def codec: c.Expr[JsonEncode[T] with JsonDecode[T]] = {
-    val encode = toTermName("encode")
-    val decode = toTermName("decode")
-    val x = toTermName("x")
-
     val tree = q"""(new _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname] {
                      ..$eitherValues
                      ..$encodes

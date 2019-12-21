@@ -4,14 +4,11 @@ package io
 import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatestplus.scalacheck.Checkers
 
-import org.scalacheck.Arbitrary
-import org.scalacheck.Gen
-
 import org.scalacheck.Prop._
 
 import testsupport.ArbitraryJValue.ArbitraryJValue
 import testsupport.ArbitraryValidString.ArbitraryValidString
-import ast.{JValue, JString}
+import ast.JValue
 
 import Tokens._
 

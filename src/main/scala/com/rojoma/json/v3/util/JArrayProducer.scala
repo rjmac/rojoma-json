@@ -1,8 +1,6 @@
 package com.rojoma.json.v3
 package util
 
-import scala.annotation.tailrec
-
 import io._
 import ast.JValue
 

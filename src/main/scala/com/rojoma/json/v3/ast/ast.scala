@@ -4,7 +4,6 @@ package ast
 import scala.language.implicitConversions
 import scala.{collection => sc}
 import scala.reflect.ClassTag
-import scala.annotation.implicitNotFound
 import java.math.{BigInteger, BigDecimal => JBigDecimal}
 import java.io.Writer
 

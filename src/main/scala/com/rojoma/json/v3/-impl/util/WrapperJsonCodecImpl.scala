@@ -3,7 +3,6 @@ package `-impl`.util
 
 import ast._
 import codec._
-import util._
 
 private[util] class WrapperDecode[U, T: JsonDecode](wrap: T => U) extends JsonDecode[U] {
   private def wrapHandler(j: JValue, x: T): Either[DecodeError, U] = {

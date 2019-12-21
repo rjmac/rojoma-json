@@ -5,8 +5,6 @@ import scala.language.implicitConversions
 
 import com.rojoma.json.{ast => v2ast}
 import com.rojoma.json.v3.{ast => v3ast}
-import com.rojoma.json.{io => v2io}
-import com.rojoma.json.v3.{io => v3io}
 import com.rojoma.json.{codec => v2codec}
 import com.rojoma.json.v3.{codec => v3codec}
 

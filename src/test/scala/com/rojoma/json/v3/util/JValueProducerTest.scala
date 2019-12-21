@@ -5,8 +5,6 @@ import ast._
 import testsupport.ArbitraryJValue._
 import testsupport.ArbitraryValidString._
 
-import org.scalacheck.{Gen, Arbitrary}
-
 import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 

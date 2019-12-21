@@ -1,24 +1,46 @@
 package com.rojoma.json.v3
 package testsupport
 
-import ast._
-
 import org.scalacheck.Arbitrary
 
 object ArbitraryJValue {
   import GenJValue._
 
+  @inline
+  private def unused[T](x: T): T = {
+    x
+  }
+
   implicit val ArbitraryJBoolean = Arbitrary(genJBoolean)
   implicit val ArbitraryJNumber = Arbitrary(genJNumber)
   implicit val ArbitraryJNull = Arbitrary(genJNull)
-  implicit def ArbitraryJString(implicit arbString: Arbitrary[String]) = Arbitrary(genJString)
+  implicit def ArbitraryJString(implicit arbString : Arbitrary[String]) = {
+    unused(arbString)
+    Arbitrary(genJString)
+  }
 
-  implicit def ArbitraryJAtom(implicit arbString: Arbitrary[String]) = Arbitrary(genJAtom)
+  implicit def ArbitraryJAtom(implicit arbString: Arbitrary[String]) = {
+    unused(arbString)
+    Arbitrary(genJAtom)
+  }
 
-  implicit def ArbitraryJArray(implicit arbString: Arbitrary[String]) = Arbitrary(genJArray())
-  implicit def ArbitraryJObject(implicit arbString: Arbitrary[String]) = Arbitrary(genJObject())
+  implicit def ArbitraryJArray(implicit arbString: Arbitrary[String]) = {
+    unused(arbString)
+    Arbitrary(genJArray())
+  }
 
-  implicit def ArbitraryJCompound(implicit arbString: Arbitrary[String]) = Arbitrary(genJCompound())
+  implicit def ArbitraryJObject(implicit arbString: Arbitrary[String]) = {
+    unused(arbString)
+    Arbitrary(genJObject())
+  }
 
-  implicit def ArbitraryJValue(implicit arbString: Arbitrary[String]) = Arbitrary(genJValue)
+  implicit def ArbitraryJCompound(implicit arbString: Arbitrary[String]) = {
+    unused(arbString)
+    Arbitrary(genJCompound())
+  }
+
+  implicit def ArbitraryJValue(implicit arbString: Arbitrary[String]) = {
+    unused(arbString)
+    Arbitrary(genJValue)
+  }
 }

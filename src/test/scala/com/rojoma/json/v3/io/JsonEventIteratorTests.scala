@@ -64,38 +64,38 @@ class JsonEventIteratorTests extends FunSuite with MustMatchers {
   }
 
   test("skipNextDatum() in a multi-object stream leaves it positioned at the start of next object") {
-    var it = i("[1,2,3] 'gnu'")
+    val it = i("[1,2,3] 'gnu'")
     it.skipNextDatum()
     it.next() must equal (stringEvent("gnu"))
   }
 
   test("skipRestOfCompound() between top-level objects does nothing") {
-    var it = i("[1,2,3] 'gnu'")
+    val it = i("[1,2,3] 'gnu'")
     it.skipNextDatum()
     it.skipRestOfCompound().next() must equal (stringEvent("gnu"))
   }
 
   test("skipRestOfCompound() at the end does not raise NoSuchElementException") {
-    var it = i("5")
+    val it = i("5")
     it.next()
     it.skipRestOfCompound()
     it.hasNext must be (false)
   }
 
   test("skipRestOfCompound() in an incomplete object raises JsonEOF") {
-    var it = i("[1,2,3")
+    val it = i("[1,2,3")
     it.next()
     a [JsonEOF] must be thrownBy { it.skipRestOfCompound() }
   }
 
   test("skipRestOfCompound() in an incomplete object raises a parse exception") {
-    var it = i("[1,2,3")
+    val it = i("[1,2,3")
     it.next()
     a [JsonParseException] must be thrownBy { it.skipRestOfCompound() }
   }
 
   test("skipNextDatum() at EOF produces NoSuchElementException") {
-    var it = i("")
+    val it = i("")
     a [NoSuchElementException] must be thrownBy { it.skipNextDatum() }
   }
 
@@ -105,23 +105,23 @@ class JsonEventIteratorTests extends FunSuite with MustMatchers {
   }
 
   test("skipNextDatum() of an incomplete object raises JsonEOF") {
-    var it = i("[1,2,3")
+    val it = i("[1,2,3")
     a [JsonEOF] must be thrownBy { it.skipNextDatum() }
   }
 
   test("skipNextDatum() of an incomplete object raises a parse eception") {
-    var it = i("[1,2,3")
+    val it = i("[1,2,3")
     a [JsonParseException] must be thrownBy { it.skipNextDatum() }
   }
 
   test("skipNextDatum() within an array skips one item") {
-    var it = i("[1,2,3]")
+    val it = i("[1,2,3]")
     it.next()
     it.skipNextDatum().next() must equal (numberEvent(2))
   }
 
   test("skipNextDatum() at the end of an array does not move") {
-    var it = i("[1]")
+    val it = i("[1]")
     it.next()
     it.next()
     it.skipNextDatum().next() must equal (endOfArrayEvent())
@@ -142,7 +142,7 @@ class JsonEventIteratorTests extends FunSuite with MustMatchers {
 
 
   test("skipNextDatum() at the end of object does not move") {
-    var it = i("{'hello':'world'}")
+    val it = i("{'hello':'world'}")
     it.next()
     it.next()
     it.next() must equal (stringEvent("world"))

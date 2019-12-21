@@ -1,12 +1,8 @@
 package com.rojoma.json.v3
 package util
 
-import java.nio.CharBuffer
-
 import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-
-import org.scalacheck.{Gen, Arbitrary}
 
 class WrappedCharArrayTests extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
   test("Converting a WrappedCharArray back into a String succeeds") {

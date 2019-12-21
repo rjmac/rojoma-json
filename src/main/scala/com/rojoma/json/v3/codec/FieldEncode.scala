@@ -5,7 +5,6 @@ import java.{util => ju}
 import java.{net => jn}
 
 import ast._
-import util.WrapperFieldEncode
 
 trait FieldEncode[T] {
   def encode(x: T): String

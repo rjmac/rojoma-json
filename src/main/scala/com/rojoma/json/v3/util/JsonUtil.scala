@@ -1,11 +1,10 @@
 package com.rojoma.json.v3
 package util
 
-import java.io.{Reader, BufferedReader, InputStreamReader, FileInputStream, FileOutputStream, OutputStreamWriter, Writer, FilterWriter, BufferedWriter, IOException, File}
+import java.io.{Reader, InputStreamReader, FileInputStream, FileOutputStream, OutputStreamWriter, Writer, FilterWriter, BufferedWriter, IOException, File}
 import java.nio.charset.Charset
 import scala.io.Codec
 
-import ast._
 import io._
 import codec._
 

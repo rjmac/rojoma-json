@@ -3,7 +3,6 @@ package util
 
 import org.scalatest.{FunSuite, MustMatchers, EitherValues}
 
-import ast._
 import codec._
 import interpolation._
 

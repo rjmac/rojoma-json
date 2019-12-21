@@ -2,7 +2,6 @@ package com.rojoma.json.v3
 package io
 
 import com.rojoma.json.v3.`-impl`.util.AbstractIterator
-import com.rojoma.json.v3.`-impl`.util.FlatteningIterator
 import com.rojoma.json.v3.`-impl`.util.FlatteningIteratorUtils._
 
 sealed abstract class MalformedEventStreamException(message: String) extends RuntimeException(message)

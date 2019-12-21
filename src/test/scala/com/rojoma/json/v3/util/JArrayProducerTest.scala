@@ -8,8 +8,6 @@ import testsupport.ArbitraryValidString._
 import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
-import org.scalacheck.{Gen, Arbitrary}
-
 import io.JsonTokenGeneratorTests._
 
 class JArrayProducerTest extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {

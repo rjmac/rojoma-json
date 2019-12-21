@@ -46,7 +46,7 @@ final class WrappedCharArray private [util] (chars: Array[Char], offset: Int, co
     // Simple hashCode similar to the one performed by java.util.Arrays#hashCode(char[]).
     var result = 1
     var i = offset
-    var end = offset + count
+    val end = offset + count
     while(i != end) {
       result = 31*result + chars(i)
       i += 1

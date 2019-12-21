@@ -3,7 +3,7 @@ package io
 
 import util.{WrappedCharArray, WrappedCharArrayIterator}
 
-import scala.annotation.{tailrec, switch}
+import scala.annotation.switch
 import scala.util.control.ControlThrowable
 
 import JsonTokenGenerator._

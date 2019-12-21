@@ -3,8 +3,6 @@ package codec
 
 import scala.language.higherKinds
 import scala.{collection => sc}
-import sc.JavaConversions._
-import sc.{mutable => scm}
 import scala.reflect.ClassTag
 import java.{util => ju}
 import java.{net => jn}

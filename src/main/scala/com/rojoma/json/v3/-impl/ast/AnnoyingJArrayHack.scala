@@ -18,4 +18,6 @@ object AnnoyingJArrayHack {
   def convertForForce(in: Seq[JValue]): Seq[JValue] =
     if(isConvertForForceNecessaryView && in.isInstanceOf[scala.collection.SeqViewLike[_, _, _]]) Vector(in : _*)
     else in
+
+  def breakOpt = breakOptimizer // just to silence the unused warning
 }

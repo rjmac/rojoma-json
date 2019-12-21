@@ -1,7 +1,6 @@
 package com.rojoma.json.v3
 package util
 
-import scala.language.existentials
 import scala.reflect.ClassTag
 
 import ast._
@@ -16,12 +15,6 @@ class SimpleHierarchyDecodeBuilder[Root <: AnyRef] private[util] (tagType: TagTy
     if(classes containsExact cls) throw new IllegalArgumentException("Already defined a decoder for class " + cls)
     new SimpleHierarchyDecodeBuilder[Root](tagType, subcodecs + (name -> dec), classes + (cls -> name))
   }
-
-  private def decFor(x: Root) =
-    classes.get(x.getClass) match {
-      case Some(name) => (name, subcodecs(name))
-      case None => throw new IllegalArgumentException("No decoder defined for " + x.getClass)
-    }
 
   def build: JsonDecode[Root] = {
     if(subcodecs.isEmpty) throw new IllegalStateException("No branches defined")

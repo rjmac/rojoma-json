@@ -1,9 +1,6 @@
 package com.rojoma.json.v3
 package io
 
-import scala.collection.immutable.VectorBuilder
-import scala.collection.mutable
-
 import java.io.{Reader, StringReader}
 
 import ast._

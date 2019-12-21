@@ -1,7 +1,6 @@
 package com.rojoma.json.v3.`-impl`.util
 
 import scala.collection.GenTraversableOnce
-import scala.annotation.tailrec
 
 object FlatteningIteratorUtils {
   implicit class Fit[T](val underlying: Iterator[T]) extends AnyVal {

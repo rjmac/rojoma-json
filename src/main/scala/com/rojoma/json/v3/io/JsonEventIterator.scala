@@ -1,7 +1,7 @@
 package com.rojoma.json.v3
 package io
 
-import java.io.{Reader, StringReader}
+import java.io.Reader
 
 import `-impl`.util.AbstractBufferedIterator
 

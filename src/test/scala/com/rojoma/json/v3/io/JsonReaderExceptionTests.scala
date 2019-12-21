@@ -3,7 +3,6 @@ package io
 
 import org.scalatest.{FunSuite, MustMatchers, EitherValues}
 
-import io._
 import codec._
 
 class JsonReaderExceptionTests extends FunSuite with MustMatchers with EitherValues {

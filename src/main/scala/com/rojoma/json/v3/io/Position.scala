@@ -3,7 +3,6 @@ package io
 
 import ast.{JValue,JNull}
 import codec._
-import matcher._
 
 class Position(val `private once 2.10 is no more`: Long) extends AnyVal {
   def row = (`private once 2.10 is no more` >> 32).toInt

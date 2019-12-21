@@ -4,9 +4,9 @@ organization := "com.rojoma"
 
 version := "3.11.0-SNAPSHOT"
 
-mimaPreviousArtifacts := Set("com.rojoma" % ("rojoma-json-v3_" + scalaBinaryVersion.value) % "3.10.1")
+mimaPreviousArtifacts := Set("com.rojoma" %% "rojoma-json-v3" % "3.10.1")
 
-scalaVersion := "2.12.0"
+scalaVersion := "2.12.10"
 
 crossScalaVersions := Seq("2.10.6", "2.11.8", scalaVersion.value)
 
@@ -16,7 +16,7 @@ scalacOptions ++= {
     case SV("2","10" | "11") =>
       List("-optimize")
     case SV("2","12") =>
-      List("-opt:l:classpath")
+      List("-opt:l:inline", "-opt-inline-from:com.rojoma.json.v3.**")
     case _ =>
       sys.error("Need to set up scalacoptions for the current compiler")
     }
