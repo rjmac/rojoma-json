@@ -2,9 +2,9 @@ name := "rojoma-json-v3"
 
 organization := "com.rojoma"
 
-version := "3.10.1"
+version := "3.11.0-SNAPSHOT"
 
-mimaPreviousArtifacts := Set("com.rojoma" % ("rojoma-json-v3_" + scalaBinaryVersion.value) % "3.10.0")
+mimaPreviousArtifacts := Set("com.rojoma" %% "rojoma-json-v3" % "3.10.1")
 
 scalaVersion := "2.13.1"
 
@@ -16,9 +16,9 @@ scalacOptions ++= {
     case SV("2","10" | "11") =>
       List("-optimize", "-Xlint")
     case SV("2","12") =>
-      List("-opt:l:classpath", "-Xlint")
+      List("-opt:l:inline", "-opt-inline-from:com.rojoma.json.v3.**", "-Xlint")
     case SV("2","13") =>
-      List("-opt:l:inline", "-Xlint", "-Xlint:-nonlocal-return", "-Xlog-free-types", "-Ymacro-annotations")
+      List("-opt:l:inline", "-opt-inline-from:com.rojoma.json.v3.**", "-Xlint", "-Xlint:-nonlocal-return", "-Xlog-free-types", "-Ymacro-annotations")
     case _ =>
       sys.error("Need to set up scalacoptions for the current compiler")
     }

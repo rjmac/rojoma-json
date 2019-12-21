@@ -72,13 +72,6 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
     result
   }
 
-  // commented because unused
-  // private def nextCharParser() = {
-  //   val result = peekCharParser()
-  //   skipCharNotAtEOF()
-  //   result
-  // }
-
   private def nextCharNotAtEOF() = {
     val result = block(pos)
     skipCharNotAtEOF()
