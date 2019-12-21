@@ -31,7 +31,7 @@ object ISO8601 {
   implicit object dateCodec extends JsonEncode[Date] with JsonDecode[Date] {
     def encode(x: Date) = instantCodec.encode(x.toInstant)
 
-    def decode(x: JValue) = instantCodec.decode(x).right.flatMap { instant =>
+    def decode(x: JValue) = instantCodec.decode(x).flatMap { instant =>
       try {
         Right(new Date(instant.toEpochMilli))
       } catch {
@@ -51,7 +51,7 @@ object ISO8601 {
       x match {
         case jstr@JString(s) =>
           try {
-            Right(ParseHelper.parseInstant(fixupOffset(fixupPattern, s)))
+            Right(DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(fixupOffset(fixupPattern, s), Instant.from))
           } catch {
             case e: DateTimeParseException =>
               Left(DecodeError.InvalidValue(jstr))
@@ -71,7 +71,7 @@ object ISO8601 {
       x match {
         case jstr@JString(s) =>
           try {
-            Right(ParseHelper.parseOffsetDateTime(fixupOffset(fixupPattern, s)))
+            Right(DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(fixupOffset(fixupPattern, s), OffsetDateTime.from))
           } catch {
             case e: DateTimeParseException =>
               Left(DecodeError.InvalidValue(jstr))
@@ -91,7 +91,7 @@ object ISO8601 {
       x match {
         case jstr@JString(s) =>
           try {
-            Right(ParseHelper.parseOffsetTime(fixupOffset(fixupPattern, s)))
+            Right(DateTimeFormatter.ISO_OFFSET_TIME.parse(fixupOffset(fixupPattern, s), OffsetTime.from))
           } catch {
             case e: DateTimeParseException =>
               Left(DecodeError.InvalidValue(jstr))
@@ -128,7 +128,7 @@ object ISO8601 {
       x match {
         case jstr@JString(s) =>
           try {
-            Right(ParseHelper.parseLocalDateTime(s))
+            Right(DateTimeFormatter.ISO_LOCAL_DATE_TIME.parse(s, LocalDateTime.from))
           } catch {
             case e: DateTimeParseException =>
               Left(DecodeError.InvalidValue(jstr))
@@ -146,7 +146,7 @@ object ISO8601 {
       x match {
         case jstr@JString(s) =>
           try {
-            Right(ParseHelper.parseLocalDate(s))
+            Right(DateTimeFormatter.ISO_LOCAL_DATE.parse(s, LocalDate.from))
           } catch {
             case e: DateTimeParseException =>
               Left(DecodeError.InvalidValue(jstr))
@@ -164,7 +164,7 @@ object ISO8601 {
       x match {
         case jstr@JString(s) =>
           try {
-            Right(ParseHelper.parseLocalTime(s))
+            Right(DateTimeFormatter.ISO_LOCAL_TIME.parse(s, LocalTime.from))
           } catch {
             case e: DateTimeParseException =>
               Left(DecodeError.InvalidValue(jstr))

@@ -34,7 +34,7 @@ class ISO8601Test extends FunSpec with MustMatchers with ScalaCheckPropertyCheck
 
     it("ends with Z") {
       forAll { (t: Instant) =>
-        val JString(s) = JsonEncode.toJValue(t)
+        val s = JsonEncode.toJValue(t).cast[JString].fold(fail("Not a string"))(_.string)
         s must endWith ("Z")
       }
     }
@@ -165,9 +165,9 @@ class ISO8601Test extends FunSpec with MustMatchers with ScalaCheckPropertyCheck
 
     it("handles durations that would be mis-parsed because of JDK-8054978") {
       JsonDecode.fromJValue[Duration](JString("PT-0.3S")) must equal (Right(Duration.ZERO.minusMillis(300)))
-      JsonDecode.fromJValue[Duration](JString("PT-2405079928888997H-26M-0.289430578S")).right.map(_.toString) must equal (Right("PT-2405079928888997H-26M-0.289430578S"))
-      JsonDecode.fromJValue[Duration](JString("PT2405079928888997H26M-0.289430578S")).right.map(_.toString) must equal (Right("PT2405079928888997H25M59.710569422S"))
-      JsonDecode.fromJValue[Duration](JString("PT2405079928888997H-26M-0.289430578S")).right.map(_.toString) must equal (Right("PT2405079928888996H33M59.710569422S"))
+      JsonDecode.fromJValue[Duration](JString("PT-2405079928888997H-26M-0.289430578S")).map(_.toString) must equal (Right("PT-2405079928888997H-26M-0.289430578S"))
+      JsonDecode.fromJValue[Duration](JString("PT2405079928888997H26M-0.289430578S")).map(_.toString) must equal (Right("PT2405079928888997H25M59.710569422S"))
+      JsonDecode.fromJValue[Duration](JString("PT2405079928888997H-26M-0.289430578S")).map(_.toString) must equal (Right("PT2405079928888996H33M59.710569422S"))
     }
   }
 

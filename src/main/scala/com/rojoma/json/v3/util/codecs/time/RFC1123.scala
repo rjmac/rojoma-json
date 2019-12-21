@@ -22,7 +22,7 @@ object RFC1123 {
       x match {
         case jstr@JString(s) =>
           try {
-            Right(ParseHelper.parseInstantRFC1123(s))
+            Right(DateTimeFormatter.RFC_1123_DATE_TIME.parse(s, Instant.from))
           } catch {
             case e: DateTimeParseException =>
               Left(DecodeError.InvalidValue(jstr))
@@ -40,7 +40,7 @@ object RFC1123 {
       x match {
         case jstr@JString(s) =>
           try {
-            Right(ParseHelper.parseOffsetDateTimeRFC1123(s))
+            Right(DateTimeFormatter.RFC_1123_DATE_TIME.parse(s, OffsetDateTime.from))
           } catch {
             case e: DateTimeParseException =>
               Left(DecodeError.InvalidValue(jstr))
