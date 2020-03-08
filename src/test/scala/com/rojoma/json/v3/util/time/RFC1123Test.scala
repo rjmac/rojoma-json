@@ -1,4 +1,4 @@
-package com.rojoma.json.v3.util.codecs.time
+package com.rojoma.json.v3.util.time
 
 import java.time._
 
@@ -9,7 +9,7 @@ import org.scalacheck.{Arbitrary,Gen}
 import com.rojoma.json.v3.codec.{JsonDecode, JsonEncode}
 
 class RFC1123Test extends FunSpec with MustMatchers with ScalaCheckPropertyChecks {
-  import RFC1123._
+  import RFC1123.codec._
 
   case class SmallInstant(underlying: Instant)
   implicit val smallInstant = Arbitrary {

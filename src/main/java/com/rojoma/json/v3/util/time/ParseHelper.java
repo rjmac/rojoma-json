@@ -1,4 +1,4 @@
-package com.rojoma.json.v3.util.codecs.time;
+package com.rojoma.json.v3.util.time;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;

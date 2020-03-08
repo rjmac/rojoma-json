@@ -1,4 +1,4 @@
-package com.rojoma.json.v3.util.codecs
+package com.rojoma.json.v3.util
 
 import java.time._
 
@@ -7,13 +7,32 @@ import org.scalacheck.{Arbitrary, Gen}
 package object time {
   val nanosPerSecond = 1000000000L
 
-  implicit val ArbitraryInstant = Arbitrary {
-    assert(Instant.MIN.getNano == 0)
-    assert(Instant.MAX.getNano == nanosPerSecond - 1)
+  private val arbitraryNanos =
+    Gen.oneOf(
+      Gen.const(0L),
+      Gen.choose(0, 999).map(_ * (nanosPerSecond / 1000)),
+      Gen.choose(0, nanosPerSecond - 1)
+    )
+
+  assert(Instant.MIN.getNano == 0)
+  assert(Instant.MAX.getNano == nanosPerSecond - 1)
+  private val fullyArbitraryInstant =
     for {
       seconds <- Gen.choose(Instant.MIN.getEpochSecond, Instant.MAX.getEpochSecond)
-      nanos <- Gen.choose(0, nanosPerSecond - 1)
+      nanos <- arbitraryNanos
     } yield Instant.ofEpochSecond(seconds, nanos)
+
+  private val arbitraryReasonableInstant =
+    for {
+      seconds <- Gen.choose(0L, 1L << 33)
+      nanos <- arbitraryNanos
+    } yield Instant.ofEpochSecond(seconds, nanos)
+
+  implicit val ArbitraryInstant = Arbitrary {
+    Gen.oneOf(
+      fullyArbitraryInstant,
+      arbitraryReasonableInstant
+    )
   }
 
   implicit val ArbitraryOffset = Arbitrary {
