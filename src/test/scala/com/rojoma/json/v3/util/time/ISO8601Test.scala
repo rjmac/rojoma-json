@@ -1,4 +1,4 @@
-package com.rojoma.json.v3.util.codecs.time
+package com.rojoma.json.v3.util.time
 
 import java.time._
 import java.util.Date
@@ -10,7 +10,7 @@ import com.rojoma.json.v3.ast.JString
 import com.rojoma.json.v3.codec.{JsonDecode, JsonEncode, DecodeError}
 
 class ISO8601Test extends FunSpec with MustMatchers with ScalaCheckPropertyChecks {
-  import ISO8601._
+  import ISO8601.codec._
 
   describe("Date codec") {
     it("roundtrips") {
