@@ -2,6 +2,7 @@ package com.rojoma.json.v3
 package extensions
 
 import scala.jdk.CollectionConverters._
+import java.lang.reflect.InvocationTargetException
 import java.util.ServiceLoader
 import java.io.Writer
 
@@ -20,7 +21,12 @@ object DoubleWriter {
     val serviceLoader = ServiceLoader.load(classOf[DoubleWriter])
     serviceLoader.iterator().asScala.nextOption() match {
       case None =>
-        Class.forName("com.rojoma.json.v3.extensions.SimpleDoubleWriter").newInstance().asInstanceOf[DoubleWriter]
+        try {
+          Class.forName("com.rojoma.json.v3.extensions.SimpleDoubleWriter").getConstructor().newInstance().asInstanceOf[DoubleWriter]
+        } catch {
+          case e: InvocationTargetException if e.getCause != null =>
+            throw e.getCause
+        }
       case Some(l) =>
         l
     }

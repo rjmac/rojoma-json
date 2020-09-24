@@ -127,4 +127,27 @@ class AutomaticJsonCodecBuilderTest extends FunSuite with MustMatchers with Eith
     JsonUtil.parseJson[Foo]("""{"is":"gnat","this":"gnu"}""") must equal (Right(Foo("gnu")))
     JsonUtil.parseJson[Foo]("""{"x":"gnat","this":"gnu"}""") must equal (Right(Foo("gnat")))
   }
+
+  test("Unknown fields can be forbidden") {
+    @ForbidUnknownFields
+    case class Foo(x: String)
+    implicit val codec = AutomaticJsonCodecBuilder[Foo]
+    JsonUtil.parseJson[Foo]("""{"x":"hello"}""") must equal (Right(Foo("hello")))
+    JsonUtil.parseJson[Foo]("""{"x":"world","y":"haha no"}""") must equal (Left(DecodeError.InvalidField("y")))
+  }
+
+  test("Unknown fields are reported after missing required ones") {
+    @ForbidUnknownFields
+    case class Foo(x: String)
+    implicit val codec = AutomaticJsonCodecBuilder[Foo]
+    JsonUtil.parseJson[Foo]("""{"y":"hello"}""") must equal (Left(DecodeError.MissingField("x")))
+  }
+
+  test("The first unknown field is returned") {
+    @ForbidUnknownFields
+    case class Foo(x: String)
+    implicit val codec = AutomaticJsonCodecBuilder[Foo]
+    JsonUtil.parseJson[Foo]("""{"x":"a","y":"b","z":"c"}""") must equal (Left(DecodeError.InvalidField("y")))
+    JsonUtil.parseJson[Foo]("""{"x":"a","z":"c","y":"b"}""") must equal (Left(DecodeError.InvalidField("z")))
+  }
 }

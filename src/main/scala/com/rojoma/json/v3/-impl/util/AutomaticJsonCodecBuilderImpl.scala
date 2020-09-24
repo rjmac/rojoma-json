@@ -4,7 +4,7 @@ package `-impl`.util
 import scala.collection.mutable
 
 import codec._
-import util.{JsonKey, AlternativeJsonKey, JsonKeyStrategy, Strategy, LazyCodec, NullForNone}
+import util.{JsonKey, AlternativeJsonKey, JsonKeyStrategy, Strategy, LazyCodec, NullForNone, ForbidUnknownFields}
 
 import MacroCompat._
 
@@ -50,6 +50,7 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
     }
 
     private val defaultNameStrategy = nameStrategy(T.typeSymbol, identityStrat)
+    private val forbidUnknownFields = T.typeSymbol.annotations.exists { ann => isType(ann.tree.tpe, typeOf[ForbidUnknownFields]) }
 
     // since v2 and v3 share the same names for their annotations, warn if we find one that isn't
     // the same type but is the same name and don't find one that IS the right type.
@@ -172,6 +173,7 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
     private val tmp4 = freshTermName()
     private val lValue = freshTermName()
     private val rValue = freshTermName()
+    private val expectedFields = freshTermName()
 
     // the name of the thing being encoded or decoded
     private val param = freshTermName()
@@ -231,6 +233,13 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
            _root_.scala.Left($lValue($tmp3.asInstanceOf[_root_.scala.Left[_root_.com.rojoma.json.v3.codec.DecodeError, _root_.scala.Any]]).augment(_root_.com.rojoma.json.v3.codec.Path.Field($tmp4)))"""
     }
 
+    private def fieldSet =
+      if(forbidUnknownFields) {
+        List(q"""private[this] val $expectedFields = _root_.scala.collection.immutable.Set(..${fields.flatMap(_.jsonNames)})""")
+      } else {
+        Nil
+      }
+
     def decoder = locally {
       val obj = freshTermName()
       val tmps = fieldss.map { _.map { _ => freshTermName() } }
@@ -263,10 +272,23 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
           Apply(seed, arglist.map(Ident(_)))
         }
 
+      def checkUnknownFields=
+        if(forbidUnknownFields) {
+          List(q"""val $tmp = $obj.keysIterator.filterNot($expectedFields)
+                   if($tmp.hasNext) {
+                     return _root_.scala.Left(
+                       _root_.com.rojoma.json.v3.codec.DecodeError.InvalidField($tmp.next())
+                     )
+                   }""")
+        } else {
+          Nil
+        }
+
       q"""def decode($param: _root_.com.rojoma.json.v3.ast.JValue): _root_.scala.Either[_root_.com.rojoma.json.v3.codec.DecodeError, $Tname] =
             if($param.isInstanceOf[_root_.com.rojoma.json.v3.ast.JObject]) {
               val $obj = $param.asInstanceOf[_root_.com.rojoma.json.v3.ast.JObject].fields
               ..$decoderMapExtractions
+              ..$checkUnknownFields
               _root_.scala.Right($create)
             } else {
               _root_.scala.Left(_root_.com.rojoma.json.v3.codec.DecodeError.InvalidType(
@@ -310,6 +332,7 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
               ..$decodes
               ..$missingMethods
               ..$errorAugmenterMethods
+              ..$fieldSet
               $decoder
               override def toString = ${"#<JsonDecode for " + T.toString + ">"}
             }) : _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname]"""
@@ -326,6 +349,7 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
                        ..$decodes
                        ..$missingMethods
                        ..$errorAugmenterMethods
+                       ..$fieldSet
                        $encoder
                        $decoder
                        override def toString = ${"#<JsonCodec for " + T.toString + ">"}

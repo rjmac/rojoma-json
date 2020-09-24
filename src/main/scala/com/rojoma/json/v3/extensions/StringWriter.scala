@@ -2,6 +2,7 @@ package com.rojoma.json.v3
 package extensions
 
 import scala.jdk.CollectionConverters._
+import java.lang.reflect.InvocationTargetException
 import java.util.ServiceLoader
 import java.io.Writer
 
@@ -78,7 +79,12 @@ object StringWriter {
     val serviceLoader = ServiceLoader.load(classOf[StringWriter])
     serviceLoader.iterator().asScala.nextOption() match {
       case None =>
-        Class.forName("com.rojoma.json.v3.extensions.SimpleStringWriter").newInstance().asInstanceOf[StringWriter]
+        try {
+          Class.forName("com.rojoma.json.v3.extensions.SimpleStringWriter").getConstructor().newInstance().asInstanceOf[StringWriter]
+        } catch {
+          case e: InvocationTargetException if e.getCause != null =>
+            throw e.getCause
+        }
       case Some(l) =>
         l
     }
