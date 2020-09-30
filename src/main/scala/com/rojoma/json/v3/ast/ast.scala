@@ -405,11 +405,9 @@ case class JBoolean(boolean: Boolean) extends JAtom {
   def jsonType = JBoolean
 }
 
-object JBoolean extends scala.runtime.AbstractFunction1[Boolean, JBoolean] with JsonType {
-  // wish I could override apply(Boolean) to use these.  At least
-  // JsonReader will, though.
-  val canonicalTrue = JBoolean(true)
-  val canonicalFalse = JBoolean(false)
+object JBoolean extends `-impl`.ast.JBooleanApply with JsonType {
+  val canonicalTrue = new JBoolean(true)
+  val canonicalFalse = new JBoolean(false)
 
   override final val toString = "boolean"
 
@@ -485,8 +483,7 @@ case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFu
   def jsonType = JArray
 }
 
-object JArray extends scala.runtime.AbstractFunction1[sc.Seq[JValue], JArray] with JsonType {
-  val canonicalEmpty: JArray = new JArray(Vector.empty) { // Vector because JsonReader is guaranteed to return JArrays which contain Vectors.
+object JArray extends `-impl`.ast.JArrayApply with JsonType {
   val empty: JArray = new JArray(Vector.empty) { // Vector because JsonReader is guaranteed to return JArrays which contain Vectors.
     override def forced = this
   }
@@ -534,8 +531,7 @@ case class JObject(val fields: sc.Map[String, JValue]) extends Iterable[(String,
   def jsonType = JObject
 }
 
-object JObject extends scala.runtime.AbstractFunction1[sc.Map[String, JValue], JObject] with JsonType {
-  val canonicalEmpty: JObject = new JObject(Map.empty) { // _Not_ LinkedHashMap because all JsonReader guarantees is ordering of elements, which this satisfies.
+object JObject extends `-impl`.ast.JObjectApply with JsonType {
   val empty: JObject = new JObject(Map.empty) { // _Not_ LinkedHashMap because all JsonReader guarantees is ordering of elements, which this satisfies.
     override def forced = this
   }
