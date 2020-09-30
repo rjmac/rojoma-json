@@ -25,7 +25,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
       if(x.nonEmpty)
         JArray(x.view.map(tEncode.encode))
       else
-        JArray.canonicalEmpty
+        JArray.empty
     }
   }
 
@@ -34,7 +34,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
       if(x.length > 0)
         JArray(x.view.map(JsonEncode[T].encode))
       else
-        JArray.canonicalEmpty
+        JArray.empty
   }
 
   implicit def setEncode[T, S[X] <: sc.Set[X]](implicit tEncode: JsonEncode[T]) = new JsonEncode[S[T]] {
@@ -42,7 +42,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
       if(x.nonEmpty)
         JArray(x.toSeq.view.map(tEncode.encode))
       else
-        JArray.canonicalEmpty
+        JArray.empty
     }
   }
 
@@ -51,7 +51,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
       if(!x.isEmpty)
         JArray(x.asScala.view.map(JsonEncode[T].encode))
       else
-        JArray.canonicalEmpty
+        JArray.empty
     }
   }
 
@@ -60,7 +60,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
       if(!x.isEmpty)
         JArray(x.asScala.toSeq.view.map(JsonEncode[T].encode))
       else
-        JArray.canonicalEmpty
+        JArray.empty
     }
   }
 
@@ -156,7 +156,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
       new JsonEncode[M[String, U]] {
         def encode(x: M[String, U]) =
           if(x.nonEmpty) JObject(x.mapValues(uEncode.encode))
-          else JObject.canonicalEmpty
+          else JObject.empty
       }.asInstanceOf[JsonEncode[M[T, U]]]
     } else {
       new JsonEncode[M[T, U]] {
@@ -166,7 +166,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
             // we'll encode as lazily as possible.
             val keysConverted: sc.Map[String, U] = x.map { case (k, v) => tEncode.encode(k) -> v }
             JObject(keysConverted.mapValues(uEncode.encode))
-          } else JObject.canonicalEmpty
+          } else JObject.empty
       }
     }
   }
@@ -196,7 +196,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
   }
 
   implicit object UnitEncode extends JsonEncode[Unit] {
-    private val empty = JArray.canonicalEmpty
+    private val empty = JArray.empty
     def encode(x: Unit) = empty
   }
 

@@ -141,7 +141,7 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
     skipWhitespace()
     if(peekCharParser() == '}') {
       skipCharNotAtEOF()
-      return JObject.canonicalEmpty
+      return JObject.empty
     }
 
     depth += 1
@@ -189,7 +189,7 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
     skipWhitespace()
     if(peekCharParser() == ']') {
       skipCharNotAtEOF()
-      return JArray.canonicalEmpty
+      return JArray.empty
     }
 
     depth += 1

@@ -60,7 +60,7 @@ class EventJsonReader(input: Iterator[JsonEvent]) extends JsonReader {
 
   private def atEndOfObject = hopeFor(EventJsonReader.EoOEvent)
   private def readObject(): JObject = {
-    if(atEndOfObject) return JObject.canonicalEmpty
+    if(atEndOfObject) return JObject.empty
 
     // It's bad practice to rely on this, but we'll preserve the order
     // of elements as they're read (barring duplication).
@@ -79,7 +79,7 @@ class EventJsonReader(input: Iterator[JsonEvent]) extends JsonReader {
 
   private def atEndOfArray = hopeFor(EventJsonReader.EoAEvent)
   private def readArray(): JArray = {
-    if(atEndOfArray) return JArray.canonicalEmpty
+    if(atEndOfArray) return JArray.empty
     val builder = new VectorBuilder[JValue]
     do {
       builder += read()
