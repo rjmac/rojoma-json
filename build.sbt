@@ -6,9 +6,9 @@ version := "3.12.1-SNAPSHOT"
 
 mimaPreviousArtifacts := Set("com.rojoma" %% "rojoma-json-v3" % "3.12.0")
 
-scalaVersion := "2.12.10"
+scalaVersion := "2.12.12"
 
-crossScalaVersions := Seq("2.10.6", "2.11.8", scalaVersion.value)
+crossScalaVersions := Seq("2.10.7", "2.11.12", scalaVersion.value)
 
 scalacOptions ++= {
   val SV = """(\d+)\.(\d+)\..*""".r
@@ -35,12 +35,12 @@ libraryDependencies ++= Seq(
 
 libraryDependencies ++= {
   if(scalaVersion.value startsWith "2.10.")
-    List("org.scalamacros" %% "quasiquotes" % "2.1.0")
+    List("org.scalamacros" %% "quasiquotes" % "2.1.1")
   else
     Nil
 }
 
-addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
 
 sourceGenerators in Compile += Def.task { SimpleJsonCodecBuilderBuilder((sourceManaged in Compile).value) }
 
