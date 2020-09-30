@@ -96,7 +96,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   }
 
   private def peekChar() = {
-    if(atEOF) throwEOF()
+    if(atEOF()) throwEOF()
     block(pos)
   }
 
@@ -452,7 +452,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
   }
 
   private def readDigit(): Char = {
-    if(!isDigit(peekChar)) lexerError(peekChar(), "digit", nextCharRow, nextCharCol)
+    if(!isDigit(peekChar())) lexerError(peekChar(), "digit", nextCharRow, nextCharCol)
     nextChar()
   }
 

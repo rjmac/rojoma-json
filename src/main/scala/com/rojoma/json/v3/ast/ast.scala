@@ -184,6 +184,21 @@ object JNumber extends JsonType {
     }
   }
 
+  private object JIntNumber {
+    private val preallocated = {
+      val tmp = new Array[JIntNumber](256)
+      for(i <- 0 until 256) {
+        tmp(i) = new JIntNumber(i - 128)
+      }
+      tmp
+    }
+
+    def create(n: Int) = {
+      if(n >= -128 && n < 128) preallocated(n + 128)
+      else new JIntNumber(n)
+    }
+  }
+
   private class JLongNumber(val toLong: Long) extends JNumber {
     def toByte = toLong.toByte
     def toShort = toLong.toShort
@@ -204,6 +219,13 @@ object JNumber extends JsonType {
       case that: JBigIntNumber => this.toBigInt == that.toBigInt
       case that: JBigIntegerNumber => this.toBigInt == that.toBigInt
       case _ => super.equals(o)
+    }
+  }
+
+  private object JLongNumber {
+    def create(n: Long) = {
+      if(n >= Int.MinValue && n <= Int.MaxValue) JIntNumber.create(n.toInt)
+      else new JLongNumber(n)
     }
   }
 
@@ -230,6 +252,15 @@ object JNumber extends JsonType {
     }
   }
 
+  private object JBigIntNumber {
+    val lowerBound = BigInt(Long.MinValue)
+    val upperBound = BigInt(Long.MaxValue)
+    def create(n: BigInt) = {
+      if(n >= lowerBound && n <= upperBound) JLongNumber.create(n.toLong)
+      else new JBigIntNumber(n)
+    }
+  }
+
   private class JBigIntegerNumber(val toBigInteger: BigInteger) extends JNumber {
     def toByte: Byte = toBigInteger.byteValue
     def toShort: Short = toBigInteger.shortValue
@@ -250,6 +281,15 @@ object JNumber extends JsonType {
       case that: JBigIntNumber => this.toBigInteger == that.toBigInteger
       case that: JBigIntegerNumber => this.toBigInteger == that.toBigInteger
       case other => super.equals(other)
+    }
+  }
+
+  private object JBigIntegerNumber {
+    val lowerBound = BigInteger.valueOf(Long.MinValue)
+    val upperBound = BigInteger.valueOf(Long.MaxValue)
+    def create(n: BigInteger) = {
+      if(n.compareTo(lowerBound) >= 0 && n.compareTo(upperBound) <= 0) JLongNumber.create(n.longValue)
+      else new JBigIntegerNumber(n)
     }
   }
 
@@ -332,12 +372,12 @@ object JNumber extends JsonType {
     lazy val toJBigDecimal = new JBigDecimal(asString, stdCtx)
   }
 
-  def apply(b: Byte): JNumber = new JIntNumber(b)
-  def apply(s: Short): JNumber = new JIntNumber(s)
-  def apply(i: Int): JNumber = new JIntNumber(i)
-  def apply(l: Long): JNumber = new JLongNumber(l)
-  def apply(bi: BigInt): JNumber = new JBigIntNumber(bi)
-  def apply(bi: BigInteger): JNumber = new JBigIntegerNumber(bi)
+  def apply(b: Byte): JNumber = JIntNumber.create(b)
+  def apply(s: Short): JNumber = JIntNumber.create(s)
+  def apply(i: Int): JNumber = JIntNumber.create(i)
+  def apply(l: Long): JNumber = JLongNumber.create(l)
+  def apply(bi: BigInt): JNumber = JBigIntNumber.create(bi)
+  def apply(bi: BigInteger): JNumber = JBigIntegerNumber.create(bi)
   def apply(f: Float): JNumber = new JFloatNumber(f)
   def apply(d: Double): JNumber = new JDoubleNumber(d)
   def apply(bd: BigDecimal): JNumber = new JBigDecimalNumber(bd)
@@ -600,15 +640,15 @@ case class JArray(elems: sc.Seq[JValue]) extends sc.Seq[JValue] with JCompound {
 }
 
 object JArray extends scala.runtime.AbstractFunction1[sc.Seq[JValue], JArray] with sc.Factory[JValue, JArray] with JsonType {
-  val canonicalEmpty: JArray = new JArray(Vector.empty) { // Vector because JsonReader is guaranteed to return JArrays which contain Vectors.
+  val empty: JArray = new JArray(Vector.empty) { // Vector because JsonReader is guaranteed to return JArrays which contain Vectors.
     override def forced = this
   }
-  val empty = canonicalEmpty
+  val canonicalEmpty = empty
 
   override def apply(elems: sc.Seq[JValue]) =
     elems match {
       case arr: JArray => arr
-      case other if other.isEmpty => canonicalEmpty
+      case other if other.isEmpty => empty
       case other => new JArray(other)
     }
 
@@ -638,7 +678,7 @@ case class JObject(val fields: sc.Map[String, JValue]) extends sc.Map[String, JV
   @deprecated("Use - or removed on an immutable Map", "2.13.0")
   def -(key: String) = new JObject(fields - key)
   @deprecated("Use -- or removedAll on an immutable Map", "2.13.0")
-  def -(key1: String, key2: String, keys: String*) = new JObject(fields-(key1, key2, keys : _*))
+  def -(key1: String, key2: String, keys: String*) = new JObject(fields.-(key1, key2, keys : _*))
 
   override def ++[V2 >: JValue](xs: IterableOnce[(String, V2)]) = fields ++ xs
   override def andThen[C](k: PartialFunction[JValue, C]) = fields.andThen(k)
@@ -786,10 +826,10 @@ case class JObject(val fields: sc.Map[String, JValue]) extends sc.Map[String, JV
 }
 
 object JObject extends scala.runtime.AbstractFunction1[sc.Map[String, JValue], JObject] with sc.Factory[(String, JValue), JObject] with JsonType {
-  val canonicalEmpty: JObject = new JObject(SeqMap.empty) {
+  val empty: JObject = new JObject(SeqMap.empty) {
     override def forced = this
   }
-  val empty = canonicalEmpty
+  val canonicalEmpty = empty
   override final val toString = "object"
   implicit object Concrete extends Json[JObject] {
     val jsonTypes = Set[JsonType](JObject)
@@ -798,7 +838,7 @@ object JObject extends scala.runtime.AbstractFunction1[sc.Map[String, JValue], J
   override def apply(fields: sc.Map[String, JValue]) =
     fields match {
       case arr: JObject => arr
-      case other if other.isEmpty => canonicalEmpty
+      case other if other.isEmpty => empty
       case other => new JObject(other)
     }
 

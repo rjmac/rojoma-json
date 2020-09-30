@@ -122,27 +122,27 @@ class MatchesTests extends FunSuite with MustMatchers {
   }
 
   test("optional fields will match null if the subpattern does accept it") {
-    val a = Variable[JValue]
+    val a = Variable[JValue]()
     (PObject("hello" -> POption(a)) matches j("""{'hello':null}""")) must equal (Right(Map(a -> JNull)))
   }
 
   test("optional fields reject if present but unmatching") {
-    val a = Variable[JString]
+    val a = Variable[JString]()
     (PObject("hello" -> POption(a)) matches j("""{'hello':5}""")) must equal (Left(DecodeError.InvalidType(JString, JNumber, Path("hello"))))
   }
 
   test("optional-or-null fields will match null") {
-    val a = Variable[Int]
+    val a = Variable[Int]()
     (PObject("hello" -> POption(a).orNull) matches j("""{'hello':null}""")) must equal (Right(Map.empty))
   }
 
   test("optional-or-null fields will match if present") {
-    val a = Variable[Int]
+    val a = Variable[Int]()
     (PObject("hello" -> POption(a).orNull) matches j("""{'hello':1}""")) must equal (Right(Map(a -> 1)))
   }
 
   test("optional-or-null fields will reject if present, non-null, and not-matching") {
-    val a = Variable[Int]
+    val a = Variable[Int]()
     (PObject("hello" -> POption(a).orNull) matches j("""{'hello':'world'}""")) must equal (Left(DecodeError.Multiple(List(DecodeError.InvalidType(JNumber, JString, Path("hello")), DecodeError.InvalidType(JNull, JString, Path("hello"))))))
   }
 
@@ -241,20 +241,20 @@ class MatchesTests extends FunSuite with MustMatchers {
   }
 
   test("generating from FirstOf produces the first option that can be generated") {
-    val a = Variable[String]
+    val a = Variable[String]()
     val pattern = FirstOf(a, "hello", "world")
     pattern.generate() must equal (JString("hello"))
   }
 
   test("Optional pattern-or-null produces nothing if the pattern doesn't generate") {
-    val a = Variable[String]
+    val a = Variable[String]()
     val pattern = PObject("hello" -> POption(FirstOf(a, JNull)))
     pattern.generate() must equal (j("""{}"""))
   }
 
   test(":=? works") {
-    val a = Variable[String]
-    val b = Variable[Int]
+    val a = Variable[String]()
+    val b = Variable[Int]()
     val pattern = FirstOf(a, b)
     pattern.generate(a :=? None, b := 5) must equal (JNumber(5))
     pattern.generate(a :=? Some("gnu"), b := 5) must equal (JString("gnu"))

@@ -2,13 +2,11 @@ name := "rojoma-json-v3"
 
 organization := "com.rojoma"
 
-version := "3.12.0"
+version := "3.12.1-SNAPSHOT"
 
-mimaPreviousArtifacts := Set("com.rojoma" %% "rojoma-json-v3" % "3.11.0")
+mimaPreviousArtifacts := Set("com.rojoma" %% "rojoma-json-v3" % "3.12.0")
 
-scalaVersion := "2.13.1"
-
-// crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.0", scalaVersion.value)
+scalaVersion := "2.13.3"
 
 scalacOptions ++= {
   val SV = """(\d+)\.(\d+)\..*""".r
@@ -35,19 +33,9 @@ testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
 libraryDependencies ++= Seq(
-  // "com.rojoma" %% "rojoma-json" % "2.4.3" % "optional",
   "org.scalatest" %% "scalatest" % "3.0.8" % "test",
   "org.scalacheck" %% "scalacheck" % "1.14.0" % "optional" // optional because generators for JValues are included
 )
-
-libraryDependencies ++= {
-  if(scalaVersion.value startsWith "2.10.")
-    List("org.scalamacros" %% "quasiquotes" % "2.1.0")
-  else
-    Nil
-}
-
-// addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 
 sourceGenerators in Compile += Def.task { SimpleJsonCodecBuilderBuilder((sourceManaged in Compile).value) }
 

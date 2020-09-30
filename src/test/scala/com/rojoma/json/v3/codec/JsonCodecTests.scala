@@ -66,19 +66,19 @@ class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
   locally {
     import testsupport.ArbitraryJValue._
     import ast._
-    test("jvalue roundtrips") { doCheck[JValue] }
+    test("jvalue roundtrips") { doCheck[JValue]() }
     locally {
-      test("jatom roundtrips") { doCheck[JAtom] }
+      test("jatom roundtrips") { doCheck[JAtom]() }
       locally {
-        test("jnull roundtrips") { doCheck[JNull] };
-        test("jboolean roundtrips") { doCheck[JBoolean] }
-        test("jstring roundtrips") { doCheck[JString] }
-        test("jnumber roundtrips") { doCheck[JNumber] }
+        test("jnull roundtrips") { doCheck[JNull]() };
+        test("jboolean roundtrips") { doCheck[JBoolean]() }
+        test("jstring roundtrips") { doCheck[JString]() }
+        test("jnumber roundtrips") { doCheck[JNumber]() }
       }
-      test("jcompound roundtrips") { doCheck[JCompound] }
+      test("jcompound roundtrips") { doCheck[JCompound]() }
       locally {
-        test("jarray roundtrips") { doCheck[JArray] }
-        test("jobject roundtrips") { doCheck[JObject] }
+        test("jarray roundtrips") { doCheck[JArray]() }
+        test("jobject roundtrips") { doCheck[JObject]() }
       }
     }
   }

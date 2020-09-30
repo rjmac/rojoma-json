@@ -84,7 +84,7 @@ object JsonInterpolatorImpl {
     }
 
     def finishArray(ctors: List[TermName => Tree]): Tree = {
-      if(ctors.isEmpty) q"_root_.com.rojoma.json.v3.ast.JArray.canonicalEmpty"
+      if(ctors.isEmpty) q"_root_.com.rojoma.json.v3.ast.JArray.empty"
       else {
         val temp = freshTermName()
         val populations = ctors.reverse.map(_(temp))
@@ -97,7 +97,7 @@ object JsonInterpolatorImpl {
     }
 
     def finishObject(ctors: List[TermName => Tree]): Tree = {
-      if(ctors.isEmpty) q"_root_.com.rojoma.json.v3.ast.JObject.canonicalEmpty"
+      if(ctors.isEmpty) q"_root_.com.rojoma.json.v3.ast.JObject.empty"
       else {
         val temp = freshTermName()
         val populations = ctors.reverse.map(_(temp))
@@ -126,7 +126,7 @@ object JsonInterpolatorImpl {
     }
 
     def optionalObjectItem(k: Tree, v: Tree): TermName => Tree = { termName =>
-      val kTemp = freshTermName
+      val kTemp = freshTermName()
       val temp = freshTermName()
       q"""{
             val $kTemp = $k
