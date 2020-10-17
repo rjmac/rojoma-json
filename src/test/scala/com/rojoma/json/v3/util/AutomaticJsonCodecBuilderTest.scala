@@ -150,4 +150,16 @@ class AutomaticJsonCodecBuilderTest extends FunSuite with MustMatchers with Eith
     JsonUtil.parseJson[Foo]("""{"x":"a","y":"b","z":"c"}""") must equal (Left(DecodeError.InvalidField("y")))
     JsonUtil.parseJson[Foo]("""{"x":"a","z":"c","y":"b"}""") must equal (Left(DecodeError.InvalidField("z")))
   }
+
+  test("An automatic encode produces values statically typed as JObject") {
+    case class Foo(x: String)
+    val encode = AutomaticJsonEncodeBuilder[Foo]
+    encode.encode(Foo("hello")) : JObject
+  }
+
+  test("An automatic codec produces values statically typed as JObject") {
+    case class Foo(x: String)
+    val encode = AutomaticJsonCodecBuilder[Foo]
+    encode.encode(Foo("hello")) : JObject
+  }
 }
