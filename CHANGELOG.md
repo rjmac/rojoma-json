@@ -1,8 +1,9 @@
 3.13.0 (unreleased)
 ===================
-* JObject and JArray have "empty" in addition to (and preferred to) `canonicalEmpty`
+* `JObject` and `JArray` have `empty` in addition to (and preferred to) `canonicalEmpty`
 * On scala 2.12, `JBoolean.apply` now alawys returns `canonicalTrue` or `canonicalFalse`
 * Small integer `JNumber`s are now interned, if constructed with an integral type.
+* The encoders produced by the automatic builders will produce values statically typed as `JObject`
 
 3.12.0
 ======
@@ -30,7 +31,7 @@
 
 3.9.1
 =====
-* Fix BigDecimal limit detection
+* Fix `BigDecimal` limit detection
 
 3.9.0
 =====
@@ -42,7 +43,7 @@
 
 3.7.2
 =====
-* Add FixedSetFieldCache
+* Add `FixedSetFieldCache`
 * Publish for 2.12
 
 3.7.0
@@ -78,16 +79,16 @@
 
 3.2.0
 =====
-* Introduce field codecs for allowing serializing maps with non-String keys
+* Introduce field codecs for allowing serializing maps with non-`String` keys
 
 3.1.2
 =====
-* Fix that malformed interpolations would throw NotImplementedException in Scala 2.10
+* Fix that malformed interpolations would throw `NotImplementedException` in Scala 2.10
 
 3.1.1
 =====
-* Improve dynamic jvalues
+* Improve dynamic `JValues`
 
 3.1.0
 =====
-* Less verbose WrapperJsonCodecs
+* Less verbose `WrapperJsonCodec`s
