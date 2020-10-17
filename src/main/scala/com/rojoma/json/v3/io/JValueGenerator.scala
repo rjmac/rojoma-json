@@ -1,7 +1,7 @@
 package com.rojoma.json.v3
 package io
 
-import scala.collection.mutable.LinkedHashMap
+import scala.collection.immutable.VectorMap
 
 import ast._
 
@@ -41,13 +41,17 @@ private[io] object JValueGeneratorImpl {
     protected def enparent(s: String) = if(parent == null) s else s + " :: " + parent
 
     def jObject(fields: Vector[Field]) = {
-      val map = new LinkedHashMap[String, JValue]
       val it = fields.iterator
-      while(it.hasNext) {
-        val f = it.next()
-        map(f.key) = f.value
+      if(!it.hasNext) {
+        JObject.empty
+      } else {
+        val map = VectorMap.newBuilder[String, JValue]
+        do {
+          val f = it.next()
+          map += f.key -> f.value
+        } while(it.hasNext)
+        JObject(map.result())
       }
-      JObject(map)
     }
   }
 

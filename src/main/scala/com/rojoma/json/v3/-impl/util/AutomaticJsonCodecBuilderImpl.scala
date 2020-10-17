@@ -192,24 +192,24 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
       def encoderMapUpdates = for(fi <- fields) yield {
         if(fi.isOption) {
           if(fi.isNullForNone) {
-            q"""$encoderMap(${fi.jsonNames.head}) = {
+            q"""$encoderMap += ${fi.jsonNames.head} -> {
                   val $tmp = $param.${fi.accessorName}
                   if($tmp.isInstanceOf[_root_.scala.Some[_]]) ${fi.encName}.encode($tmp.get)
                   else _root_.com.rojoma.json.v3.ast.JNull
                 }"""
           } else {
             q"""val $tmp = $param.${fi.accessorName}
-                if($tmp.isInstanceOf[_root_.scala.Some[_]]) $encoderMap(${fi.jsonNames.head}) = ${fi.encName}.encode($tmp.get)"""
+                if($tmp.isInstanceOf[_root_.scala.Some[_]]) $encoderMap += ${fi.jsonNames.head} -> ${fi.encName}.encode($tmp.get)"""
           }
         } else {
-          q"$encoderMap(${fi.jsonNames.head}) = ${fi.encName}.encode($param.${fi.accessorName})"
+          q"$encoderMap += ${fi.jsonNames.head} -> ${fi.encName}.encode($param.${fi.accessorName})"
         }
       }
 
       q"""def encode($param: $Tname) = {
-            val $encoderMap = new _root_.scala.collection.mutable.LinkedHashMap[_root_.scala.Predef.String, _root_.com.rojoma.json.v3.ast.JValue]
+            val $encoderMap = _root_.scala.collection.immutable.VectorMap.newBuilder[_root_.scala.Predef.String, _root_.com.rojoma.json.v3.ast.JValue]
             ..$encoderMapUpdates
-            _root_.com.rojoma.json.v3.ast.JObject($encoderMap)
+            _root_.com.rojoma.json.v3.ast.JObject($encoderMap.result())
           }"""
     }
 

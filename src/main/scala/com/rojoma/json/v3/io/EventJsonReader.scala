@@ -1,8 +1,7 @@
 package com.rojoma.json.v3
 package io
 
-import scala.collection.immutable.VectorBuilder
-import scala.collection.mutable
+import scala.collection.immutable.{VectorBuilder, VectorMap}
 
 import java.io.Reader
 
@@ -62,9 +61,7 @@ class EventJsonReader(input: Iterator[JsonEvent]) extends JsonReader {
   private def readObject(): JObject = {
     if(atEndOfObject) return JObject.empty
 
-    // It's bad practice to rely on this, but we'll preserve the order
-    // of elements as they're read (barring duplication).
-    val result = new mutable.LinkedHashMap[String, JValue]
+    val result = VectorMap.newBuilder[String, JValue]
     do {
       lexer.next() match {
         case FieldEvent(field) =>
@@ -74,7 +71,7 @@ class EventJsonReader(input: Iterator[JsonEvent]) extends JsonReader {
           throw new JsonBadParse(event)
       }
     } while(!atEndOfObject)
-    JObject(result)
+    JObject(result.result())
   }
 
   private def atEndOfArray = hopeFor(EventJsonReader.EoAEvent)

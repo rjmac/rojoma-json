@@ -3,8 +3,8 @@ package io
 
 import java.io.Reader
 
-import scala.collection.mutable
-import scala.collection.immutable
+import scala.collection.mutable.Builder
+import scala.collection.immutable.VectorMap
 import ast._
 
 class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityFieldCache, blockSize: Int = 1024) extends JsonReader {
@@ -146,16 +146,16 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
 
     depth += 1
 
-    val result = new mutable.LinkedHashMap[String, JValue]
+    val result = VectorMap.newBuilder[String, JValue]
     result += readMapping("field name or end of object")
     readRestOfObjectBody(result)
 
     depth -= 1
 
-    JObject(result)
+    JObject(result.result())
   }
 
-  private def readRestOfObjectBody(result: mutable.LinkedHashMap[String, JValue]): Unit = {
+  private def readRestOfObjectBody(result: Builder[(String, JValue), _]): Unit = {
     skipWhitespace()
     while(peekCharParser() != '}') {
       if(peekCharParser() != ',') badToken("comma or end of object")
@@ -194,7 +194,7 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
 
     depth += 1
 
-    val result = new immutable.VectorBuilder[JValue]
+    val result = Vector.newBuilder[JValue]
     result += readDatum("datum or end of array")
     readRestOfArrayBody(result)
 
@@ -203,7 +203,7 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
     JArray(result.result())
   }
 
-  private def readRestOfArrayBody(result: immutable.VectorBuilder[JValue]): Unit = {
+  private def readRestOfArrayBody(result: Builder[JValue, _]): Unit = {
     skipWhitespace()
     while(peekCharParser() != ']') {
       if(peekCharParser() != ',') badToken("comma or end of array")
