@@ -312,17 +312,17 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
 
     private def eitherValues = List(lValueDef, rValueDef)
 
-    def encode: c.Expr[JsonEncode[T]] = {
+    def encode: c.Expr[JsonEncode[T] with JObjectEncode[T]] = {
       val tree =
-        q"""(new _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] {
+        q"""(new _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.json.v3.`-impl`.util.JObjectEncode[$Tname] {
               ..$encodes
               $encoder
               override def toString = ${"#<JsonEncode for " + T.toString + ">"}
-            }) : _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname]"""
+            }) : _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.json.v3.`-impl`.util.JObjectEncode[$Tname]"""
 
       // println(tree)
 
-      c.Expr[JsonEncode[T]](tree)
+      c.Expr[JsonEncode[T] with JObjectEncode[T]](tree)
     }
 
     def decode: c.Expr[JsonDecode[T]] = {
@@ -342,8 +342,8 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
       c.Expr[JsonDecode[T]](tree)
     }
 
-    def codec: c.Expr[JsonEncode[T] with JsonDecode[T]] = {
-      val tree = q"""(new _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname] {
+    def codec: c.Expr[JsonEncode[T] with JsonDecode[T] with JObjectEncode[T]] = {
+      val tree = q"""(new _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname] with _root_.com.rojoma.json.v3.`-impl`.util.JObjectEncode[$Tname] {
                        ..$eitherValues
                        ..$encodes
                        ..$decodes
@@ -353,17 +353,17 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
                        $encoder
                        $decoder
                        override def toString = ${"#<JsonCodec for " + T.toString + ">"}
-                     }) : _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname]"""
+                     }) : _root_.com.rojoma.json.v3.codec.JsonEncode[$Tname] with _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname] with _root_.com.rojoma.json.v3.`-impl`.util.JObjectEncode[$Tname]"""
 
       // println(tree)
 
-      c.Expr[JsonEncode[T] with JsonDecode[T]](tree)
+      c.Expr[JsonEncode[T] with JsonDecode[T] with JObjectEncode[T]](tree)
     }
   }
 }
 
 object AutomaticJsonCodecBuilderImpl {
-  def encode[T : ctx.WeakTypeTag](ctx: Context): ctx.Expr[JsonEncode[T]] = {
+  def encode[T : ctx.WeakTypeTag](ctx: Context): ctx.Expr[JsonEncode[T] with JObjectEncode[T]] = {
     val b = new AutomaticJsonCodecBuilderImpl[ctx.type](ctx)
     new b.Impl[T]().encode
   }
@@ -373,7 +373,7 @@ object AutomaticJsonCodecBuilderImpl {
     new b.Impl[T]().decode
   }
 
-  def codec[T : ctx.WeakTypeTag](ctx: Context): ctx.Expr[JsonEncode[T] with JsonDecode[T]] = {
+  def codec[T : ctx.WeakTypeTag](ctx: Context): ctx.Expr[JsonEncode[T] with JsonDecode[T] with JObjectEncode[T]] = {
     val b = new AutomaticJsonCodecBuilderImpl[ctx.type](ctx)
     new b.Impl[T]().codec
   }
