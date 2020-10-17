@@ -648,7 +648,6 @@ object JArray extends scala.runtime.AbstractFunction1[sc.Seq[JValue], JArray] wi
   override def apply(elems: sc.Seq[JValue]) =
     elems match {
       case arr: JArray => arr
-      case other if other.isEmpty => empty
       case other => new JArray(other)
     }
 
@@ -838,7 +837,6 @@ object JObject extends scala.runtime.AbstractFunction1[sc.Map[String, JValue], J
   override def apply(fields: sc.Map[String, JValue]) =
     fields match {
       case arr: JObject => arr
-      case other if other.isEmpty => empty
       case other => new JObject(other)
     }
 
