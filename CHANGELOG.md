@@ -2,7 +2,6 @@
 ===================
 * JObject and JArray have "empty" in addition to (and preferred to) `canonicalEmpty`
 * On scala 2.12, `JBoolean.apply` now alawys returns `canonicalTrue` or `canonicalFalse`
-* On scala 2.12, `JObject` and `JArray.apply` return `empty` if given an empty collection
 * Small integer `JNumber`s are now interned, if constructed with an integral type.
 
 3.12.0

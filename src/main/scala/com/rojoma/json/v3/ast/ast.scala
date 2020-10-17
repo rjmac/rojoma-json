@@ -483,7 +483,7 @@ case class JArray(elems: sc.Seq[JValue]) extends Iterable[JValue] with PartialFu
   def jsonType = JArray
 }
 
-object JArray extends `-impl`.ast.JArrayApply with JsonType {
+object JArray extends scala.runtime.AbstractFunction1[Seq[JValue], JArray] with JsonType {
   val empty: JArray = new JArray(Vector.empty) { // Vector because JsonReader is guaranteed to return JArrays which contain Vectors.
     override def forced = this
   }
@@ -531,7 +531,7 @@ case class JObject(val fields: sc.Map[String, JValue]) extends Iterable[(String,
   def jsonType = JObject
 }
 
-object JObject extends `-impl`.ast.JObjectApply with JsonType {
+object JObject extends scala.runtime.AbstractFunction1[sc.Map[String, JValue], JObject]  with JsonType {
   val empty: JObject = new JObject(Map.empty) { // _Not_ LinkedHashMap because all JsonReader guarantees is ordering of elements, which this satisfies.
     override def forced = this
   }
