@@ -102,7 +102,7 @@ object JsonInterpolatorImpl {
         val temp = freshTermName()
         val populations = ctors.reverse.map(_(temp))
         q"""{
-          val $temp = _root_.scala.collection.immutable.ListMap.newBuilder[_root_.java.lang.String, _root_.com.rojoma.json.v3.ast.JValue]
+          val $temp = _root_.scala.collection.immutable.VectorMap.newBuilder[_root_.java.lang.String, _root_.com.rojoma.json.v3.ast.JValue]
           ..$populations
           _root_.com.rojoma.json.v3.ast.JObject($temp.result())
         }"""
