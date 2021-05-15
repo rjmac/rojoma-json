@@ -28,7 +28,7 @@ Compile / console / scalacOptions += "-Xlint:-unused"
 
 Compile / doc / scalacOptions -= "-Xfatal-warnings"
 
-testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
+Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 
 libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
@@ -37,27 +37,27 @@ libraryDependencies ++= Seq(
   "org.scalacheck" %% "scalacheck" % "1.14.0" % "optional" // optional because generators for JValues are included
 )
 
-sourceGenerators in Compile += Def.task { SimpleJsonCodecBuilderBuilder((sourceManaged in Compile).value) }
+Compile / sourceGenerators += Def.task { SimpleJsonCodecBuilderBuilder((Compile / sourceManaged).value) }
 
-sourceGenerators in Compile += Def.task { TupleCodecBuilder((sourceManaged in Compile).value) }
+Compile / sourceGenerators += Def.task { TupleCodecBuilder((Compile / sourceManaged).value) }
 
 // Bit of a hack; regenerate README.markdown when version is changed
 // to a non-SNAPSHOT value.
-sourceGenerators in Compile += Def.task { READMEBuilder(baseDirectory.value, version.value, crossScalaVersions.value) }
+Compile / sourceGenerators += Def.task { READMEBuilder(baseDirectory.value, version.value, crossScalaVersions.value) }
 
-unmanagedSourceDirectories in Compile += locally {
+Compile / unmanagedSourceDirectories += locally {
   val MajorMinor = """(\d+\.\d+)\..*""".r
   val dir = scalaVersion.value match {
     case MajorMinor(mm) => "scala-" + mm
     case _ => sys.error("Unable to find major/minor Scala version in " + scalaVersion)
   }
-  (scalaSource in Compile).value.getParentFile / dir
+  (Compile / scalaSource).value.getParentFile / dir
 }
 
 // Include generated sources in source jar
-mappings in (Compile, packageSrc) ++= {
-  val base = (sourceManaged in Compile).value
-  val srcs = (managedSources in Compile).value
+Compile / packageSrc / mappings ++= {
+  val base = (Compile / sourceManaged).value
+  val srcs = (Compile / managedSources).value
   import Path.{flat, relativeTo}
   srcs pair (relativeTo(base) | flat)
 }
