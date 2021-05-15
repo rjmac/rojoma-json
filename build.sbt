@@ -6,7 +6,7 @@ version := "3.12.1-SNAPSHOT"
 
 mimaPreviousArtifacts := Set("com.rojoma" %% "rojoma-json-v3" % "3.12.0")
 
-scalaVersion := "2.13.3"
+scalaVersion := "2.13.5"
 
 scalacOptions ++= {
   val SV = """(\d+)\.(\d+)\..*""".r
