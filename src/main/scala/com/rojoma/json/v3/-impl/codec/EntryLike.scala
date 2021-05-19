@@ -1,8 +1,6 @@
 package com.rojoma.json.v3
 package `-impl`.codec
 
-import scala.language.implicitConversions
-
 import codec.Path
 
 sealed trait EntryLike {
@@ -10,8 +8,11 @@ sealed trait EntryLike {
 }
 
 object EntryLike {
-  implicit def str2entry(s: String) = FieldEntryLike(s)
-  implicit def int2entry(i: Int) = IndexEntryLike(i)
+  given Conversion[String, EntryLike] with
+    def apply(s: String) = FieldEntryLike(s)
+
+  given Conversion[Int, EntryLike] with
+    def apply(i: Int) = IndexEntryLike(i)
 }
 
 case class FieldEntryLike(s: String) extends EntryLike {

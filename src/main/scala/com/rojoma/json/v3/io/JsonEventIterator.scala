@@ -83,14 +83,16 @@ class JsonEventIterator(input: Iterator[JsonToken], fieldCache: FieldCache) exte
     if(!atTop) {
       try {
         var count = 0
-        do {
+        while {
           val ev = next()
           ev match {
             case StartOfObjectEvent() | StartOfArrayEvent() => count += 1
             case EndOfObjectEvent() | EndOfArrayEvent() => count -= 1
             case _ => /* nothing */
           }
-        } while(count >= 0)
+
+          count >= 0
+        } do ()
       } catch {
         case e: NoSuchTokenException => throw new JsonParserEOF(e.position)
         case _: NoSuchElementException => throw new JsonParserEOF(Position(-1, -1))

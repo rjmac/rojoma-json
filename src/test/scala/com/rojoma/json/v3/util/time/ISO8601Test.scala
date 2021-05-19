@@ -3,18 +3,19 @@ package com.rojoma.json.v3.util.time
 import java.time._
 import java.util.Date
 
-import org.scalatest.{FunSpec, MustMatchers}
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import com.rojoma.json.v3.ast.JString
 import com.rojoma.json.v3.codec.{JsonDecode, JsonEncode, DecodeError}
 
-class ISO8601Test extends FunSpec with MustMatchers with ScalaCheckPropertyChecks {
-  import ISO8601.codec._
+class ISO8601Test extends AnyFunSpec with Matchers with ScalaCheckPropertyChecks {
+  import ISO8601.codec.given
 
   describe("Date codec") {
     it("roundtrips") {
-      forAll { epochMillis: Long =>
+      forAll { (epochMillis: Long) =>
         val d = new Date(epochMillis)
         JsonDecode.fromJValue[Date](JsonEncode.toJValue(d)) must equal (Right(d))
       }

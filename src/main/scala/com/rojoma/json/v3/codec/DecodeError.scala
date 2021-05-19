@@ -2,7 +2,6 @@ package com.rojoma.json.v3
 package codec
 
 import scala.{collection => sc}
-import scala.language.implicitConversions
 import scala.runtime.ScalaRunTime
 
 import ast._
@@ -10,16 +9,12 @@ import ast._
 sealed trait DecodeError extends RuntimeException {
   def augment(parent: Path.Entry): DecodeError
   def english: String
+
+  final def prefix(field: String) = augment(Path.Field(field))
+  final def prefix(index: Int) = augment(Path.Index(index))
 }
 
 object DecodeError {
-  // can't be added to DecodeError as
-  //    def augment(parent: String/Int): DecodeError = augment(parent)
-  // for binary compat reasons, and can't keep the name "augment" because
-  // the existing augment will hide it from implicit search.  So it's
-  // called "prefix"!
-  implicit def prefixable(de: DecodeError) = new `-impl`.codec.PrefixableDecodeError(de)
-
   /** There were several choices and they all failed. */
   case class Multiple(choices: Seq[Simple]) extends DecodeError {
     def augment(parent: Path.Entry) = copy(choices = choices.map(_.augment(parent)))
@@ -104,14 +99,14 @@ object DecodeError {
     override def toString = ScalaRunTime._toString(this)
   }
 
-  implicit val jCodec: JsonEncode[DecodeError] with JsonDecode[DecodeError] = new JsonEncode[DecodeError] with JsonDecode[DecodeError] {
+  given jCodec: JsonEncode[DecodeError] with JsonDecode[DecodeError] with {
     import matcher._
     import util._
 
     // We can't use SimpleJsonCodecBuilder for the sub-codecs because
     // it doesn't play nicely with value class fields like `path'.
 
-    private implicit val itCodec = new JsonEncode[InvalidType] with JsonDecode[InvalidType] {
+    given JsonEncode[InvalidType] with JsonDecode[InvalidType] with {
       private val expected = Variable[JsonType]()
       private val got = Variable[JsonType]()
       private val path = Variable[Path]()
@@ -127,8 +122,7 @@ object DecodeError {
       }
     }
 
-
-    private implicit val ivCodec = new JsonEncode[InvalidValue] with JsonDecode[InvalidValue] {
+    given JsonEncode[InvalidValue] with JsonDecode[InvalidValue] with {
       private val got = Variable[JValue]()
       private val path = Variable[Path]()
 
@@ -142,7 +136,7 @@ object DecodeError {
       }
     }
 
-    private implicit val mfCodec = new JsonEncode[MissingField] with JsonDecode[MissingField] {
+    given JsonEncode[MissingField] with JsonDecode[MissingField] with {
       private val field = Variable[String]()
       private val path = Variable[Path]()
 
@@ -156,7 +150,7 @@ object DecodeError {
       }
     }
 
-    private implicit val ifCodec = new JsonEncode[InvalidField] with JsonDecode[InvalidField] {
+    given JsonEncode[InvalidField] with JsonDecode[InvalidField] with {
       private val field = Variable[String]()
       private val path = Variable[Path]()
 
@@ -170,7 +164,7 @@ object DecodeError {
       }
     }
 
-    private implicit val ilCodec = new JsonEncode[InvalidLength] with JsonDecode[InvalidLength] {
+    given JsonEncode[InvalidLength] with JsonDecode[InvalidLength] with {
       private val expected = Variable[Int]()
       private val got = Variable[Int]()
       private val path = Variable[Path]()
@@ -186,7 +180,7 @@ object DecodeError {
       }
     }
 
-    private implicit val simpleCodec =
+    given simpleCodec: (JsonEncode[Simple] with JsonDecode[Simple]) =
       SimpleHierarchyCodecBuilder[Simple](InternalTag("type", false)).
         branch[InvalidType]("invalid_type").
         branch[InvalidValue]("invalid_value").

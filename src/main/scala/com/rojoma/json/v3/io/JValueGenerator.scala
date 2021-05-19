@@ -46,10 +46,12 @@ private[io] object JValueGeneratorImpl {
         JObject.empty
       } else {
         val map = VectorMap.newBuilder[String, JValue]
-        do {
+        while {
           val f = it.next()
           map += f.key -> f.value
-        } while(it.hasNext)
+
+          it.hasNext
+        } do ()
         JObject(map.result())
       }
     }

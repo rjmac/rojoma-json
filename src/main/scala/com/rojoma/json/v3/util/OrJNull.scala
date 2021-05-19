@@ -19,26 +19,26 @@ import com.rojoma.json.v3.codec.JsonEncode
   * } """
   * }}}
   */
-sealed abstract class OrJNull[+T]
+enum OrJNull[+T] {
+  case Some(value: T)
+  case None
+}
 object OrJNull {
-  case class Some[+T](value: T) extends OrJNull[T]
-  case object None extends OrJNull[Nothing]
 
-  implicit def encode[T : JsonEncode]: JsonEncode[OrJNull[T]] =
-    new JsonEncode[OrJNull[T]] {
-      def encode(x: OrJNull[T]) =
-        x match {
-          case Some(v) => JsonEncode.toJValue(v)
-          case None => JNull
-        }
-    }
+  given [T: JsonEncode]: JsonEncode[OrJNull[T]] with {
+    def encode(x: OrJNull[T]) =
+      x match {
+        case Some(v) => JsonEncode.toJValue(v)
+        case None => JNull
+      }
+  }
 
   object implicits {
-    implicit class OrJNullExt[T](private val underlying: Option[T]) extends AnyVal {
+    extension [T](underlying: Option[T]) {
       def orJNull: OrJNull[T] =
         underlying match {
-          case scala.Some(x) => OrJNull.Some(x)
-          case scala.None => OrJNull.None
+          case scala.Some(x) => Some(x)
+          case scala.None => None
         }
     }
   }

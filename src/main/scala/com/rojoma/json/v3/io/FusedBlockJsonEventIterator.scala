@@ -473,12 +473,12 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
 
     if(peekChar() == '-') scratch += nextChar()
 
-    do { scratch += readDigit() } while(!atEOF() && isDigit(peekCharNotAtEOF()))
+    while { scratch += readDigit(); !atEOF() && isDigit(peekCharNotAtEOF()) } do ()
 
     val hasFrac = !atEOF() && peekCharNotAtEOF() == '.'
     if(hasFrac) {
       scratch += nextChar() // skip decimal
-      do { scratch += readDigit() } while(!atEOF() && isDigit(peekCharNotAtEOF()))
+      while { scratch += readDigit(); !atEOF() && isDigit(peekCharNotAtEOF()) } do ()
     }
 
     val hasExponent = !atEOF() && (peekCharNotAtEOF() == 'e' || peekCharNotAtEOF() == 'E')
@@ -489,7 +489,7 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
       else scratch += '+' // ensure there's always a sign
 
       val exponentDigitsStart = scratch.length
-      do { scratch += readDigit() } while(!atEOF() && isDigit(peekCharNotAtEOF()))
+      while { scratch += readDigit(); !atEOF() && isDigit(peekCharNotAtEOF()) } do ()
 
       // this relies on the exponent being the last thing read
       val result = scratch.toString
@@ -525,14 +525,16 @@ class FusedBlockJsonEventIterator(input: Reader, fieldCache: FieldCache = Identi
     if(!atTop) {
       try {
         var count = 0
-        do {
+        while {
           val ev = next()
           ev match {
             case StartOfObjectEvent() | StartOfArrayEvent() => count += 1
             case EndOfObjectEvent() | EndOfArrayEvent() => count -= 1
             case _ => /* nothing */
           }
-        } while(count >= 0)
+
+          count >= 0
+        } do ()
       } catch {
         case e: NoSuchTokenException => throw new JsonParserEOF(e.position)
         case _: NoSuchElementException => throw new JsonParserEOF(Position(-1, -1))

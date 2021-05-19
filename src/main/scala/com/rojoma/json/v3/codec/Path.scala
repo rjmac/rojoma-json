@@ -23,7 +23,7 @@ object Path {
   case class Index(index: Int) extends Entry
   case class Field(field: String) extends Entry
   object Entry {
-    implicit val jCodec: JsonEncode[Entry] with JsonDecode[Entry] = new JsonEncode[Entry] with JsonDecode[Entry] {
+    given jCodec: JsonEncode[Entry] with JsonDecode[Entry] with {
       def encode(e: Entry) = e match {
         case Index(i) => JNumber(i)
         case Field(s) => JString(s)
@@ -80,5 +80,5 @@ object Path {
   }
 
   private def create(xs: List[Entry]) = new Path(xs) // helping out type inference
-  implicit val jCodec = WrapperJsonCodec[Path](create, _.toList)
+  given jCodec: (JsonEncode[Path] with JsonDecode[Path]) = WrapperJsonCodec[Path](create, _.toList)
 }

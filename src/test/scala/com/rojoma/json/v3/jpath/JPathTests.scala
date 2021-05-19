@@ -3,9 +3,10 @@ package jpath
 
 import ast._
 
-import org.scalatest.{FunSuite, MustMatchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 
-class JPathTests extends FunSuite with MustMatchers {
+class JPathTests extends AnyFunSuite with Matchers {
   def j(s: String) = io.JsonReader.fromString(s)
 
   def isNumberGreaterThan(x: Int)(f: zipper.JsonZipper): Boolean = f.value match {

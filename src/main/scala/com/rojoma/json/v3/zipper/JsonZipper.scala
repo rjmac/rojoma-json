@@ -1,8 +1,8 @@
 package com.rojoma.json.v3
 package zipper
 
-import scala.language.implicitConversions
 import scala.annotation.tailrec
+import scala.reflect.ClassTag
 
 import ast._
 import codec.Path
@@ -247,7 +247,13 @@ object JsonZipper {
 
   def unapply(zipper: JsonZipper): Option[JValue] = Some(zipper.value)
 
-  implicit def toCastable[T <: JsonZipper](x: T): com.rojoma.json.v3.`-impl`.GenericDownCaster[T] = new com.rojoma.json.v3.`-impl`.GenericDownCaster(x)
+  extension [T <: JsonZipper](value: T) {
+    def cast[U <: T](using t: ClassTag[U]): Option[U] = {
+      val cls = t.runtimeClass
+      if(cls.isInstance(value)) Some(cls.cast(value).asInstanceOf[U])
+      else None
+    }
+  }
 }
 
 // TOP LEVEL

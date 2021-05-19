@@ -14,11 +14,11 @@ trait JsonDecode[T] {
 }
 
 /** Generally-useful json implicits. */
-object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
+object JsonDecode extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
   private type CB[A, B] = sc.Factory[A, B]
   type DecodeResult[T] = Either[DecodeError, T]
 
-  def apply[T](implicit a: JsonDecode[T]): a.type = a
+  def apply[T](using a: JsonDecode[T]): a.type = a
   def fromJValue[T : JsonDecode](x: JValue) = JsonDecode[T].decode(x)
 
   private class IterableDecode[T, S](tDecode: JsonDecode[T], buildFactory: CB[T, S]) extends JsonDecode[S] {
@@ -39,16 +39,16 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
-  implicit def seqDecode[T, S[X] <: sc.Seq[X]](implicit tDecode: JsonDecode[T], buildFactory: CB[T, S[T]]): JsonDecode[S[T]] =
+  given seqDecode[T, S[X] <: sc.Seq[X]](using tDecode: JsonDecode[T], buildFactory: CB[T, S[T]]): JsonDecode[S[T]] =
     new IterableDecode(tDecode, buildFactory)
 
-  implicit def arrayDecode[T](implicit tDecode: JsonDecode[T], ct: ClassTag[T]): JsonDecode[Array[T]] =
+  given arrayDecode[T](using tDecode: JsonDecode[T], ct: ClassTag[T]): JsonDecode[Array[T]] =
     new IterableDecode(tDecode, implicitly[CB[T, Array[T]]])
 
-  implicit def setDecode[T, S[U] <: sc.Set[U]](implicit tCodec: JsonDecode[T], buildFactory: CB[T, S[T]]): JsonDecode[S[T]] =
+  given setDecode[T, S[U] <: sc.Set[U]](using tCodec: JsonDecode[T], buildFactory: CB[T, S[T]]): JsonDecode[S[T]] =
     new IterableDecode(tCodec, buildFactory)
 
-  implicit def juListDecode[T: JsonDecode] = new JsonDecode[ju.List[T]] {
+  given juListDecode[T: JsonDecode]: JsonDecode[ju.List[T]] with {
     def decode(xs: JValue): DecodeResult[ju.List[T]] = xs match {
       case JArray(jElems) =>
         val result = new ju.ArrayList[T](jElems.length)
@@ -67,7 +67,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
-  implicit def juSetDecode[T : JsonDecode] = new JsonDecode[ju.Set[T]] {
+  given juSetDecode[T : JsonDecode]: JsonDecode[ju.Set[T]] with {
     def decode(xs: JValue): DecodeResult[ju.Set[T]] = xs match {
       case JArray(jElems) =>
         val result = new ju.LinkedHashSet[T]
@@ -86,84 +86,84 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
-  implicit object stringDecode extends JsonDecode[String] {
+  given stringDecode: JsonDecode[String] with {
     def decode(x: JValue) = x match {
       case JString(s) => Right(s)
       case other => Left(DecodeError.InvalidType(JString, other.jsonType))
     }
   }
 
-  implicit object boolDecode extends JsonDecode[Boolean] {
+  given boolDecode: JsonDecode[Boolean] with {
     def decode(x: JValue) = x match {
       case JBoolean(b) => Right(b)
       case other => Left(DecodeError.InvalidType(JBoolean, other.jsonType))
     }
   }
 
-  implicit object jbooleanDecode extends JsonDecode[java.lang.Boolean] {
+  given jbooleanDecode: JsonDecode[java.lang.Boolean] with {
     def decode(x: JValue) = x match {
       case JBoolean(b) => Right(b)
       case other => Left(DecodeError.InvalidType(JBoolean, other.jsonType))
     }
   }
 
-  implicit object byteDecode extends JsonDecode[Byte] {
+  given byteDecode: JsonDecode[Byte] with {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toByte)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
     }
   }
 
-  implicit object jbyteDecode extends JsonDecode[java.lang.Byte] {
+  given jbyteDecode: JsonDecode[java.lang.Byte] with {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toByte)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
     }
   }
 
-  implicit object shortDecode extends JsonDecode[Short] {
+  given shortDecode: JsonDecode[Short] with {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toShort)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
     }
   }
 
-  implicit object jshortDecode extends JsonDecode[java.lang.Short] {
+  given jshortDecode: JsonDecode[java.lang.Short] with {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toShort)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
     }
   }
 
-  implicit object intDecode extends JsonDecode[Int] {
+  given intDecode: JsonDecode[Int] with {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toInt)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
     }
   }
 
-  implicit object jintegerDecode extends JsonDecode[java.lang.Integer] {
+  given jintegerDecode: JsonDecode[java.lang.Integer] with {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toInt)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
     }
   }
 
-  implicit object longDecode extends JsonDecode[Long] {
+  given longDecode: JsonDecode[Long] with {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toLong)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
     }
   }
 
-  implicit object jlongDecode extends JsonDecode[java.lang.Long] {
+  given jlongDecode: JsonDecode[java.lang.Long] with {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toLong)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
     }
   }
 
-  implicit object bigintDecode extends JsonDecode[BigInt] {
+  given bigintDecode: JsonDecode[BigInt] with {
     def encode(x: BigInt) = JNumber(x)
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toBigInt)
@@ -171,56 +171,56 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
-  implicit object bigintegerDecode extends JsonDecode[java.math.BigInteger] {
+  given bigintegerDecode: JsonDecode[java.math.BigInteger] with {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toBigInt.underlying)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
     }
   }
 
-  implicit object floatDecode extends JsonDecode[Float] {
+  given floatDecode: JsonDecode[Float] with {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toFloat)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
     }
   }
 
-  implicit object jfloatDecode extends JsonDecode[java.lang.Float] {
+  given jfloatDecode: JsonDecode[java.lang.Float] with {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toFloat)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
     }
   }
 
-  implicit object doubleDecode extends JsonDecode[Double] {
+  given doubleDecode: JsonDecode[Double] with {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toDouble)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
     }
   }
 
-  implicit object jdoubleDecode extends JsonDecode[java.lang.Double] {
+  given jdoubleDecode: JsonDecode[java.lang.Double] with {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toDouble)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
     }
   }
 
-  implicit object bigdecimalDecode extends JsonDecode[BigDecimal] {
+  given bigdecimalDecode: JsonDecode[BigDecimal] with {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toBigDecimal)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
     }
   }
 
-  implicit object jbigdecimalDecode extends JsonDecode[java.math.BigDecimal] {
+  given jbigdecimalDecode: JsonDecode[java.math.BigDecimal] with {
     def decode(x: JValue) = x match {
       case num: JNumber => Right(num.toBigDecimal.underlying)
       case other => Left(DecodeError.InvalidType(JNumber, other.jsonType))
     }
   }
 
-  implicit def jvalueDecode[T <: JValue : Json] = new JsonDecode[T] {
+  given jvalueDecode[T <: JValue : Json]: JsonDecode[T] with {
     def decode(x: JValue) = x.cast[T] match {
       case Some(j) =>
         Right(j)
@@ -230,7 +230,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
-  implicit def fieldMapDecode[T, U, M[A, B] <: sc.Map[A, B]](implicit tDecode: FieldDecode[T], uDecode: JsonDecode[U], buildFactory: CB[(T, U), M[T, U]]) = new JsonDecode[M[T, U]] {
+  given fieldMapDecode[T, U, M[A, B] <: sc.Map[A, B]](using tDecode: FieldDecode[T], uDecode: JsonDecode[U], buildFactory: CB[(T, U), M[T, U]]): JsonDecode[M[T, U]] with {
     def decode(x: JValue): DecodeResult[M[T, U]] = x match {
       case JObject(fields) =>
         val builder = buildFactory.newBuilder
@@ -251,7 +251,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
-  implicit def fieldJuMapDecode[T, U](implicit tDecode: FieldDecode[T], uDecode: JsonDecode[U]) = new JsonDecode[ju.Map[T, U]] {
+  given fieldJuMapDecode[T, U](using tDecode: FieldDecode[T], uDecode: JsonDecode[U]): JsonDecode[ju.Map[T, U]] with {
     def decode(x: JValue): DecodeResult[ju.Map[T, U]] = x match {
       case JObject(fields) =>
         val result = new ju.LinkedHashMap[T, U]
@@ -272,17 +272,10 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
-  @deprecated(message = "Use fieldMapEncode instead", since="3.2.0")
-  def mapDecode[T, M[U, V] <: sc.Map[U, V]](implicit tDecode: JsonDecode[T], buildFactory: CB[(String, T), M[String, T]]) =
-    fieldMapDecode[String, T, M]
-
-  @deprecated(message = "Use fieldJuMapEncode instead", since="3.2.0")
-  def juMapDecode[T: JsonDecode] = fieldJuMapDecode[String, T]
-
   // either is right-biased; if decoding as Right fails it tries Left;
   // if Left fails the whole thing fails.
-  implicit def eitherDecode[L: JsonDecode, R: JsonDecode] = new JsonDecode[Either[L, R]] {
-    def decode(x: JValue) = 
+  given eitherDecode[L: JsonDecode, R: JsonDecode]: JsonDecode[Either[L, R]] with {
+    def decode(x: JValue) =
       JsonDecode[R].decode(x) match {
         case Right(right) => Right(Right(right))
         case Left(err1) =>
@@ -294,7 +287,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
       }
   }
 
-  implicit def jlEnumDecode[T <: java.lang.Enum[T]](implicit tag: ClassTag[T]) = {
+  given jlEnumDecode[T <: java.lang.Enum[T]](using tag: ClassTag[T]): JsonDecode[T] =
     if(tag.runtimeClass.isAnnotationPresent(classOf[JsonCaseInsensitiveEnum])) {
       new JsonDecode[T] {
         val nameMap =
@@ -333,9 +326,8 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
         }
       }
     }
-  }
 
-  implicit object UnitDecode extends JsonDecode[Unit] {
+  given UnitDecode: JsonDecode[Unit] with {
     def decode(x: JValue) = x match {
       case JArray(xs) if xs.isEmpty => Right(())
       case nonEmpty: JArray => Left(DecodeError.InvalidLength(0, nonEmpty.length))
@@ -343,9 +335,9 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
     }
   }
 
-  implicit val uuidDecode = WrapperJsonDecode[ju.UUID](ju.UUID.fromString)
-  implicit val uriDecode = WrapperJsonDecode[jn.URI](jn.URI.create)
+  given uuidDecode: JsonDecode[ju.UUID] = WrapperJsonDecode[ju.UUID](ju.UUID.fromString)
+  given uriDecode: JsonDecode[jn.URI] = WrapperJsonDecode[jn.URI](jn.URI.create)
 
-  def scalaEnumDecode[T <: Enumeration](enum: T): JsonDecode[enum.Value] =
-    JsonCodec.scalaEnumCodec(enum)
+  def scalaEnumDecode[T <: Enumeration](e: T): JsonDecode[e.Value] =
+    JsonCodec.scalaEnumCodec(e)
 }

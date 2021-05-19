@@ -70,13 +70,13 @@ class TupleDecode {
     val typeNames = (1 to n).map(typeName)
     val elemNames = (1 to n).map(elemName)
     val decodedNames = (1 to n).map(decodedName)
- 
+
     def mapNames1[T](a: Int => String)(f: String => T) = (1 to n).map(a).map(f)
     def mapNamesIdx[T](a: Int => String)(f: (Int, String) => T) = (1 to n).map { i => f(i, a(i)) }
     def mapNames2[T](a: Int => String, b: Int => String)(f: (String, String) => T) = (1 to n).map(x => (a(x), b(x))).map(f.tupled)
     def mapNames3[T](a: Int => String, b: Int => String, c: Int => String)(f: (String, String, String) => T) = (1 to n).map(x => (a(x), b(x), c(x))).map(f.tupled)
 
-    sb.append("  implicit def tuple").append(n).append("Encode").append(typeNames.mkString("[",",","]")).append("( implicit ").append(mapNames2(subcodecName, typeName) { (sc,t) => sc + ": JsonEncode[" + t + "]" }.mkString(",")).append(") = new JsonEncode[").append(typeNames.mkString("(",",",")")).append("] {\n")
+    sb.append("  given tuple").append(n).append("Encode").append(typeNames.mkString("[",",","]")).append("(using ").append(mapNames2(subcodecName, typeName) { (sc,t) => sc + ": JsonEncode[" + t + "]" }.mkString(",")).append("): JsonEncode[").append(typeNames.mkString("(",",",")")).append("] with {\n")
     sb.append("    def encode(tuple: ").append(typeNames.mkString("(",",",")")).append("): JArray = {\n")
     sb.append("      JArray(Seq(").append(mapNamesIdx(subcodecName) { (i, c) => c + ".encode(tuple._" + i + ")" }.mkString(",")).append("))\n")
     sb.append("    }\n")
@@ -97,16 +97,16 @@ class TupleDecode {
     val typeNames = (1 to n).map(typeName)
     val elemNames = (1 to n).map(elemName)
     val decodedNames = (1 to n).map(decodedName)
- 
+
     def mapNames1[T](a: Int => String)(f: String => T) = (1 to n).map(a).map(f)
     def mapNamesIdx[T](a: Int => String)(f: (Int, String) => T) = (1 to n).map { i => f(i, a(i)) }
     def mapNames2[T](a: Int => String, b: Int => String)(f: (String, String) => T) = (1 to n).map(x => (a(x), b(x))).map(f.tupled)
     def mapNames3a[T](a: Int => String, b: Int => String, c: Int => String)(f: (String, String, String, Int) => T) = (1 to n).map(x => (a(x), b(x), c(x), x)).map(f.tupled)
 
-    sb.append("  implicit def tuple").append(n).append("Decode").append(typeNames.mkString("[",",","]")).append("( implicit ").append(mapNames2(subcodecName, typeName) { (sc,t) => sc + ": JsonDecode[" + t + "]" }.mkString(",")).append(") = new JsonDecode[").append(typeNames.mkString("(",",",")")).append("] {\n")
+    sb.append("  given tuple").append(n).append("Decode").append(typeNames.mkString("[",",","]")).append("(using ").append(mapNames2(subcodecName, typeName) { (sc,t) => sc + ": JsonDecode[" + t + "]" }.mkString(",")).append("): JsonDecode[").append(typeNames.mkString("(",",",")")).append("] with {\n")
     sb.append("    private def pathErr(err: DecodeError, n: Int) = Left(err.prefix(n - 1))\n")
     sb.append("    def decode(jvalue: JValue): DecodeResult[(").append(typeNames.mkString(",")).append(")] = jvalue match {\n")
-    sb.append("      case JArray(Seq(").append(elemNames.mkString(",")).append(")) =>\n")
+    sb.append("      case JArray(Seq(").append(elemNames.map(_ + ":JValue").mkString(",")).append(")) =>\n")
     for(line <- mapNames3a(decodedName, subcodecName, elemName)("        val " + _ + " = " + _ + ".decode(" + _ + ") match { case Right(result) => result; case Left(err) => return pathErr(err, " + _ + ") }\n")) {
       sb.append(line)
     }

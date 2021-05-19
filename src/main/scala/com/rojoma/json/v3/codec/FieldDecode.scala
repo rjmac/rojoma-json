@@ -13,14 +13,14 @@ trait FieldDecode[T] {
 }
 
 object FieldDecode {
-  def apply[T](implicit ev: FieldDecode[T]) = ev
-  def toString[T](x: String)(implicit ev: FieldDecode[T]) = ev.decode(x)
+  def apply[T](using ev: FieldDecode[T]) = ev
+  def toString[T](x: String)(using ev: FieldDecode[T]) = ev.decode(x)
 
-  implicit object stringDecode extends FieldDecode[String] {
+  given stringDecode: FieldDecode[String] with {
     def decode(x: String) = Right(x)
   }
 
-  implicit object boolDecode extends FieldDecode[Boolean] {
+  given boolDecode: FieldDecode[Boolean] with {
     def decode(x: String) = x match {
       case "true" => Right(true)
       case "false" => Right(false)
@@ -28,23 +28,23 @@ object FieldDecode {
     }
   }
 
-  implicit val byteDecode = WrapperFieldDecode[Byte](_.toByte)
-  implicit val shortDecode = WrapperFieldDecode[Short](_.toShort)
-  implicit val intDecode = WrapperFieldDecode[Int](_.toInt)
-  implicit val longDecode = WrapperFieldDecode[Long](_.toLong)
-  implicit val floatDecode = WrapperFieldDecode[Float](_.toFloat)
-  implicit val doubleDecode = WrapperFieldDecode[Double](_.toDouble)
-  implicit val bgintDecode = WrapperFieldDecode[BigInt](BigInt(_))
-  implicit val bigintegerDecode = WrapperFieldDecode[java.math.BigInteger](new java.math.BigInteger(_))
-  implicit val bigdecimalDecode = WrapperFieldDecode[BigDecimal](BigDecimal(_, java.math.MathContext.UNLIMITED))
-  implicit val jbigdecimalDecode = WrapperFieldDecode[java.math.BigDecimal](new java.math.BigDecimal(_, java.math.MathContext.UNLIMITED))
+  given byteDecode: FieldDecode[Byte] = WrapperFieldDecode[Byte](_.toByte)
+  given shortDecode: FieldDecode[Short] = WrapperFieldDecode[Short](_.toShort)
+  given intDecode: FieldDecode[Int] = WrapperFieldDecode[Int](_.toInt)
+  given longDecode: FieldDecode[Long] = WrapperFieldDecode[Long](_.toLong)
+  given floatDecode: FieldDecode[Float] = WrapperFieldDecode[Float](_.toFloat)
+  given doubleDecode: FieldDecode[Double] = WrapperFieldDecode[Double](_.toDouble)
+  given bgintDecode: FieldDecode[BigInt] = WrapperFieldDecode[BigInt](BigInt(_))
+  given bigintegerDecode: FieldDecode[java.math.BigInteger] = WrapperFieldDecode[java.math.BigInteger](new java.math.BigInteger(_))
+  given bigdecimalDecode: FieldDecode[BigDecimal] = WrapperFieldDecode[BigDecimal](BigDecimal(_, java.math.MathContext.UNLIMITED))
+  given jbigdecimalDecode: FieldDecode[java.math.BigDecimal] = WrapperFieldDecode[java.math.BigDecimal](new java.math.BigDecimal(_, java.math.MathContext.UNLIMITED))
 
-  implicit object jstringDecode extends FieldDecode[JString] {
+  given jstringDecode: FieldDecode[JString] with {
     def decode(x: String) = Right(JString(x))
   }
 
-  implicit def jlEnumDecode[T <: java.lang.Enum[T]](implicit tag: ClassTag[T]) = new FieldDecode[T] {
-    def decode(x: String) = 
+  given jlEnumDecode[T <: java.lang.Enum[T]](using tag: ClassTag[T]): FieldDecode[T] with {
+    def decode(x: String) =
       try {
         Right(java.lang.Enum.valueOf[T](tag.runtimeClass.asInstanceOf[Class[T]], x))
       } catch {
@@ -53,9 +53,9 @@ object FieldDecode {
       }
   }
 
-  implicit val uuidDecode = WrapperFieldDecode[ju.UUID](ju.UUID.fromString)
-  implicit val uriDecode = WrapperFieldDecode[jn.URI](jn.URI.create)
+  given uuidDecode: FieldDecode[ju.UUID] = WrapperFieldDecode[ju.UUID](ju.UUID.fromString)
+  given uriDecode: FieldDecode[jn.URI] = WrapperFieldDecode[jn.URI](jn.URI.create)
 
-  def scalaEnumDecode[T <: Enumeration](enum: T): FieldDecode[enum.Value] =
-    FieldCodec.scalaEnumCodec(enum)
+  def scalaEnumDecode[T <: Enumeration](e: T): FieldDecode[e.Value] =
+    FieldCodec.scalaEnumCodec(e)
 }

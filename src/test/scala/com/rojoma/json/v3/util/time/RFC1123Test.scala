@@ -2,24 +2,25 @@ package com.rojoma.json.v3.util.time
 
 import java.time._
 
-import org.scalatest.{FunSpec, MustMatchers}
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import org.scalacheck.{Arbitrary,Gen}
 
 import com.rojoma.json.v3.codec.{JsonDecode, JsonEncode}
 
-class RFC1123Test extends FunSpec with MustMatchers with ScalaCheckPropertyChecks {
-  import RFC1123.codec._
+class RFC1123Test extends AnyFunSpec with Matchers with ScalaCheckPropertyChecks {
+  import RFC1123.codec.given
 
   case class SmallInstant(underlying: Instant)
-  implicit val smallInstant = Arbitrary {
+  given smallInstant: Arbitrary[SmallInstant] = Arbitrary {
     for {
       seconds <- Gen.choose(0L, Int.MaxValue*10L)
     } yield SmallInstant(Instant.ofEpochSecond(seconds, 0))
   }
 
   case class SmallOffsetDateTime(underlying: OffsetDateTime)
-  implicit val smallOffsetDateTime = Arbitrary {
+  given smallOffsetDateTime: Arbitrary[SmallOffsetDateTime] = Arbitrary {
     for {
       instant <- Arbitrary.arbitrary(smallInstant).map(_.underlying)
       offset <- Arbitrary.arbitrary[ZoneOffset]

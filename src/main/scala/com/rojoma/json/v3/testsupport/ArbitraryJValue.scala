@@ -6,13 +6,13 @@ import org.scalacheck.Arbitrary
 object ArbitraryJValue {
   import GenJValue._
 
-  implicit val ArbitraryJBoolean = Arbitrary(genJBoolean)
-  implicit val ArbitraryJNumber = Arbitrary(genJNumber)
-  implicit val ArbitraryJNull = Arbitrary(genJNull)
-  implicit val ArbitraryJString = Arbitrary(genJString)
-  implicit val ArbitraryJAtom = Arbitrary(genJAtom)
-  implicit val ArbitraryJArray = Arbitrary(genJArray())
-  implicit val ArbitraryJObject = Arbitrary(genJObject())
-  implicit val ArbitraryJCompound = Arbitrary(genJCompound())
-  implicit val ArbitraryJValue = Arbitrary(genJValue)
+  given ArbitraryJBoolean: Arbitrary[ast.JBoolean] = Arbitrary(genJBoolean)
+  given ArbitraryJNumber: Arbitrary[ast.JNumber] = Arbitrary(genJNumber)
+  given ArbitraryJNull: Arbitrary[ast.JNull] = Arbitrary(genJNull)
+  given ArbitraryJString: Arbitrary[ast.JString] = Arbitrary(genJString)
+  given ArbitraryJAtom: Arbitrary[ast.JAtom] = Arbitrary(genJAtom)
+  given ArbitraryJArray: Arbitrary[ast.JArray] = Arbitrary(genJArray())
+  given ArbitraryJObject: Arbitrary[ast.JObject] = Arbitrary(genJObject())
+  given ArbitraryJCompound: Arbitrary[ast.JCompound] = Arbitrary(genJCompound())
+  given ArbitraryJValue: Arbitrary[ast.JValue] = Arbitrary(genJValue)
 }

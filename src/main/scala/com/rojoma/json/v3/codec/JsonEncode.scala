@@ -17,10 +17,10 @@ trait JsonEncode[T] {
 
 /** Generally-useful json implicits. */
 object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
-  def apply[T](implicit a: JsonEncode[T]): a.type = a
+  def apply[T](using a: JsonEncode[T]): a.type = a
   def toJValue[T : JsonEncode](x: T): JValue = JsonEncode[T].encode(x)
 
-  implicit def seqEncode[T, S[X] <: sc.Seq[X]](implicit tEncode: JsonEncode[T]) = new JsonEncode[S[T]] {
+  given seqEncode[T, S[X] <: sc.Seq[X]](using tEncode: JsonEncode[T]): JsonEncode[S[T]] with {
     def encode(x: S[T]): JValue = {
       if(x.nonEmpty)
         JArray(x.view.map(tEncode.encode).toVector)
@@ -29,7 +29,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
     }
   }
 
-  implicit def arrayEncode[T: JsonEncode: ClassTag] = new JsonEncode[Array[T]] {
+  given arrayEncode[T: JsonEncode: ClassTag]: JsonEncode[Array[T]] with {
     def encode(x: Array[T]): JValue =
       if(x.length > 0)
         JArray(x.view.map(JsonEncode[T].encode).toVector)
@@ -37,7 +37,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
         JArray.empty
   }
 
-  implicit def setEncode[T, S[X] <: sc.Set[X]](implicit tEncode: JsonEncode[T]) = new JsonEncode[S[T]] {
+  given setEncode[T, S[X] <: sc.Set[X]](using tEncode: JsonEncode[T]): JsonEncode[S[T]] with {
     def encode(x: S[T]): JValue = {
       if(x.nonEmpty)
         JArray(x.iterator.map(tEncode.encode).toVector)
@@ -46,7 +46,7 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
     }
   }
 
-  implicit def juListEncode[T: JsonEncode] = new JsonEncode[ju.List[T]] {
+  given juListEncode[T: JsonEncode]: JsonEncode[ju.List[T]] with {
     def encode(x: ju.List[T]): JValue = {
       if(!x.isEmpty)
         JArray(x.asScala.view.map(JsonEncode[T].encode).toVector)
@@ -55,100 +55,100 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
     }
   }
 
-  implicit def juSetEncode[T: JsonEncode] = new JsonEncode[ju.Set[T]] {
+  given juSetEncode[T](using tEncode: JsonEncode[T]): JsonEncode[ju.Set[T]] with {
     def encode(x: ju.Set[T]): JValue = {
       if(!x.isEmpty)
-        JArray(new MappedViewSeq(x.asScala.toSeq, JsonEncode[T].encode))
+        JArray(new MappedViewSeq(x.asScala.toSeq, tEncode.encode))
       else
         JArray.empty
     }
   }
 
-  implicit object stringEncode extends JsonEncode[String] {
+  given stringEncode: JsonEncode[String] with {
     def encode(x: String) = JString(x)
   }
 
-  implicit object boolEncode extends JsonEncode[Boolean] {
+  given boolEncode: JsonEncode[Boolean] with {
     private val jtrue = JBoolean.canonicalTrue
     private val jfalse = JBoolean.canonicalFalse
     def encode(x: Boolean) = if(x) jtrue else jfalse
   }
 
-  implicit object jbooleanEncode extends JsonEncode[java.lang.Boolean] {
+  given jbooleanEncode: JsonEncode[java.lang.Boolean] with {
     private val jtrue = JBoolean.canonicalTrue
     private val jfalse = JBoolean.canonicalFalse
     def encode(x: java.lang.Boolean) = if(x) jtrue else jfalse
   }
 
-  implicit object byteEncode extends JsonEncode[Byte] {
+  given byteEncode: JsonEncode[Byte] with {
     def encode(x: Byte) = JNumber(x)
   }
 
-  implicit object jbyteEncode extends JsonEncode[java.lang.Byte] {
+  given jbyteEncode: JsonEncode[java.lang.Byte] with {
     def encode(x: java.lang.Byte) = JNumber(x)
   }
 
-  implicit object shortEncode extends JsonEncode[Short] {
+  given shortEncode: JsonEncode[Short] with {
     def encode(x: Short) = JNumber(x)
   }
 
-  implicit object jshortEncode extends JsonEncode[java.lang.Short] {
+  given jshortEncode: JsonEncode[java.lang.Short] with {
     def encode(x: java.lang.Short) = JNumber(x)
   }
 
-  implicit object intEncode extends JsonEncode[Int] {
+  given intEncode: JsonEncode[Int] with {
     def encode(x: Int) = JNumber(x)
   }
 
-  implicit object jintegerEncode extends JsonEncode[java.lang.Integer] {
+  given jintegerEncode: JsonEncode[java.lang.Integer] with {
     def encode(x: java.lang.Integer) = JNumber(x)
   }
 
-  implicit object longEncode extends JsonEncode[Long] {
+  given longEncode: JsonEncode[Long] with {
     def encode(x: Long) = JNumber(x)
   }
 
-  implicit object jlongEncode extends JsonEncode[java.lang.Long] {
+  given jlongEncode: JsonEncode[java.lang.Long] with {
     def encode(x: java.lang.Long) = JNumber(x)
   }
 
-  implicit object bigintEncode extends JsonEncode[BigInt] {
+  given bigintEncode: JsonEncode[BigInt] with {
     def encode(x: BigInt) = JNumber(x)
   }
 
-  implicit object bigintegerEncode extends JsonEncode[java.math.BigInteger] {
+  given bigintegerEncode: JsonEncode[java.math.BigInteger] with {
     def encode(x: java.math.BigInteger) = JNumber(new BigInt(x))
   }
 
-  implicit object floatEncode extends JsonEncode[Float] {
+  given floatEncode: JsonEncode[Float] with {
     def encode(x: Float) = JNumber(x)
   }
 
-  implicit object jfloatEncode extends JsonEncode[java.lang.Float] {
+  given jfloatEncode: JsonEncode[java.lang.Float] with {
     def encode(x: java.lang.Float) = JNumber(x)
   }
 
-  implicit object doubleEncode extends JsonEncode[Double] {
+  given doubleEncode: JsonEncode[Double] with {
     def encode(x: Double) = JNumber(x)
   }
 
-  implicit object jdoubleEncode extends JsonEncode[java.lang.Double] {
+  given jdoubleEncode: JsonEncode[java.lang.Double] with {
     def encode(x: java.lang.Double) = JNumber(x)
   }
 
-  implicit object bigdecimalEncode extends JsonEncode[BigDecimal] {
+  given bigdecimalEncode: JsonEncode[BigDecimal] with {
     def encode(x: BigDecimal) = JNumber(x)
   }
 
-  implicit object jbigdecimalEncode extends JsonEncode[java.math.BigDecimal] {
+  given jbigdecimalEncode: JsonEncode[java.math.BigDecimal] with {
     def encode(x: java.math.BigDecimal) = JNumber(BigDecimal(x))
   }
 
-  implicit def jvalueEncode[T <: JValue] = new JsonEncode[T] {
+  given jvalueEncode[T <: JValue]: JsonEncode[T] with {
     def encode(x: T) = x
   }
 
-  implicit def fieldMapEncode[T, U, M[A, B] <: sc.Map[A, B]](implicit tEncode: FieldEncode[T], uEncode: JsonEncode[U]): JsonEncode[M[T,U]] = {
+  given fieldMapEncode[T, U, M[A, B] <: sc.Map[A, B]](using tEncode: FieldEncode[T], uEncode: JsonEncode[U]): JsonEncode[M[T,U]] = {
     if(tEncode eq FieldEncode.stringEncode) {
       // common enough to have its own impl, since it can be done more cheaply
       // We're taking advantage of the fact that modifying the thing that was
@@ -171,38 +171,32 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
     }
   }
 
-  implicit def fieldJuMapEncode[T, U](implicit tEncode: FieldEncode[T], uEncode: JsonEncode[U]): JsonEncode[ju.Map[T,U]] = new JsonEncode[ju.Map[T, U]] {
-    val scalaCodec = fieldMapEncode[T, U, sc.Map]
+  given fieldJuMapEncode[T, U](using tEncode: FieldEncode[T], uEncode: JsonEncode[U]): JsonEncode[ju.Map[T,U]] with {
+    private val scalaCodec = fieldMapEncode[T, U, sc.Map]
     def encode(x: ju.Map[T, U]) = scalaCodec.encode(x.asScala)
   }
 
-  @deprecated(message = "Use fieldMapEncode instead", since="3.2.0")
-  def mapEncode[T, M[U, V] <: sc.Map[U, V]](implicit tEncode: JsonEncode[T]) = fieldMapEncode[String, T, M]
-
-  @deprecated(message = "Use fieldJuMapEncode instead", since="3.2.0")
-  def juMapEncode[T: JsonEncode] = fieldJuMapEncode[String, T]
-
   // either is right-biased; if decoding as Right fails it tries Left;
   // if Left fails the whole thing fails.
-  implicit def eitherEncode[L: JsonEncode, R: JsonEncode] = new JsonEncode[Either[L, R]] {
+  given eitherEncode[L: JsonEncode, R: JsonEncode]: JsonEncode[Either[L, R]] with {
     def encode(x: Either[L,R]) = x match {
       case Left(left) => JsonEncode[L].encode(left)
       case Right(right) => JsonEncode[R].encode(right)
     }
   }
 
-  implicit def jlEnumEncode[T <: java.lang.Enum[T]] = new JsonEncode[T] {
+  given jlEnumEncode[T <: java.lang.Enum[T]]: JsonEncode[T] with {
     def encode(x: T) = JString(x.name)
   }
 
-  implicit object UnitEncode extends JsonEncode[Unit] {
+  given UnitEncode: JsonEncode[Unit] with {
     private val empty = JArray.empty
     def encode(x: Unit) = empty
   }
 
-  implicit val uuidEncode = WrapperJsonEncode[ju.UUID](_.toString)
-  implicit val uriEncode = WrapperJsonEncode[jn.URI](_.toString)
+  given uuidEncode: JsonEncode[ju.UUID] = WrapperJsonEncode[ju.UUID](_.toString)
+  given uriEncode: JsonEncode[jn.URI] = WrapperJsonEncode[jn.URI](_.toString)
 
-  def scalaEnumEncode[T <: Enumeration](enum: T): JsonEncode[enum.Value] =
-    JsonCodec.scalaEnumCodec(enum)
+  def scalaEnumEncode[T <: Enumeration](e: T): JsonEncode[e.Value] =
+    JsonCodec.scalaEnumCodec(e)
 }

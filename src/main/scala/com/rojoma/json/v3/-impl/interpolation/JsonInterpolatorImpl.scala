@@ -1,166 +1,272 @@
 package com.rojoma.json.v3
 package `-impl`.interpolation
 
+import scala.quoted._
+import scala.collection.immutable.{VectorBuilder, VectorMap, ArraySeq}
+import scala.collection.mutable
 import java.io.StringReader
 
 import ast._
 import io._
 
-import `-impl`.util.MacroCompat
-import `-impl`.util.MacroCompat._
-
 object JsonInterpolatorImpl {
-  def j(c0: Context)(pieces: c0.Expr[Any]*): c0.Expr[JValue] = {
-    val mc = new MacroCompat[c0.type](c0) {
-    }
-    import mc._
-    import c.universe._
+  def j(strCtxExpr: Expr[StringContext], piecesExpr: Expr[Seq[Any]])(using Quotes): Expr[JValue] = {
+    import quotes.reflect._
 
-    def freshTermName(): TermName = toTermName(c.freshName())
+    case class Bail(msg: String, pos: Position) extends Exception(msg)
+    def bail(msg: String, pos: Position) = throw Bail(msg, pos)
+
+    def noCodecFound[T](term: Term, replace: => Expr[T]): Expr[T] = {
+      report.error("No JsonEncode instance found for this term", term.pos)
+      replace
+    }
+    def typeMismatch[T](term: Term, expected: String, replace: => Expr[T]): Expr[T] = {
+      report.throwError(s"Type mismatch: expected $expected", term.pos)
+      replace
+    }
+
+    def encodeExpr(expr: Expr[Any]): Expr[JValue] = {
+      val term = expr.asTerm
+      if(term.tpe <:< TypeRepr.of[JValue]) {
+        term.asExprOf[JValue]
+      } else {
+        term.tpe.widen.asType match {
+          case '[a] =>
+            Expr.summon[codec.JsonEncode[a]] match {
+              case Some(encoder) =>
+                val typedExpr = term.asExprOf[a]
+                '{ $encoder.encode($typedExpr) }
+              case None =>
+                noCodecFound(term, '{ JNull })
+            }
+          }
+      }
+    }
+
+    def encodeField(expr: Expr[Any]): Expr[String] = {
+      val term = expr.asTerm
+      term.tpe.widen.asType match {
+        case '[a] =>
+          Expr.summon[codec.FieldEncode[a]] match {
+            case Some(encoder) =>
+              val typedExpr = term.asExprOf[a]
+              '{ $encoder.encode($typedExpr) }
+            case None =>
+              noCodecFound(term, '{ "" })
+          }
+      }
+    }
+
+    def encodeOptional(expr: Expr[Any]): Expr[Option[JValue]] = {
+      val term = expr.asTerm
+      term.tpe.widen.asType match {
+        case '[Option[a]] =>
+          Expr.summon[codec.JsonEncode[a]] match {
+            case Some(encoder) =>
+              val typedExpr = term.asExprOf[Option[a]]
+              '{ Convert.option($typedExpr)(using $encoder) }
+            case None =>
+              noCodecFound(term, '{ Option.empty[JValue] })
+          }
+        case _ =>
+          typeMismatch(term, "Option", '{ Option.empty[JValue] })
+      }
+    }
+
+    def encodeArray(expr: Expr[Any]): Expr[Iterator[JValue]] = {
+      val term = expr.asTerm
+      term.tpe.widen.asType match {
+        case '[Iterable[a]] =>
+          Expr.summon[codec.JsonEncode[a]] match {
+            case Some(encoder) =>
+              val typedExpr = term.asExprOf[Iterable[a]]
+              '{ Convert.array($typedExpr)(using $encoder) }
+            case None =>
+              noCodecFound(term, '{ Iterator.empty[JValue] })
+          }
+        case _ =>
+          typeMismatch(term, "Iterable", '{ Iterator.empty[JValue] })
+      }
+    }
+
+    def encodeMap(expr: Expr[Any]): Expr[Iterator[(String, JValue)]] = {
+      val term = expr.asTerm
+      term.tpe.widen.asType match {
+        case '[Iterable[(a, b)]] =>
+          (Expr.summon[codec.FieldEncode[a]], Expr.summon[codec.JsonEncode[b]]) match {
+            case (Some(aEncoder), Some(bEncoder)) =>
+              val typedExpr = term.asExprOf[Iterable[(a, b)]]
+              '{ Convert.map($typedExpr)(using $aEncoder, $bEncoder) }
+            case _ =>
+              noCodecFound(term, '{ Iterator.empty[(String, JValue)] })
+          }
+        case _ =>
+          typeMismatch(term, "Iterable of pairs", '{ Iterator.empty[(String, JValue)] })
+      }
+    }
 
     sealed abstract class Tokenized {
-      def position: c.universe.Position
+      def position: Position
     }
-    case class Token(token: JsonToken)(pos: => c.universe.Position) extends Tokenized {
+    case class Token(token: JsonToken)(pos: => Position) extends Tokenized {
       lazy val position = pos
     }
-    case class Unquote(tree: Tree) extends Tokenized {
-      def position = tree.pos
+    case class Unquote(expr: Expr[Any]) extends Tokenized {
+      def position = expr.asTerm.pos
     }
-    case class UnquoteSplice(tree: Tree) extends Tokenized {
-      def position = tree.pos
+    object Unquote extends (Expr[Any] => Tokenized)
+    case class UnquoteSplice(expr: Expr[Any]) extends Tokenized {
+      def position = expr.asTerm.pos
     }
-    case class UnquoteOptional(tree: Tree) extends Tokenized {
-      def position = tree.pos
+    object UnquoteSplice extends (Expr[Any] => Tokenized)
+    case class UnquoteOptional(expr: Expr[Any]) extends Tokenized {
+      def position = expr.asTerm.pos
     }
-    case class DeferredError(position: c.universe.Position, message: String) extends Tokenized
-    case class End(position: c.universe.Position) extends Tokenized
-
-    def stripPos(msg: String): String = {
-      val PfxRegex = """-?\d+:-?\d+: (.*)""".r
-      msg match {
-        case PfxRegex(rest) => rest
-        case noPfx => noPfx
-      }
-    }
-
-    def move(pos: c.universe.Position, offset: Int): c.universe.Position =
-      if(isDefined(pos)) {
-        if(pos.isRange) pos.withEnd(pos.end + offset).withPoint(pos.point + offset).withStart(pos.start + offset)
-        else pos.withPoint(pos.point + offset)
-      } else {
-        pos
-      }
-
-    def offsetOf(s: String, p: io.Position) = {
-      val before = s.split("\n", -1).take(p.row - 1).map(_.length + 1).sum
-      val result = before + p.column - 1
-      result
-    }
-    def relativize(start: c.universe.Position, s: String, j: io.Position): c.universe.Position =
-      if(j == io.Position.Invalid) move(start, s.length)
-      else move(start, offsetOf(s, j))
-
-    def abort(msg: String) = c.abort(c.enclosingPosition, msg)
-    def tokens(s: String, pos: c.universe.Position) = try {
-      new JsonTokenIterator(new StringReader(s)).toList
-    } catch {
-      case e: JsonLexException =>
-       c.abort(relativize(pos, s, e.position), stripPos(e.message))
-    }
-
-    case class TokenInfo(tokens: List[JsonToken])(val nextUnquote: Tree => Tokenized, val orig: String, val origPos: c.universe.Position) {
-      def pop = TokenInfo(tokens.tail)(nextUnquote, orig, origPos)
-      def position = tokens.headOption match {
-        case Some(hd) => relativize(origPos, orig, hd.position)
-        case None => relativize(origPos, orig, Position.Invalid)
-      }
-      def positionAtEnd = relativize(origPos, orig, io.Position(row = orig.length - (orig.lastIndexOf('\n') + 1),
-                                                                column = orig.split("\n", -1).length - 1))
-    }
+    object UnquoteOptional extends (Expr[Any] => Tokenized)
+    case class DeferredError(position: Position, message: String) extends Tokenized
+    case class End(position: Position) extends Tokenized
 
     sealed trait State {
-      def step(thing: Tokenized): Either[State, Tree]
-    }
-
-    def finishArray(ctors: List[TermName => Tree]): Tree = {
-      if(ctors.isEmpty) q"_root_.com.rojoma.json.v3.ast.JArray.empty"
-      else {
-        val temp = freshTermName()
-        val populations = ctors.reverse.map(_(temp))
-        q"""{
-          val $temp = _root_.scala.collection.immutable.Vector.newBuilder[_root_.com.rojoma.json.v3.ast.JValue]
-          ..$populations
-          _root_.com.rojoma.json.v3.ast.JArray($temp.result())
-        }"""
-      }
-    }
-
-    def finishObject(ctors: List[TermName => Tree]): Tree = {
-      if(ctors.isEmpty) q"_root_.com.rojoma.json.v3.ast.JObject.empty"
-      else {
-        val temp = freshTermName()
-        val populations = ctors.reverse.map(_(temp))
-        q"""{
-          val $temp = _root_.scala.collection.immutable.VectorMap.newBuilder[_root_.java.lang.String, _root_.com.rojoma.json.v3.ast.JValue]
-          ..$populations
-          _root_.com.rojoma.json.v3.ast.JObject($temp.result())
-        }"""
-      }
-    }
-
-    def arrayItem(v: Tree): TermName => Tree = { termName =>
-      q"$termName += $v"
-    }
-
-    def optionalArrayItem(v: Tree): TermName => Tree = { termName =>
-      q"$termName ++= _root_.com.rojoma.json.v3.`-impl`.interpolation.Convert.option($v)"
-    }
-
-    def arrayItems(v: Tree): TermName => Tree = { termName =>
-      q"$termName ++= _root_.com.rojoma.json.v3.`-impl`.interpolation.Convert.array($v)"
-    }
-
-    def objectItem(k: Tree, v: Tree): TermName => Tree = { termName =>
-      q"$termName += (($k, $v))"
-    }
-
-    def optionalObjectItem(k: Tree, v: Tree): TermName => Tree = { termName =>
-      val kTemp = freshTermName()
-      val temp = freshTermName()
-      q"""{
-            val $kTemp = $k
-            _root_.com.rojoma.json.v3.`-impl`.interpolation.Convert.option($v) match {
-              case _root_.scala.Some($temp) => $termName += (($kTemp, $temp))
-              case _root_.scala.None => {}
-            }
-          }"""
-    }
-
-    def objectItems(v: Tree): TermName => Tree = { termName =>
-      q"""$termName ++= _root_.com.rojoma.json.v3.`-impl`.interpolation.Convert.map($v)"""
+      def step(thing: Tokenized): Either[State, Expr[JValue]]
     }
 
     def unexpectedTokenized(thing: Tokenized, expecting: String): Nothing =
       thing match {
         case Token(t) =>
-          c.abort(thing.position, stripPos(new JsonUnexpectedToken(t, expecting).message))
+          bail(stripPos(new JsonUnexpectedToken(t, expecting).message), thing.position)
         case DeferredError(pos, what) =>
-          c.abort(pos, what)
+          bail(what, pos)
         case End(pos) =>
-          c.abort(pos, new JsonParserEOF(Position.Invalid).message)
-        case UnquoteSplice(t) =>
-          c.abort(thing.position, s"Expected $expecting; got splicing unquote")
-        case UnquoteOptional(t) =>
-          c.abort(thing.position, s"Expected $expecting; got optional unquote")
+          bail(new JsonParserEOF(io.Position.Invalid).message, pos)
+        case UnquoteSplice(_) =>
+          bail(s"Expected $expecting; got splicing unquote", thing.position)
+        case UnquoteOptional(_) =>
+          bail(s"Expected $expecting; got optional unquote", thing.position)
         case Unquote(t) =>
-          c.abort(thing.position, s"Expected $expecting; got unquote")
+          bail(s"Expected $expecting; got unquote", thing.position)
       }
 
-    def withThing(thing: Tokenized, expecting: String)(f: PartialFunction[Tokenized, Either[State, Tree]]): Either[State, Tree] =
+    def withThing(thing: Tokenized, expecting: String)(f: PartialFunction[Tokenized, Either[State, Expr[JValue]]]): Either[State, Expr[JValue]] =
       f.applyOrElse(thing, unexpectedTokenized(_ : Tokenized, expecting))
 
-    class ExpectingArrayDatum(ctors: List[TermName => Tree], returnState: Tree => State, expecting: String) extends State {
+    sealed abstract class ArrayCtor {
+      def populator: Expr[VectorBuilder[JValue]] => Expr[Any]
+    }
+    case class UnknownCountArrayCtor(populator: Expr[VectorBuilder[JValue]] => Expr[Any]) extends ArrayCtor
+    case class OneItemCtor(value: Expr[JValue]) extends ArrayCtor {
+      def populator = (e: Expr[VectorBuilder[JValue]]) => '{ $e += $value }
+    }
+
+    type VectorMapBuilder[K, V] = mutable.Builder[(K, V), VectorMap[K, V]]
+    type ObjectCtor = Expr[VectorMapBuilder[String, JValue]] => Expr[Any]
+
+    def finishArray(ctors: List[ArrayCtor]): Expr[JValue] = {
+      if(ctors.isEmpty) '{ JArray.empty }
+      else if(ctors.forall(_.isInstanceOf[OneItemCtor])) {
+        val singletons = ctors.map(_.asInstanceOf[OneItemCtor])
+        '{
+           val temp = new Array[JValue](${Expr(ctors.length)})
+           ${
+             Block(
+               singletons.reverse.zipWithIndex.map { case (ctor, i) =>
+                 '{ temp(${Expr(i)}) = ${ctor.value} }.asTerm },
+               '{ JArray(ArraySeq.unsafeWrapArray(temp)) }.asTerm
+             ).asExprOf[JArray]
+           }
+        }
+      } else {
+        '{
+           val temp = new VectorBuilder[JValue]
+           ${Block(ctors.reverse.map { ctor => ctor.populator('{temp}).asTerm }, '{ JArray(temp.result()) }.asTerm).asExprOf[JArray]}
+         }
+      }
+    }
+
+    def finishObject(ctors: List[ObjectCtor]): Expr[JValue] = {
+      if(ctors.isEmpty) '{ JObject.empty }
+      else {
+        '{
+           val temp = VectorMap.newBuilder[String, JValue]
+           ${Block(ctors.reverse.map { ctor => ctor('{temp}).asTerm }, '{ JObject(temp.result()) }.asTerm).asExprOf[JObject]}
+        }
+      }
+    }
+
+    def arrayItem(v: Expr[Any]): ArrayCtor =
+      OneItemCtor(encodeExpr(v))
+
+    def optionalArrayItem(v: Expr[Any]): ArrayCtor =
+      UnknownCountArrayCtor(builder => '{ $builder ++= ${encodeOptional(v)} })
+
+    def arrayItems(v: Expr[Any]): ArrayCtor =
+      UnknownCountArrayCtor(builder => '{ $builder ++= ${encodeArray(v)} })
+
+    def objectItem(k: Expr[String], v: Expr[Any]): ObjectCtor = { builder =>
+      '{ $builder += (($k, ${encodeExpr(v)})) }
+    }
+
+    def optionalObjectItem(k: Expr[String], v: Expr[Any]): ObjectCtor = { builder =>
+      '{
+         val kTemp = $k
+         ${encodeOptional(v)} match {
+           case Some(vTemp) => $builder += ((kTemp, vTemp))
+           case None => {}
+         }
+      }
+    }
+
+    def objectItems(v: Expr[Any]): ObjectCtor = { builder =>
+      '{ $builder ++= ${encodeMap(v)} }
+    }
+
+    class TopLevelDatum extends State {
+      def step(thing: Tokenized) =
+        new ExpectingDatum(new ExpectingEnd(_)).step(thing)
+    }
+
+    class ExpectingEnd(result: Expr[JValue]) extends State {
+      def step(thing: Tokenized) =
+        withThing(thing, "end of input") {
+          case End(_) => Right(result)
+        }
+    }
+
+    class ExpectingDatum(returnState: Expr[JValue] => State, expecting: String = "datum") extends State {
+      def step(thing: Tokenized) =
+        withThing(thing, expecting) {
+          case Unquote(item) =>
+            Left(returnState(encodeExpr(item)))
+          case Token(TokenOpenBracket()) =>
+            Left(new ExpectingDatumOrEndOfArray(Nil, returnState))
+          case Token(TokenOpenBrace()) =>
+            Left(new ExpectingFieldOrEndOfObject(Nil, returnState))
+          case Token(TokenString(s)) =>
+            Left(returnState('{ JString(${Expr(s)}) }))
+          case Token(TokenIdentifier("true")) =>
+            Left(returnState('{ JBoolean.canonicalTrue }))
+          case Token(TokenIdentifier("false")) =>
+            Left(returnState('{ JBoolean.canonicalFalse }))
+          case Token(TokenIdentifier("null")) =>
+            Left(returnState('{ JNull }))
+          case Token(TokenNumber(n)) =>
+            // Hmm.   We can inspect "n" and generate a more specific JNumber type.
+            // But it's most likely we'll just be serializing the result, so there's
+            // not much point.
+            Left(returnState('{ JNumber.unsafeFromString(${Expr(n)}) }))
+        }
+    }
+
+    class ExpectingDatumOrEndOfArray(ctors: List[ArrayCtor], returnState: Expr[JValue] => State) extends State {
+      def step(thing: Tokenized) =
+        thing match {
+          case Token(TokenCloseBracket()) =>
+            Left(returnState(finishArray(ctors)))
+          case other =>
+            new ExpectingArrayDatum(ctors, returnState, "datum or end of array").step(other)
+        }
+    }
+
+    class ExpectingArrayDatum(ctors: List[ArrayCtor], returnState: Expr[JValue] => State, expecting: String) extends State {
       def step(thing: Tokenized) =
         thing match {
           case UnquoteSplice(items) =>
@@ -172,8 +278,7 @@ object JsonInterpolatorImpl {
         }
     }
 
-
-    class ExpectingCommaOrEndOfArray(ctors: List[TermName => Tree], returnState: Tree => State) extends State {
+    class ExpectingCommaOrEndOfArray(ctors: List[ArrayCtor], returnState: Expr[JValue] => State) extends State {
       def step(thing: Tokenized) =
         withThing(thing, "comma or end of array") {
           case Token(TokenCloseBracket()) =>
@@ -183,59 +288,7 @@ object JsonInterpolatorImpl {
         }
     }
 
-    class ExpectingDatumOrEndOfArray(ctors: List[TermName => Tree], returnState: Tree => State) extends State {
-      def step(thing: Tokenized) =
-        thing match {
-          case Token(TokenCloseBracket()) =>
-            Left(returnState(finishArray(ctors)))
-          case other =>
-            new ExpectingArrayDatum(ctors, returnState, "datum or end of array").step(other)
-        }
-    }
-
-    class ExpectingCommaOrEndOfObject(ctors: List[TermName => Tree], returnState: Tree => State) extends State {
-      def step(thing: Tokenized) =
-        withThing(thing, "comma or end of object") {
-          case Token(TokenCloseBrace()) =>
-            Left(returnState(finishObject(ctors)))
-          case Token(TokenComma()) =>
-            Left(new ExpectingFieldName(ctors, returnState))
-        }
-    }
-
-    class ExpectingFieldValue(field: Tree, ctors: List[TermName => Tree], returnState: Tree => State) extends State {
-      def step(thing: Tokenized) =
-        thing match {
-          case UnquoteOptional(item) =>
-            Left(new ExpectingCommaOrEndOfObject(optionalObjectItem(field, item) :: ctors, returnState))
-          case other =>
-            new ExpectingDatum({ v => new ExpectingCommaOrEndOfObject(objectItem(field, v) :: ctors, returnState) }).step(other)
-        }
-    }
-
-    class ExpectingColon(field: Tree, ctors: List[TermName => Tree], returnState: Tree => State) extends State {
-      def step(thing: Tokenized) =
-        withThing(thing, "colon") {
-          case Token(TokenColon()) =>
-            Left(new ExpectingFieldValue(field, ctors, returnState))
-        }
-    }
-
-    class ExpectingFieldName(ctors: List[TermName => Tree], returnState: Tree => State, expecting: String = "field name") extends State {
-      def step(thing: Tokenized) =
-        withThing(thing, expecting) {
-          case UnquoteSplice(items) =>
-            Left(new ExpectingCommaOrEndOfObject(objectItems(items) :: ctors, returnState))
-          case Unquote(s) =>
-            Left(new ExpectingColon(q"_root_.com.rojoma.json.v3.codec.FieldEncode.toField($s)", ctors, returnState))
-          case Token(TokenString(s)) =>
-            Left(new ExpectingColon(q"$s", ctors, returnState))
-          case Token(TokenIdentifier(s)) =>
-            Left(new ExpectingColon(q"$s", ctors, returnState))
-        }
-    }
-
-    class ExpectingFieldOrEndOfObject(ctors: List[TermName => Tree], returnState: Tree => State) extends State {
+    class ExpectingFieldOrEndOfObject(ctors: List[ObjectCtor], returnState: Expr[JValue] => State) extends State {
       def step(thing: Tokenized) =
         thing match {
           case Token(TokenCloseBrace()) =>
@@ -245,111 +298,159 @@ object JsonInterpolatorImpl {
         }
     }
 
-    class ExpectingDatum(returnState: Tree => State, expecting: String = "datum") extends State {
+    class ExpectingFieldName(ctors: List[ObjectCtor], returnState: Expr[JValue] => State, expecting: String = "field name") extends State {
       def step(thing: Tokenized) =
         withThing(thing, expecting) {
-          case Unquote(item) =>
-            Left(returnState(q"_root_.com.rojoma.json.v3.codec.JsonEncode.toJValue($item)"))
-          case Token(TokenOpenBracket()) =>
-            Left(new ExpectingDatumOrEndOfArray(Nil, returnState))
-          case Token(TokenOpenBrace()) =>
-            Left(new ExpectingFieldOrEndOfObject(Nil, returnState))
+          case UnquoteSplice(items) =>
+            Left(new ExpectingCommaOrEndOfObject(objectItems(items) :: ctors, returnState))
+          case Unquote(s) =>
+            Left(new ExpectingColon(encodeField(s), ctors, returnState))
           case Token(TokenString(s)) =>
-            Left(returnState(q"_root_.com.rojoma.json.v3.ast.JString($s)"))
-          case Token(TokenIdentifier("true")) =>
-            Left(returnState(q"_root_.com.rojoma.json.v3.ast.JBoolean.canonicalTrue"))
-          case Token(TokenIdentifier("false")) =>
-            Left(returnState(q"_root_.com.rojoma.json.v3.ast.JBoolean.canonicalFalse"))
-          case Token(TokenIdentifier("null")) =>
-            Left(returnState(q"_root_.com.rojoma.json.v3.ast.JNull"))
-          case Token(TokenNumber(n)) =>
-            // Hmm.   We can inspect "n" and generate a more specific JNumber type.
-            // But it's most likely we'll just be serializing the result, so there's
-            // not much point.
-            Left(returnState(q"_root_.com.rojoma.json.v3.ast.JNumber.unsafeFromString($n)"))
+            Left(new ExpectingColon(Expr(s), ctors, returnState))
+          case Token(TokenIdentifier(s)) =>
+            Left(new ExpectingColon(Expr(s), ctors, returnState))
         }
     }
 
-    class ExpectingEnd(tree: Tree) extends State {
+    class ExpectingColon(field: Expr[String], ctors: List[ObjectCtor], returnState: Expr[JValue] => State) extends State {
       def step(thing: Tokenized) =
-        withThing(thing, "end of input") {
-          case End(_) => Right(tree)
+        withThing(thing, "colon") {
+          case Token(TokenColon()) =>
+            Left(new ExpectingFieldValue(field, ctors, returnState))
         }
     }
 
-    class TopLevelDatum extends State {
+    class ExpectingFieldValue(field: Expr[String], ctors: List[ObjectCtor], returnState: Expr[JValue] => State) extends State {
       def step(thing: Tokenized) =
-        new ExpectingDatum(new ExpectingEnd(_)).step(thing)
+        thing match {
+          case UnquoteOptional(item) =>
+            Left(new ExpectingCommaOrEndOfObject(optionalObjectItem(field, item) :: ctors, returnState))
+          case other =>
+            new ExpectingDatum({ v => new ExpectingCommaOrEndOfObject(objectItem(field, v) :: ctors, returnState) }).step(other)
+        }
     }
 
+    class ExpectingCommaOrEndOfObject(ctors: List[ObjectCtor], returnState: Expr[JValue] => State) extends State {
+      def step(thing: Tokenized) =
+        withThing(thing, "comma or end of object") {
+          case Token(TokenCloseBrace()) =>
+            Left(returnState(finishObject(ctors)))
+          case Token(TokenComma()) =>
+            Left(new ExpectingFieldName(ctors, returnState))
+        }
+    }
 
-    def walk(initialThings: List[Tokenized]): Tree = {
+    def walk(initialThings: List[Tokenized]): Expr[JValue] = {
       var things = initialThings
       var state: State = new TopLevelDatum
       while(!things.isEmpty) {
         state.step(things.head) match {
-          case Right(tree) =>
-            return tree
+          case Right(result) =>
+            return result
           case Left(newState) =>
             state = newState
         }
         things = things.tail
       }
-      abort("Internal error: Should have gotten to an end")
+      report.throwError("Internal error: Should have gotten to an end")
     }
 
-    c.prefix.tree match {
-      case Apply(_, List(Apply(_, rawParts))) =>
-        val parts = rawParts map {
-          case node@Literal(Constant(rawPart: String)) =>
+    def move(pos: Position, offset: Int): Position = {
+      Position(pos.sourceFile, pos.start + offset, pos.start + offset + 1)
+    }
+    def offsetOf(s: String, p: io.Position) = {
+      val before = s.split("\n", -1).take(p.row - 1).map(_.length + 1).sum
+      val result = before + p.column - 1
+      result
+    }
+    def relativize(start: Position, s: String, j: io.Position): Position =
+      if(j == io.Position.Invalid) move(start, s.length)
+      else move(start, offsetOf(s, j))
+
+    case class TokenInfo(tokens: List[JsonToken])(val nextUnquote: Expr[Any] => Tokenized, val orig: String, val origPos: Position) {
+      def pop = TokenInfo(tokens.tail)(nextUnquote, orig, origPos)
+      def position = tokens.headOption match {
+        case Some(hd) => relativize(origPos, orig, hd.position)
+        case None => relativize(origPos, orig, io.Position.Invalid)
+      }
+      def positionAtEnd = relativize(origPos, orig, io.Position(row = orig.split("\n", -1).length,
+                                                                column = orig.length - orig.lastIndexOf('\n')))
+    }
+
+    def stripPos(msg: String): String = {
+      val PfxRegex = """-?\d+:-?\d+: (.*)""".r
+      msg match {
+        case PfxRegex(rest) => rest
+        case noPfx => noPfx
+      }
+    }
+
+    def tokens(s: String, pos: Position) = try {
+      new JsonTokenIterator(new StringReader(s)).toList
+    } catch {
+      case e: JsonLexException =>
+       bail(stripPos(e.message), relativize(pos, s, e.position))
+    }
+
+    try {
+      (strCtxExpr, piecesExpr) match {
+        case ('{ StringContext(${Varargs(rawPartExprs)} : _*) }, Varargs(pieces)) =>
+          val parts = rawPartExprs.map { rawPartExpr =>
+            val rawPart = rawPartExpr.valueOrError;
             val (part, nextUnquote) =
               if(rawPart.endsWith("..")) (rawPart.dropRight(2), UnquoteSplice)
               else if(rawPart.endsWith("?")) (rawPart.dropRight(1), UnquoteOptional)
               else (rawPart, Unquote)
             try {
-              TokenInfo(tokens(part, node.pos))(nextUnquote, part, node.pos)
+              TokenInfo(tokens(part, rawPartExpr.asTerm.pos))(nextUnquote, part, rawPartExpr.asTerm.pos)
             } catch {
               case e: JsonReaderException =>
-                c.abort(relativize(node.pos, part, e.position), stripPos(e.message))
+                bail(stripPos(e.message), relativize(rawPartExpr.asTerm.pos, rawPart, e.position))
             }
-        }
-        if(parts.length != pieces.length + 1) abort("Internal error: there is not one more piece than part")
-
-        val builder = List.newBuilder[Tokenized]
-        def interweave(parts: List[TokenInfo], pieces: List[c.Expr[Any]]): Unit = {
-          (parts, pieces) match {
-            case (Nil, Nil) => // done
-            case ((ti: TokenInfo) :: Nil, Nil) =>
-              var remaining = ti
-              while(!remaining.tokens.isEmpty) {
-                val left = remaining
-                builder += Token(remaining.tokens.head)(left.position)
-                remaining = remaining.pop
-              }
-              if(remaining.nextUnquote ne Unquote) {
-                builder += DeferredError(remaining.positionAtEnd, "Splice at end of input")
-              }
-              builder += End(ti.positionAtEnd)
-            case ((ti: TokenInfo) :: rest, piece :: pieces) =>
-              var remaining = ti
-              while(!remaining.tokens.isEmpty) {
-                val left = remaining
-                builder += Token(remaining.tokens.head)(left.position)
-                remaining = remaining.pop
-              }
-              builder += remaining.nextUnquote(piece.tree)
-              interweave(rest, pieces)
-            case _ =>
-              abort("Internal error: pieces and parts didn't line up")
           }
-        }
-        interweave(parts.toList, pieces.toList)
 
-        val tree = walk(builder.result())
-        //println(tree)
-        c.Expr[JValue](tree)
-      case _ =>
-        abort("Not called from interpolation position.")
+          if(parts.length != pieces.length + 1) bail("Using non-interpolator syntax for JSON is not supported", piecesExpr.asTerm.pos)
+
+          val builder = List.newBuilder[Tokenized]
+          def interweave(parts: List[TokenInfo], pieces: List[Expr[Any]]): Unit = {
+            (parts, pieces) match {
+              case (Nil, Nil) => // done
+              case ((ti: TokenInfo) :: Nil, Nil) =>
+                var remaining = ti
+                while(!remaining.tokens.isEmpty) {
+                  val left = remaining
+                  builder += Token(remaining.tokens.head)(left.position)
+                  remaining = remaining.pop
+                }
+                if(remaining.nextUnquote ne Unquote) {
+                  builder += DeferredError(remaining.positionAtEnd, "Splice at end of input")
+                }
+                builder += End(ti.positionAtEnd)
+              case ((ti: TokenInfo) :: rest, piece :: pieces) =>
+                var remaining = ti
+                while(!remaining.tokens.isEmpty) {
+                  val left = remaining
+                  builder += Token(remaining.tokens.head)(left.position)
+                  remaining = remaining.pop
+                }
+                builder += remaining.nextUnquote(piece)
+                interweave(rest, pieces)
+              case _ =>
+                bail("Internal error: pieces and parts didn't line up", piecesExpr.asTerm.pos)
+            }
+          }
+          interweave(parts.toList, pieces.toList)
+
+          val r = walk(builder.result())
+          // println(r.show)
+          r
+        case _ =>
+          bail("Using non-interpolator syntax for JSON is not supported", piecesExpr.asTerm.pos)
+      }
+    } catch {
+      case Bail(msg, pos) =>
+        report.error(msg, pos)
+        '{ ??? : JValue }
     }
   }
 }

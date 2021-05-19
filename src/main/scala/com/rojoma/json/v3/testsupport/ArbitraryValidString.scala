@@ -6,12 +6,12 @@ import org.scalacheck.Gen
 
 object ArbitraryValidString {
   // Strings with surrogate characters that make valid surrogate pairs
-  implicit val ArbitraryValidString = Arbitrary[String] {
+  val ArbitraryValidString: Arbitrary[String] = {
     val lowSurrogate = Gen.choose(Character.MIN_LOW_SURROGATE, Character.MAX_LOW_SURROGATE).map(_.toChar)
 
     val notLowSurrogate = Gen.frequency(
-      (Character.MIN_LOW_SURROGATE - Char.MinValue, Gen.choose(Char.MinValue, Character.MIN_LOW_SURROGATE - 1)),
-      (Char.MaxValue - Character.MAX_LOW_SURROGATE, Gen.choose(Character.MAX_LOW_SURROGATE + 1, Char.MaxValue))
+      (Character.MIN_LOW_SURROGATE.toInt - Char.MinValue.toInt, Gen.choose(Char.MinValue.toInt, Character.MIN_LOW_SURROGATE - 1)),
+      (Char.MaxValue - Character.MAX_LOW_SURROGATE, Gen.choose(Character.MAX_LOW_SURROGATE + 1, Char.MaxValue.toInt))
     ).map(_.toChar)
 
     val validCodePoint = notLowSurrogate flatMap { a =>
@@ -19,6 +19,6 @@ object ArbitraryValidString {
       else a.toString
     }
 
-    Gen.containerOf[List, String](validCodePoint) map (_.mkString)
+    Arbitrary(Gen.containerOf[List, String](validCodePoint) map (_.mkString))
   }
 }

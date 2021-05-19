@@ -3,13 +3,14 @@ package io
 
 import scala.reflect.ClassTag
 
-import org.scalatest.{FunSuite, MustMatchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import ast.JValue
-import testsupport.ArbitraryJValue.ArbitraryJValue
+import testsupport.ArbitraryJValue.given
 
-class JsonEventIteratorComparisonTests extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
+class JsonEventIteratorComparisonTests extends AnyFunSuite with Matchers with ScalaCheckPropertyChecks {
   def simpleIterator(s: String) = new JsonEventIterator(new JsonTokenIterator(new java.io.StringReader(s)))
   def blockIterator(s: String) = new JsonEventIterator(new BlockJsonTokenIterator(s))
   def fusedIterator(s: String) = new FusedBlockJsonEventIterator(s)

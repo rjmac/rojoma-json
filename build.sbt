@@ -4,19 +4,15 @@ organization := "com.rojoma"
 
 version := "3.12.1-SNAPSHOT"
 
-mimaPreviousArtifacts := Set("com.rojoma" %% "rojoma-json-v3" % "3.12.0")
+mimaPreviousArtifacts := Set()//"com.rojoma" %% "rojoma-json-v3" % "3.12.0")
 
-scalaVersion := "2.13.5"
+scalaVersion := "3.0.0"
 
 scalacOptions ++= {
   val SV = """(\d+)\.(\d+)\..*""".r
   val optimizationOptions = scalaVersion.value match {
-    case SV("2","10" | "11") =>
-      List("-optimize", "-Xlint")
-    case SV("2","12") =>
-      List("-opt:l:inline", "-opt-inline-from:com.rojoma.json.v3.**", "-Xlint")
-    case SV("2","13") =>
-      List("-opt:l:inline", "-opt-inline-from:com.rojoma.json.v3.**", "-Xlint", "-Xlint:-nonlocal-return", "-Xlog-free-types", "-Ymacro-annotations")
+    case SV("3","0") =>
+      List()
     case _ =>
       sys.error("Need to set up scalacoptions for the current compiler")
     }
@@ -28,13 +24,12 @@ Compile / console / scalacOptions += "-Xlint:-unused"
 
 Compile / doc / scalacOptions -= "-Xfatal-warnings"
 
-Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
-
-libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
+Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oDF")
 
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "3.0.8" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.14.0" % "optional" // optional because generators for JValues are included
+  "org.scalatest" %% "scalatest" % "3.2.9" % "test",
+  "org.scalatestplus" %% "scalacheck-1-15" % "3.2.9.0" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.15.4" % "optional" // optional because generators for JValues are included
 )
 
 Compile / sourceGenerators += Def.task { SimpleJsonCodecBuilderBuilder((Compile / sourceManaged).value) }

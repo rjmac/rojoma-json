@@ -354,12 +354,12 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
 
     if(peekCharLexer() == '-') scratch += nextCharLexer()
 
-    do { scratch += readDigit() } while(!atEOF() && isDigit(peekCharNotAtEOF()))
+    while { scratch += readDigit(); !atEOF() && isDigit(peekCharNotAtEOF()) } do ()
 
     val hasFrac = !atEOF() && peekCharNotAtEOF() == '.'
     if(hasFrac) {
       scratch += nextCharNotAtEOF() // skip decimal
-      do { scratch += readDigit() } while(!atEOF() && isDigit(peekCharNotAtEOF()))
+      while { scratch += readDigit(); !atEOF() && isDigit(peekCharNotAtEOF()) } do ()
     }
 
     val hasExponent = !atEOF() && (peekCharNotAtEOF() == 'e' || peekCharNotAtEOF() == 'E')
@@ -370,7 +370,7 @@ class FusedBlockJsonReader(input: Reader, fieldCache: FieldCache = IdentityField
       else scratch += '+' // ensure there's always a sign
 
       val exponentDigitsStart = scratch.length
-      do { scratch += readDigit() } while(!atEOF() && isDigit(peekCharNotAtEOF()))
+      while { scratch += readDigit();!atEOF() && isDigit(peekCharNotAtEOF()) } do ()
 
       // this relies on the exponent being the last thing read
       val result = scratch.toString

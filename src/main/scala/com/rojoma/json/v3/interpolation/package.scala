@@ -1,13 +1,9 @@
-package com.rojoma.json.v3
+package com.rojoma.json.v3.interpolation
 
-import scala.language.experimental.macros
+import scala.quoted.*
 
-import `-impl`.interpolation.JsonInterpolatorImpl
-import ast.JValue
+extension (inline ctx: StringContext) transparent inline def j(inline pieces: =>Any*):Any =
+  ${ com.rojoma.json.v3.`-impl`.interpolation.JsonInterpolatorImpl.j('ctx, 'pieces) }
 
-package object interpolation {
-  implicit class jsonInterpolator(private val sc: StringContext) extends AnyVal {
-    def j(pieces: Any*): JValue = macro JsonInterpolatorImpl.j
-    def json(pieces: Any*): JValue = macro JsonInterpolatorImpl.j
-  }
-}
+extension (inline ctx: StringContext) transparent inline def json(inline pieces: =>Any*):Any =
+  ${ com.rojoma.json.v3.`-impl`.interpolation.JsonInterpolatorImpl.j('ctx, 'pieces) }

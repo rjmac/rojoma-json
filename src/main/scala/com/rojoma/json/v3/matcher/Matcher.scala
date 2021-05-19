@@ -1,8 +1,6 @@
 package com.rojoma.json.v3
 package matcher
 
-import scala.language.implicitConversions
-
 import ast._
 import codec._
 
@@ -18,10 +16,12 @@ class JsonGenerationException extends RuntimeException("Cannot generate JSON; th
 sealed trait OptPattern
 
 object OptPattern extends LowPriorityImplicits {
-  implicit def litifyJValue(x: JValue): Pattern = x match {
-    case atom: JAtom => Literal(atom)
-    case JArray(arr) => PArray(arr.view.map(litifyJValue).toVector : _*)
-    case JObject(obj) => PObject(obj.view.mapValues(litifyJValue).to(Vector) : _*)
+  given litifyJValue: Conversion[JValue, Pattern] with {
+    def apply(x: JValue) = x match {
+      case atom: JAtom => Literal(atom)
+      case JArray(arr) => PArray(arr.view.map(litifyJValue).toVector : _*)
+      case JObject(obj) => PObject(obj.view.mapValues(litifyJValue).to(Vector) : _*)
+    }
   }
 
   /** Converts an object with a [[com.rojoma.json.v3.codec.JsonDecode]]
@@ -29,16 +29,18 @@ object OptPattern extends LowPriorityImplicits {
    * [[com.rojoma.json.v3.matcher.Pattern]] which matches a value only
    * if the codec can decode it into something which is `equal` to the
    * object. */
-  implicit def litifyCodec[T : JsonDecode : JsonEncode](lit: T): Pattern =
-    new Pattern {
-      def evaluate(x: JValue, environment: Pattern.Results): Either[DecodeError, Pattern.Results] =
-        JsonDecode[T].decode(x) match {
-          case Right(y) if lit == y => Right(environment)
-          case Right(_) => Left(DecodeError.InvalidValue(x))
-          case Left(err) => Left(err)
-        }
+  given litifyCodec[T](using JsonDecode[T], JsonEncode[T]): Conversion[T, Pattern] with {
+    def apply(lit: T) =
+      new Pattern {
+        def evaluate(x: JValue, environment: Pattern.Results): Either[DecodeError, Pattern.Results] =
+          JsonDecode[T].decode(x) match {
+            case Right(y) if lit == y => Right(environment)
+            case Right(_) => Left(DecodeError.InvalidValue(x))
+            case Left(err) => Left(err)
+          }
 
-      def generate(environment: Pattern.Results): Option[JValue] = Some(JsonEncode[T].encode(lit))
+        def generate(environment: Pattern.Results): Option[JValue] = Some(JsonEncode[T].encode(lit))
+      }
     }
 }
 

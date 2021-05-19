@@ -1,12 +1,12 @@
 package com.rojoma.json.v3
 package io
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import org.scalatestplus.scalacheck.Checkers
 
 import org.scalacheck.Prop._
 
-class PositionTests extends FunSuite with Checkers {
+class PositionTests extends AnyFunSuite with Checkers {
   test("Position stores rows and columns") {
     check(forAll { (row: Int, column: Int) =>
       val pos = Position(row, column)

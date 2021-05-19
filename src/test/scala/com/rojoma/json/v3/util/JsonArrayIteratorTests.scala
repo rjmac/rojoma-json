@@ -5,16 +5,17 @@ import codec.JsonEncode
 import ast._
 import io._
 
-import testsupport.ArbitraryJValue._
+import testsupport.ArbitraryJValue.given
 
-import org.scalatest.{FunSuite, MustMatchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import Events._
 
-class JsonArrayIteratorTests extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
+class JsonArrayIteratorTests extends AnyFunSuite with Matchers with ScalaCheckPropertyChecks {
   test("Eventifying an array and decoding it with a JsonArrayIterator is an identity operation") {
-    forAll() { xs: List[String] =>
+    forAll() { (xs: List[String]) =>
       JsonArrayIterator.fromEvents[String](JValueEventIterator(JsonEncode.toJValue(xs))).toList must equal (xs)
     }
   }
@@ -24,7 +25,7 @@ class JsonArrayIteratorTests extends FunSuite with MustMatchers with ScalaCheckP
   }
 
   test("Giving JsonArrayIterator a non-array input fails with JsonBadParse") {
-    forAll() { x: JValue =>
+    forAll() { (x: JValue) =>
       whenever(!x.isInstanceOf[JArray]) {
         a [JsonBadParse] must be thrownBy { JsonArrayIterator.fromEvents[String](JValueEventIterator(x)) }
       }
@@ -32,7 +33,7 @@ class JsonArrayIteratorTests extends FunSuite with MustMatchers with ScalaCheckP
   }
 
   test("Giving JsonArrayIterator an incomplete array eventually throws JsonEOF") {
-    forAll() { x: JArray =>
+    forAll() { (x: JArray) =>
     a [JsonEOF] must be thrownBy { JsonArrayIterator.fromEvents[JValue](JValueEventIterator(x).toSeq.dropRight(1).iterator).toList } 
     }
   }
@@ -56,7 +57,7 @@ class JsonArrayIteratorTests extends FunSuite with MustMatchers with ScalaCheckP
   }
 
   test("setting alreadyInArray works") {
-    forAll() { xs: JArray =>
+    forAll() { (xs: JArray) =>
       JsonArrayIterator.fromEvents[JValue](JValueEventIterator(xs).drop(1), alreadyInArray = true).toList must equal (xs.toSeq)
     }
   }

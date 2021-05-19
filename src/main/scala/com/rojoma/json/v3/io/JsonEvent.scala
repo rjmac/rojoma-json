@@ -1,6 +1,8 @@
 package com.rojoma.json.v3
 package io
 
+import scala.language.implicitConversions
+
 sealed abstract class JsonEvent {
   val position: Position
 
@@ -108,7 +110,7 @@ object JsonEvent {
     }
   }
 
-  implicit val jCodec: JsonEncode[JsonEvent] with JsonDecode[JsonEvent] = new JsonEncode[JsonEvent] with JsonDecode[JsonEvent] {
+  given jCodec: JsonEncode[JsonEvent] with JsonDecode[JsonEvent] with {
     private val Pos = "position"
 
     def encode(e: JsonEvent) = {

@@ -1,10 +1,11 @@
 package com.rojoma.json.v3
 package util
 
-import org.scalatest.{FunSuite, MustMatchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
-class WrappedCharArrayTests extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
+class WrappedCharArrayTests extends AnyFunSuite with Matchers with ScalaCheckPropertyChecks {
   test("Converting a WrappedCharArray back into a String succeeds") {
     WrappedCharArray("hello there".toCharArray).toString must equal ("hello there")
   }

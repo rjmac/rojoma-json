@@ -16,7 +16,7 @@ import com.rojoma.json.v3.codec._
   */
 package RFC1123 {
   object codec {
-    implicit object dateCodec extends JsonEncode[Date] with JsonDecode[Date] {
+    given dateCodec: JsonEncode[Date] with JsonDecode[Date] with {
       def encode(x: Date) = instantCodec.encode(x.toInstant)
       def decode(x: JValue) = instantCodec.decode(x).flatMap { instant =>
         try {
@@ -28,7 +28,7 @@ package RFC1123 {
       }
     }
 
-    implicit object instantCodec extends JsonEncode[Instant] with JsonDecode[Instant] {
+    given instantCodec: JsonEncode[Instant] with JsonDecode[Instant] with {
       def encode(x: Instant) =
         JString(DateTimeFormatter.RFC_1123_DATE_TIME.format(x.atOffset(ZoneOffset.UTC)))
 
@@ -46,7 +46,7 @@ package RFC1123 {
         }
     }
 
-    implicit object offsetDateTimeCodec extends JsonEncode[OffsetDateTime] with JsonDecode[OffsetDateTime] {
+    given offsetDateTimeCodec: JsonEncode[OffsetDateTime] with JsonDecode[OffsetDateTime] with {
       def encode(x: OffsetDateTime) =
         JString(DateTimeFormatter.RFC_1123_DATE_TIME.format(x))
 
@@ -66,12 +66,12 @@ package RFC1123 {
   }
 
   object encode {
-    implicit val instantEncode : JsonEncode[Instant] = codec.instantCodec
-    implicit val offsetDateTimeEncode : JsonEncode[OffsetDateTime] = codec.offsetDateTimeCodec
+    given instantEncode : JsonEncode[Instant] = codec.instantCodec
+    given offsetDateTimeEncode : JsonEncode[OffsetDateTime] = codec.offsetDateTimeCodec
   }
 
   object decode {
-    implicit val instantDecode : JsonDecode[Instant] = codec.instantCodec
-    implicit val offsetDateTimeDecode : JsonDecode[OffsetDateTime] = codec.offsetDateTimeCodec
+    given instantDecode : JsonDecode[Instant] = codec.instantCodec
+    given offsetDateTimeDecode : JsonDecode[OffsetDateTime] = codec.offsetDateTimeCodec
   }
 }

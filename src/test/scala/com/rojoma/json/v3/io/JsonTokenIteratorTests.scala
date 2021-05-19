@@ -1,11 +1,12 @@
 package com.rojoma.json.v3
 package io
 
-import org.scalatest.{FunSuite, MustMatchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 
 import Tokens._
 
-class JsonTokenIteratorTests extends FunSuite with MustMatchers {
+class JsonTokenIteratorTests extends AnyFunSuite with Matchers {
   def r(s: String) = new java.io.StringReader(s)
 
   def t(s: String) = new JsonTokenIterator(r(s)).next()

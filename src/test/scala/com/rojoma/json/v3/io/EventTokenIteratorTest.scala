@@ -1,7 +1,8 @@
 package com.rojoma.json.v3
 package io
 
-import org.scalatest.{FunSuite, MustMatchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import org.scalacheck.Gen
@@ -11,7 +12,7 @@ import testsupport.ArbitraryJValue.ArbitraryJValue
 import ast.JValue
 import Events._
 
-class EventTokenIteratorTest extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
+class EventTokenIteratorTest extends AnyFunSuite with Matchers with ScalaCheckPropertyChecks {
   def shortList[T : Arbitrary] = for {
     size <- Gen.choose(0, 5)
     list <- Gen.listOfN(size, Arbitrary.arbitrary[T])
@@ -80,7 +81,7 @@ class EventTokenIteratorTest extends FunSuite with MustMatchers with ScalaCheckP
   }
 
   test("Roundtripping a valid event-stream to tokens must produce the same event-stream") {
-    forAll() { jvalue: JValue =>
+    forAll() { (jvalue: JValue) =>
       val eventStream = JValueEventIterator(jvalue).toList
       new JsonEventIterator(EventTokenIterator(eventStream.iterator)).toList must equal(eventStream)
     }

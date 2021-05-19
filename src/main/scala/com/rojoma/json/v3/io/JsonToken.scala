@@ -1,6 +1,8 @@
 package com.rojoma.json.v3
 package io
 
+import scala.language.implicitConversions
+
 import ast._
 
 sealed abstract class JsonToken {

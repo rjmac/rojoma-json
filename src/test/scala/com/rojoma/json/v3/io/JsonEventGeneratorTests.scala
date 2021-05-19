@@ -2,14 +2,15 @@ package com.rojoma.json.v3
 package io
 
 import ast.JValue
-import testsupport.ArbitraryJValue._
+import testsupport.ArbitraryJValue.given
 
-import org.scalatest.{FunSuite, MustMatchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import Events._
 
-class JsonEventGeneratorTests extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
+class JsonEventGeneratorTests extends AnyFunSuite with Matchers with ScalaCheckPropertyChecks {
   def r(s: String) = new java.io.StringReader(s)
   def doParse(s: String) = {
     val it = new JsonTokenIterator(r(s))
@@ -57,7 +58,7 @@ class JsonEventGeneratorTests extends FunSuite with MustMatchers with ScalaCheck
   }
 
   test("Parsing random JSON works") {
-    forAll { j: JValue =>
+    forAll { (j: JValue) =>
       JsonReader.fromEvents(parseAll(j.toString, requireComplete = true).iterator) must equal (j)
     }
   }
@@ -88,7 +89,7 @@ class JsonEventGeneratorTests extends FunSuite with MustMatchers with ScalaCheck
 
   test("Object fields must be separated by commas") {
     parseAll("{'a':1,'b':2")
-   a [JsonUnexpectedToken] must be thrownBy { parseAll("{'a':1 'b':2") }
+    a [JsonUnexpectedToken] must be thrownBy { parseAll("{'a':1 'b':2") }
   }
 
   val atTopLevel = Symbol("atTopLevel")

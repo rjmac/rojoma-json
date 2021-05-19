@@ -260,7 +260,7 @@ private[io] object JsonTokenGeneratorImpl {
     }
 
     def readOrdinaryWhitespace(input: PositionedCharExtractor): State = {
-      do {
+      while {
         val c = input.peek()
         if(Character.isWhitespace(c)) input.next()
         else if(c == '/') {
@@ -269,7 +269,9 @@ private[io] object JsonTokenGeneratorImpl {
           if(input.atEnd) throw EndOfInputPreparingToReadSecondCommentCharacter(slashPos) // ick, but it should be super rare!
           else return readSecondCommentCharacter(input, slashPos)
         } else return Done
-      } while(!input.atEnd)
+
+        !input.atEnd
+      } do ()
       ReadingOrdinaryWhitespace
     }
 
@@ -287,22 +289,26 @@ private[io] object JsonTokenGeneratorImpl {
     }
 
     def readToEOL(input: PositionedCharExtractor): State = {
-      do {
+      while {
         val c = input.next()
         if(c == '\n') return ReadingOrdinaryWhitespace
-      } while(!input.atEnd)
+
+        !input.atEnd
+      } do ()
       ReadingToEOL
     }
 
     def read_*(input: PositionedCharExtractor): State = {
-      do {
+      while {
         val c = input.next()
         if(c == '*') {
           if(input.atEnd) return LookingFor_/
           else if(input.next() == '/') return ReadingOrdinaryWhitespace
           // otherwise wasn't end-of-comment so just keep going
         }
-      } while(!input.atEnd)
+
+        !input.atEnd
+      } do ()
       LookingFor_*
     }
 
@@ -386,13 +392,15 @@ private[io] object JsonTokenGeneratorImpl {
     def readOrdinaryCharacters(initialState: CompoundState, sb: StringBuilder, input: PositionedCharExtractor, boundary: Char): CompoundState = {
       // precondition: there is data available and it is not the boundary-char
       var state = initialState
-      do { // we'll eat as much as we can without running into a non-ordinary character
+      while { // we'll eat as much as we can without running into a non-ordinary character
         val c = input.next()
         if(c == '\\') { // oops, here's a non-ordinary character!
           val newState = if(input.atEnd) updateState(state, ReadingEscape) else readEscapeChar(state, sb, input)
           return newState
         } else state = addChar(state, sb, c)
-      } while(!input.atEnd && input.peek() != boundary)
+
+        !input.atEnd && input.peek() != boundary
+      } do ()
       state
     }
 

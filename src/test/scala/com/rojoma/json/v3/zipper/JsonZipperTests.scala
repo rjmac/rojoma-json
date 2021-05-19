@@ -3,9 +3,10 @@ package zipper
 
 import ast._
 
-import org.scalatest.{FunSuite, MustMatchers, EitherValues}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 
-class JsonZipperTests extends FunSuite with MustMatchers with EitherValues {
+class JsonZipperTests extends AnyFunSuite with Matchers {
   def r[T : codec.JsonDecode](s: String) = util.JsonUtil.parseJson[T](s).getOrElse(fail("ack"))
 
   test("Can descend into an array") {

@@ -166,12 +166,12 @@ class JsonTokenIterator(reader: Reader) extends AbstractBufferedIterator[JsonTok
 
     if(peekChar() == '-') scratch += nextChar()
 
-    do { scratch += readDigit() } while(!atEOF() && isDigit(peekChar()))
+    while { scratch += readDigit(); !atEOF() && isDigit(peekChar()) } do ()
 
     val hasFrac = !atEOF() && peekChar() == '.'
     if(hasFrac) {
       scratch += nextChar() // skip decimal
-      do { scratch += readDigit() } while(!atEOF() && isDigit(peekChar()))
+      while { scratch += readDigit(); !atEOF() && isDigit(peekChar()) } do ()
     }
 
     val hasExponent = !atEOF() && (peekChar() == 'e' || peekChar() == 'E')
@@ -184,7 +184,7 @@ class JsonTokenIterator(reader: Reader) extends AbstractBufferedIterator[JsonTok
         else scratch += '+' // ensure there's always a sign
 
         val exponentDigitsStart = scratch.length
-        do { scratch += readDigit() } while(!atEOF() && isDigit(peekChar()))
+        while { scratch += readDigit(); !atEOF() && isDigit(peekChar()) } do ()
 
         // this relies on the exponent being the last thing read
         val result = scratch.toString

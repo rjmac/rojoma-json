@@ -1,19 +1,22 @@
 package com.rojoma.json.v3
 package matcher
 
+import scala.language.implicitConversions
+
 import ast._
 import codec._
 
-import org.scalatest.{FunSuite, MustMatchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 
-class MatchesTests extends FunSuite with MustMatchers {
+class MatchesTests extends AnyFunSuite with Matchers {
   def j(s: String) = io.JsonReader.fromString(s)
 
   locally {
     // tests which depend on having the JValue => Literal conversion in scope because
     // "matches" is used on a JValue directly.
 
-    import OptPattern._
+    import OptPattern.given
 
     test("atom literals match") {
       (JNull matches JNull) must equal (Right(Map.empty))
@@ -180,8 +183,12 @@ class MatchesTests extends FunSuite with MustMatchers {
   }
 
   test("types with codecs can be matched as literals") {
-    (PObject("hello" -> List("happy","there","sad")) matches j("""{'hello':['happy','there','sad']}""")) must equal (Right(Map.empty))
-    (PObject("hello" -> List("happy")) matches j("""{'hello':['happy','there','sad']}""")) must equal (Left(DecodeError.InvalidValue(j("""['happy','there','sad']"""), Path("hello"))))
+    // I'm not sure why scala 3 doesn't pick up that List[String] has
+    // JsonEncode and JsonDecodes anymore, while it does these other
+    // things?  It probably has something to do with the givens being
+    // defined over any subclass of Seq?
+    (PObject("hello" -> java.util.Arrays.asList("happy","there","sad")) matches j("""{'hello':['happy','there','sad']}""")) must equal (Right(Map.empty))
+    (PObject("hello" -> java.util.Arrays.asList("happy")) matches j("""{'hello':['happy','there','sad']}""")) must equal (Left(DecodeError.InvalidValue(j("""['happy','there','sad']"""), Path("hello"))))
     (PObject("hello" -> "world") matches j("""{'hello':'world'}""")) must equal (Right(Map.empty))
   }
 

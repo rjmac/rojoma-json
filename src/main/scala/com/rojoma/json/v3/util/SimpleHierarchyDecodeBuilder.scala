@@ -1,6 +1,7 @@
 package com.rojoma.json.v3
 package util
 
+import scala.language.implicitConversions
 import scala.reflect.ClassTag
 
 import ast._
@@ -9,7 +10,7 @@ import codec._
 import com.rojoma.json.v3.`-impl`.util.ClassAwareMap
 
 class SimpleHierarchyDecodeBuilder[Root <: AnyRef] private[util] (tagType: TagType, subcodecs: Map[String, JsonDecode[_ <: Root]], classes: ClassAwareMap[String]) {
-  def branch[T <: Root](name: String)(implicit dec: JsonDecode[T], mfst: ClassTag[T]) = {
+  def branch[T <: Root](name: String)(using dec: JsonDecode[T], mfst: ClassTag[T]) = {
     val cls = mfst.runtimeClass
     if(subcodecs contains name) throw new IllegalArgumentException("Already defined a decoder for branch " + name)
     if(classes containsExact cls) throw new IllegalArgumentException("Already defined a decoder for class " + cls)
@@ -108,7 +109,7 @@ class SimpleHierarchyDecodeBuilder[Root <: AnyRef] private[util] (tagType: TagTy
 }
 
 class NoTagSimpleHierarchyDecodeBuilder[Root <: AnyRef] private[util] (subcodecs: Seq[(Class[_], JsonDecode[_ <: Root])]) {
-  def branch[T <: Root](implicit dec: JsonDecode[T], mfst: ClassTag[T]) = {
+  def branch[T <: Root](using dec: JsonDecode[T], mfst: ClassTag[T]) = {
     val cls = mfst.runtimeClass
     if(subcodecs.find(_._1 == cls).isDefined) throw new IllegalArgumentException("Already defined a codec for class " + cls)
     new NoTagSimpleHierarchyDecodeBuilder[Root](subcodecs :+ (cls -> dec))

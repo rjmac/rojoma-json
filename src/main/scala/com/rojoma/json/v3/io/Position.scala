@@ -21,7 +21,7 @@ object Position {
 
   val Invalid = Position(-1, -1)
 
-  implicit val jCodec: JsonEncode[Position] with JsonDecode[Position] = new JsonEncode[Position] with JsonDecode[Position] {
+  given jCodec: JsonEncode[Position] with JsonDecode[Position] with {
     private val pairEnc = JsonEncode[(Int, Int)]
     private val pairDec = JsonDecode[Either[JNull, (Int, Int)]]
 

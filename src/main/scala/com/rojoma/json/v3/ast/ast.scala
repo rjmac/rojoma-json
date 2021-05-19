@@ -1,7 +1,6 @@
 package com.rojoma.json.v3
 package ast
 
-import scala.language.implicitConversions
 import scala.{collection => sc}
 import scala.collection.immutable.SeqMap
 import scala.reflect.ClassTag
@@ -22,18 +21,20 @@ sealed abstract class Json[T <: JValue] {
   override lazy val toString = jsonTypes.toSeq.map(_.toString).sorted.mkString(",")
 }
 
-sealed trait JsonType
+sealed trait JsonType {
+  val jsonName: String
+}
 object JsonType {
   import codec._
-  implicit val jCodec: JsonEncode[JsonType] with JsonDecode[JsonType] = new JsonEncode[JsonType] with JsonDecode[JsonType] {
-    def encode(j: JsonType) = JString(j.toString)
+  given jCodec: JsonEncode[JsonType] with JsonDecode[JsonType] with {
+    def encode(j: JsonType) = JString(j.jsonName)
     def decode(x: JValue) = x match {
-      case JString(JObject.toString) => Right(JObject)
-      case JString(JArray.toString) => Right(JArray)
-      case JString(JString.toString) => Right(JString)
-      case JString(JNumber.toString) => Right(JNumber)
-      case JString(JBoolean.toString) => Right(JBoolean)
-      case JString(JNull.toString) => Right(JNull)
+      case JString(JObject.jsonName) => Right(JObject)
+      case JString(JArray.jsonName) => Right(JArray)
+      case JString(JString.jsonName) => Right(JString)
+      case JString(JNumber.jsonName) => Right(JNumber)
+      case JString(JBoolean.jsonName) => Right(JBoolean)
+      case JString(JNull.jsonName) => Right(JNull)
       case s: JString => Left(DecodeError.InvalidValue(s))
       case other => Left(DecodeError.InvalidType(other.jsonType, JString))
     }
@@ -65,18 +66,6 @@ sealed trait JValue {
     * syntax for arrays.  It can be turned back into a `JValue` with
     * the `!` or `?` methods.
     *
-    * Note that certain field-names (the names common to all objects
-    * plus `apply`, `applyDynamic`, and `selectDynamic` cannot be accessed
-    * with simple field-notation.  Instead, pass them as strings to
-    * the `apply` method. */
-  @deprecated(message = "Prefer `dyn`", since = "3.1.1")
-  def dynamic = new com.rojoma.json.v3.dynamic.DynamicJValue(Some(this))
-
-  /** Produces a dynamically typed view of this `JValue` which can be
-    * descended using dot-notation for field names or apply-type
-    * syntax for arrays.  It can be turned back into a `JValue` with
-    * the `!` or `?` methods.
-    *
     * Note that certain field-names (the names common to all `Objects`
     * plus `apply`, `applyDynamic`, and `selectDynamic` cannot be accessed
     * with simple field-notation.  Instead, pass them as strings to
@@ -88,8 +77,6 @@ sealed trait JValue {
 }
 
 object JValue {
-  final override val toString = "value"
-
   /** Safe downcast with a fairly nice syntax.
     * This will statically prevent attempting to cast anywhere except
     * a subclass of the value's static type.
@@ -104,9 +91,14 @@ object JValue {
     *   } getOrElse(throw "couldn't find interesting elements")
     * }}}
     */
-  implicit def toCastable[T <: JValue](x: T) = new `-impl`.ast.DownCaster(x)
+  extension [T <: JValue](value: T) {
+    def cast[U <: T](using j: Json[U]): Option[U] = {
+      if(j.jsonTypes(value.jsonType)) Some(value.asInstanceOf[U])
+      else None
+    }
+  }
 
-  implicit object Concrete extends Json[JValue] {
+  given Concrete: Json[JValue] with {
     val jsonTypes = JAtom.Concrete.jsonTypes ++ JCompound.Concrete.jsonTypes
   }
 }
@@ -121,9 +113,7 @@ sealed abstract class JAtom extends JValue {
 }
 
 object JAtom {
-  final override val toString = "atom"
-
-  implicit object Concrete extends Json[JAtom] {
+  given Concrete: Json[JAtom] with {
     val jsonTypes = Set[JsonType](JNumber, JString, JBoolean, JNull)
   }
 }
@@ -155,7 +145,8 @@ sealed abstract class JNumber extends JAtom with JNotNullValue {
 }
 
 object JNumber extends JsonType {
-  final override val toString = "number"
+  final override val jsonName = "number"
+  override final val toString = "JNumber"
 
   private val stdCtx = java.math.MathContext.UNLIMITED
 
@@ -385,7 +376,7 @@ object JNumber extends JsonType {
 
   def unsafeFromString(s: String): JNumber = new JUncheckedStringNumber(s)
 
-  implicit object Concrete extends Json[JNumber] {
+  given Concrete: Json[JNumber] with {
     val jsonTypes = Set[JsonType](JNumber)
   }
 }
@@ -397,9 +388,9 @@ case class JString(string: String) extends JAtom with JNotNullValue {
 }
 
 object JString extends scala.runtime.AbstractFunction1[String, JString] with JsonType {
-  override final val toString = "string"
+  override final val jsonName = "string"
 
-  implicit object Concrete extends Json[JString] {
+  given Concrete: Json[JString] with {
     val jsonTypes = Set[JsonType](JString)
   }
 }
@@ -415,9 +406,9 @@ object JBoolean extends scala.runtime.AbstractFunction1[Boolean, JBoolean] with 
 
   def apply(boolean: Boolean) = if(boolean) canonicalTrue else canonicalFalse
 
-  override final val toString = "boolean"
+  override final val jsonName = "boolean"
 
-  implicit object Concrete extends Json[JBoolean] {
+  given Concrete: Json[JBoolean] with {
     val jsonTypes = Set[JsonType](JBoolean)
   }
 }
@@ -425,11 +416,11 @@ object JBoolean extends scala.runtime.AbstractFunction1[Boolean, JBoolean] with 
 /** Null. */
 sealed abstract class JNull extends JAtom // so the object has a nameable type
 case object JNull extends JNull with JsonType {
-  final override val toString = "null"
+  final override val jsonName = "null"
 
   def jsonType = JNull
 
-  implicit object Concrete extends Json[JNull] {
+  given Concrete: Json[JNull] with {
     val jsonTypes = Set[JsonType](JNull)
   }
 }
@@ -442,9 +433,7 @@ sealed trait JCompound extends JNotNullValue {
 }
 
 object JCompound {
-  final override val toString = "compound"
-
-  implicit object Concrete extends Json[JCompound] {
+  given Concrete: Json[JCompound] with {
     val jsonTypes = JArray.Concrete.jsonTypes ++ JObject.Concrete.jsonTypes
   }
 }
@@ -501,8 +490,8 @@ case class JArray(elems: sc.Seq[JValue]) extends sc.Seq[JValue] with JCompound {
   override def findLast(p: JValue => Boolean) = elems.findLast(p)
   override def flatMap[B](f: JValue => IterableOnce[B]) = elems.flatMap(f)
   final def flatMap(f: JValue => IterableOnce[JValue]) = new JArray(elems.flatMap(f))
-  override def flatten[B](implicit asIterable: JValue => IterableOnce[B]) = elems.flatten
-  final def flatten[B](implicit asIterable: JValue => IterableOnce[JValue]) = new JArray(elems.flatten)
+  override def flatten[B](using asIterable: JValue => IterableOnce[B]) = elems.flatten
+  final def flatten[B](using asIterable: JValue => IterableOnce[JValue]) = new JArray(elems.flatten)
   override def fold[A >: JValue](z: A)(op: (A, A) => A) = elems.fold(z)(op)
   override def foldLeft[B](z: B)(op: (B, JValue) => B) = elems.foldLeft(z)(op)
   override def foldRight[B](z: B)(op: (JValue, B) => B) = elems.foldRight(z)(op)
@@ -596,7 +585,7 @@ case class JArray(elems: sc.Seq[JValue]) extends sc.Seq[JValue] with JCompound {
     (new JArray(a), new JArray(b))
   }
   override def startsWith[B >: JValue](that: IterableOnce[B], offset: Int = 0) = elems.startsWith(that)
-  override def stepper[S <: sc.Stepper[_]](implicit shape: sc.StepperShape[JValue, S]) = elems.stepper[S]
+  override def stepper[S <: sc.Stepper[_]](using shape: sc.StepperShape[JValue, S]) = elems.stepper[S]
   override def sum[B >: JValue : math.Numeric] = elems.sum[B]
   override def tail = new JArray(elems.tail)
   override def tails = elems.tails.map(JArray)
@@ -608,15 +597,15 @@ case class JArray(elems: sc.Seq[JValue]) extends sc.Seq[JValue] with JCompound {
   override def toArray[B >: JValue : ClassTag] = elems.toArray[B]
   override def toIndexedSeq = elems.toIndexedSeq
   override def toList = elems.toList
-  override def toMap[K, V](implicit ev: <:<[JValue, (K, V)]) = elems.toMap
+  override def toMap[K, V](using ev: <:<[JValue, (K, V)]) = elems.toMap
   override def toSeq = elems.toSeq
   override def toSet[B >: JValue] = elems.toSet[B]
   override def toVector = elems.toVector
   // transpose also does not have a JArray-producing override deliberately
-  override def transpose[B](implicit asIterable: JValue => Iterable[B]) = elems.transpose[B]
+  override def transpose[B](using asIterable: JValue => Iterable[B]) = elems.transpose[B]
   override def unapply(a: Int) = elems.unapply(a)
-  override def unzip[A1, A2](implicit asPair: JValue => (A1, A2)) = elems.unzip[A1, A2]
-  override def unzip3[A1, A2, A3](implicit asPair: JValue => (A1, A2, A3)) = elems.unzip3[A1, A2, A3]
+  override def unzip[A1, A2](using asPair: JValue => (A1, A2)) = elems.unzip[A1, A2]
+  override def unzip3[A1, A2, A3](using asPair: JValue => (A1, A2, A3)) = elems.unzip3[A1, A2, A3]
   override def updated[B >: JValue](index: Int, elem: B) = elems.updated(index, elem)
   final def updated(index: Int, elem: JValue) = new JArray(elems.updated(index, elem))
   override def view = elems.view
@@ -649,8 +638,8 @@ object JArray extends scala.runtime.AbstractFunction1[sc.Seq[JValue], JArray] wi
       case other => new JArray(other)
     }
 
-  override final val toString = "array"
-  implicit object Concrete extends Json[JArray] {
+  override final val jsonName = "array"
+  given Concrete: Json[JArray] with {
     val jsonTypes = Set[JsonType](JArray)
   }
 
@@ -664,7 +653,7 @@ object JArray extends scala.runtime.AbstractFunction1[sc.Seq[JValue], JArray] wi
   override def fromSpecific(it: IterableOnce[JValue]) = JArray(it.iterator.to(Vector))
   override def newBuilder: sc.mutable.Builder[JValue, JArray] = new JArrayBuilder
 
-  implicit def jarrayFactory[A <: JValue]: sc.Factory[A, JArray] = this
+  given jarrayFactory[A <: JValue]: sc.Factory[A, JArray] = this
 }
 
 /** A JSON object, which is a `scala.collection.Map` from `String` to [[com.rojoma.json.v3.ast.JValue]]. */
@@ -709,7 +698,7 @@ case class JObject(val fields: sc.Map[String, JValue]) extends sc.Map[String, JV
   override def flatMap[K2, V2](f: ((String, JValue)) => IterableOnce[(K2, V2)]) = fields.flatMap(f)
   final def flatMap(f: ((String, JValue)) => IterableOnce[(String, JValue)]) = new JObject(fields.flatMap(f))
   override def flatMap[B](f: ((String, JValue)) => IterableOnce[B]) = fields.flatMap(f)
-  override def flatten[B](implicit asIterable: ((String, JValue)) => IterableOnce[B]) = fields.flatten[B]
+  override def flatten[B](using asIterable: ((String, JValue)) => IterableOnce[B]) = fields.flatten[B]
   override def fold[A >: (String, JValue)](z: A)(op: (A, A) => A) = fields.fold(z)(op)
   override def foldLeft[B](z: B)(op: (B, (String, JValue)) => B) = fields.foldLeft(z)(op)
   override def foldRight[B](z: B)(op: ((String, JValue), B) => B) = fields.foldRight(z)(op)
@@ -731,7 +720,7 @@ case class JObject(val fields: sc.Map[String, JValue]) extends sc.Map[String, JV
   override def isTraversableAgain = fields.isTraversableAgain
   override def iterableFactory = fields.iterableFactory
   override def keySet = fields.keySet
-  override def keyStepper[S <: sc.Stepper[_]](implicit shape: sc.StepperShape[String, S]) = fields.keyStepper[S]
+  override def keyStepper[S <: sc.Stepper[_]](using shape: sc.StepperShape[String, S]) = fields.keyStepper[S]
   override def keys = fields.keys
   override def keysIterator = fields.keysIterator
   override def knownSize = fields.size
@@ -782,7 +771,7 @@ case class JObject(val fields: sc.Map[String, JValue]) extends sc.Map[String, JV
     val (a, b) = fields.splitAt(n)
     (new JObject(a), new JObject(b))
   }
-  override def stepper[S <: sc.Stepper[_]](implicit shape: sc.StepperShape[(String, JValue), S]) = fields.stepper[S]
+  override def stepper[S <: sc.Stepper[_]](using shape: sc.StepperShape[(String, JValue), S]) = fields.stepper[S]
   override def sum[B >: (String, JValue) : Numeric] = fields.sum[B]
   override def tail = new JObject(fields.tail)
   override def tails = fields.tails.map(JObject)
@@ -794,15 +783,15 @@ case class JObject(val fields: sc.Map[String, JValue]) extends sc.Map[String, JV
   override def toArray[B >: (String, JValue) : ClassTag] = fields.toArray[B]
   override def toIndexedSeq = fields.toIndexedSeq
   override def toList = fields.toList
-  override def toMap[K, V](implicit ev: <:<[(String, JValue), (K, V)]) = fields.toMap
+  override def toMap[K, V](using ev: <:<[(String, JValue), (K, V)]) = fields.toMap
   override def toSeq = fields.toSeq
   override def toSet[B >: (String, JValue)] = fields.toSet
   override def toVector = fields.toVector
-  override def transpose[B](implicit asIterable: ((String, JValue)) => Iterable[B]) = fields.transpose[B]
+  override def transpose[B](using asIterable: ((String, JValue)) => Iterable[B]) = fields.transpose[B]
   override def unapply(a: String) = fields.unapply(a)
-  override def unzip[A1, A2](implicit asPair: ((String, JValue)) => ((A1, A2))) = fields.unzip[A1, A2]
-  override def unzip3[A1, A2, A3](implicit asPair: ((String, JValue)) => ((A1, A2, A3))) = fields.unzip3[A1, A2, A3]
-  override def valueStepper[S <: sc.Stepper[_]](implicit shape: sc.StepperShape[JValue, S]) = fields.valueStepper[S]
+  override def unzip[A1, A2](using asPair: ((String, JValue)) => ((A1, A2))) = fields.unzip[A1, A2]
+  override def unzip3[A1, A2, A3](using asPair: ((String, JValue)) => ((A1, A2, A3))) = fields.unzip3[A1, A2, A3]
+  override def valueStepper[S <: sc.Stepper[_]](using shape: sc.StepperShape[JValue, S]) = fields.valueStepper[S]
   override def values = fields.values
   override def valuesIterator = fields.valuesIterator
   override def view = fields.view
@@ -825,8 +814,8 @@ object JObject extends scala.runtime.AbstractFunction1[sc.Map[String, JValue], J
     override def forced = this
   }
   val canonicalEmpty = empty
-  override final val toString = "object"
-  implicit object Concrete extends Json[JObject] {
+  override final val jsonName = "object"
+  given Concrete: Json[JObject] with {
     val jsonTypes = Set[JsonType](JObject)
   }
 
@@ -846,5 +835,5 @@ object JObject extends scala.runtime.AbstractFunction1[sc.Map[String, JValue], J
   override def fromSpecific(it: IterableOnce[(String, JValue)]) = JObject(it.iterator.to(SeqMap))
   override def newBuilder: sc.mutable.Builder[(String, JValue), JObject] = new JObjectBuilder
 
-  implicit def jobjectFactory[A <: JValue]: sc.Factory[(String, A), JObject] = this
+  given jobjectFactory[A <: JValue]: sc.Factory[(String, A), JObject] = this
 }

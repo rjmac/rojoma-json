@@ -2,23 +2,25 @@ package com.rojoma.json.v3
 package codec
 
 import scala.jdk.CollectionConverters._
+import scala.language.implicitConversions
 
+import testsupport.ArbitraryJValue.given
 import ast._
 import interpolation._
 
-import org.scalatest.FunSuite
-import org.scalatest.MustMatchers
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.Checkers
 
 import org.scalacheck.Prop._
 import org.scalacheck.Arbitrary
 
-class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
+class JsonCodecTests extends AnyFunSuite with Checkers with Matchers {
   import JsonEncode.toJValue
   import JsonDecode.fromJValue
 
   def doCheck[T : Arbitrary : JsonEncode : JsonDecode](): Unit = {
-    check(forAll { x: T =>
+    check(forAll { (x: T) =>
       fromJValue[T](toJValue(x)) == Right(x)
     })
   }
@@ -64,8 +66,6 @@ class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
   }
 
   locally {
-    import testsupport.ArbitraryJValue._
-    import ast._
     test("jvalue roundtrips") { doCheck[JValue]() }
     locally {
       test("jatom roundtrips") { doCheck[JAtom]() }
@@ -88,7 +88,7 @@ class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
   }
 
   test("array roundtrips") {
-    check(forAll { x: Array[String] =>
+    check(forAll { (x: Array[String]) =>
       // YAY JAVA
       java.util.Arrays.equals(fromJValue[Array[String]](toJValue(x)).getOrElse(fail("ack")).asInstanceOf[Array[Object]], x.asInstanceOf[Array[Object]])
     })
@@ -96,7 +96,7 @@ class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
 
   test("java.util.List roundtrips") {
     import java.{util => ju}
-    implicit def arbitraryJUList[T : Arbitrary] = Arbitrary {
+    given arbitraryJUList[T : Arbitrary]: Arbitrary[ju.List[T]] = Arbitrary {
       import Arbitrary.arbitrary
       for(xs <- arbitrary[List[T]]) yield new ju.ArrayList(xs.asJava) : ju.List[T]
     }
@@ -109,7 +109,7 @@ class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
 
   test("java.util.Map roundtrips") {
     import java.{util => ju}
-    implicit def arbitraryJUMap[T : Arbitrary, U : Arbitrary] = Arbitrary {
+    given arbitraryJUMap[T : Arbitrary, U : Arbitrary]: Arbitrary[ju.Map[T, U]] = Arbitrary {
       import Arbitrary.arbitrary
       for(xs <- arbitrary[Map[T, U]]) yield {
         val juMap: ju.Map[T, U] = new java.util.HashMap
@@ -120,23 +120,23 @@ class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
     doCheck[ju.Map[String, String]]()
   }
 
+  object X1 extends Enumeration { // sadness: in scala 3, calling withName on a function-local class blows up at runtime
+    val a, b, c = Value
+    val d = Value("haha")
+  }
   test("scala enum roundtrips") {
-    object X extends Enumeration {
-      val a, b, c = Value
-      val d = Value("haha")
-    }
-    val codec = JsonCodec.scalaEnumCodec(X)
-    codec.encode(X.a) must equal (JString("a"))
-    codec.decode(JString("b")) must equal (Right(X.b))
-    codec.encode(X.d) must equal (JString("haha"))
-    codec.decode(JString("haha")) must equal (Right(X.d))
+    val codec = JsonCodec.scalaEnumCodec(X1)
+    codec.encode(X1.a) must equal (JString("a"))
+    codec.decode(JString("b")) must equal (Right(X1.b))
+    codec.encode(X1.d) must equal (JString("haha"))
+    codec.decode(JString("haha")) must equal (Right(X1.d))
   }
 
+  object X2 extends Enumeration {
+    val a, b, c = Value
+  }
   test("scala enum codec disallows invalid values") {
-    object X extends Enumeration {
-      val a, b, c = Value
-    }
-    val codec = JsonCodec.scalaEnumCodec(X)
+    val codec = JsonCodec.scalaEnumCodec(X2)
     codec.decode(JString("q")) must equal (Left(DecodeError.InvalidValue(JString("q"), Path())))
   }
 

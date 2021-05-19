@@ -45,25 +45,25 @@ object JArrayProducer {
   case class ParserError(err: JsonEventGenerator.AnyError) extends Error with EndError
   case class UnexpectedEndOfInput(finalValue: Option[JValue], endPosition: Position) extends EndError
 
-  class Builder private (lexer: JsonTokenGenerator, afterStartOfList: Boolean, fieldCache: FieldCache) {
+  class Builder private (lexer: JsonTokenGenerator, afterStartOfList_ : Boolean, fieldCache: FieldCache) {
     def this() = this(null, false, null)
 
     private def copy(
       lexer: JsonTokenGenerator = this.lexer,
-      afterStartOfList: Boolean = this.afterStartOfList,
+      afterStartOfList_ : Boolean = this.afterStartOfList_ ,
       fieldCache: FieldCache = this.fieldCache
     ): Builder =
-      new Builder(lexer, afterStartOfList, fieldCache)
+      new Builder(lexer, afterStartOfList_ , fieldCache)
 
     def withLexer(lexer: JsonTokenGenerator) = copy(lexer = lexer)
-    def afterStartOfList = copy(afterStartOfList = true)
+    def afterStartOfList = copy(afterStartOfList_ = true)
     def withFieldCache(fieldCache: FieldCache) = copy(fieldCache = fieldCache)
 
     def build = {
       val trueLexer = if(lexer == null) JsonTokenGenerator.newGenerator else lexer
       val trueFieldCache = if(fieldCache == null) IdentityFieldCache else fieldCache
 
-      if(afterStartOfList) new AwaitingDatumOrEndOfList(trueLexer, trueFieldCache)
+      if(afterStartOfList_) new AwaitingDatumOrEndOfList(trueLexer, trueFieldCache)
       else new AwaitingStartOfList(trueLexer, trueFieldCache)
     }
   }

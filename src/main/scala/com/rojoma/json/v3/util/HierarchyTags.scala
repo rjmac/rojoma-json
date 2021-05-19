@@ -14,16 +14,16 @@ sealed abstract class TagType
  * case class SubclassA(name: String) extends Base
  * case class SubclassB(x: Int, y: Int) extends Base
  *
- * implicit val aCodec = SimpleJsonCodecBuilder[SubclassA].build("name", _.name)
- * implicit val bCodec = SimpleJsonCodecBuilder[SubclassB].build("x", _.x, "y", _.y)
+ * given JsonEncode[SubclassA] = SimpleJsonEncodeBuilder[SubclassA].build("name", _.name)
+ * given JsonEncode[SubclassB] = SimpleJsonEncodeBuilder[SubclassB].build("x", _.x, "y", _.y)
  *
- * val baseCodec = SimpleHierarchyCodecBuilder[Base](InternalTag("type")).
+ * val baseEncode = SimpleHierarchyEncodeBuilder[Base](InternalTag("type")).
  *    branch[SubclassA]("a").
  *    branch[SubclassB]("b").
  *    build
  *
- * println(baseCodec.encode(SubclassA("John"))) // { "type" : "a", "name" : "John" }
- * println(baseCodec.encode(SubclassB(1, 2))) // { "type" : "b", "x" : 1, "y" : 2 }
+ * println(baseEncode.encode(SubclassA("John"))) // { "type" : "a", "name" : "John" }
+ * println(baseEncode.encode(SubclassB(1, 2))) // { "type" : "b", "x" : 1, "y" : 2 }
  * }}}
  */
 case class InternalTag(fieldName: String, removeTagForSubcodec: Boolean = true) extends TagType
@@ -37,16 +37,16 @@ case class InternalTag(fieldName: String, removeTagForSubcodec: Boolean = true) 
  * case class SubclassA(name: String) extends Base
  * case class SubclassB(x: Int, y: Int) extends Base
  *
- * implicit val aCodec = SimpleJsonCodecBuilder[SubclassA].build("name", _.name)
- * implicit val bCodec = SimpleJsonCodecBuilder[SubclassB].build("x", _.x, "y", _.y)
+ * given JsonEncode[SubclassA] = SimpleJsonEncodeBuilder[SubclassA].build("name", _.name)
+ * given JsonEncode[SubclassB] = SimpleJsonEncodeBuilder[SubclassB].build("x", _.x, "y", _.y)
  *
- * val baseCodec = SimpleHierarchyCodecBuilder[Base](TagToValue).
+ * val baseEncode = SimpleHierarchyEncodeBuilder[Base](TagToValue).
  *    branch[SubclassA]("a").
  *    branch[SubclassB]("b").
  *    build
  *
- * println(baseCodec.encode(SubclassA("John"))) // { "a" : { "name" : "John" } }
- * println(baseCodec.encode(SubclassB(1, 2))) // { "b" : { "x" : 1, "y" : 2 } }
+ * println(baseEncode.encode(SubclassA("John"))) // { "a" : { "name" : "John" } }
+ * println(baseEncode.encode(SubclassB(1, 2))) // { "b" : { "x" : 1, "y" : 2 } }
  * }}}
  */
 case object TagToValue extends TagType
@@ -61,16 +61,16 @@ case object TagToValue extends TagType
  * case class SubclassA(name: String) extends Base
  * case class SubclassB(x: Int, y: Int) extends Base
  *
- * implicit val aCodec = SimpleJsonCodecBuilder[SubclassA].build("name", _.name)
- * implicit val bCodec = SimpleJsonCodecBuilder[SubclassB].build("x", _.x, "y", _.y)
+ * given JsonEncode[SubclassA] = SimpleJsonEncodeBuilder[SubclassA].build("name", _.name)
+ * given JsonEncode[SubclassB] = SimpleJsonEncodeBuilder[SubclassB].build("x", _.x, "y", _.y)
  *
- * val baseCodec = SimpleHierarchyCodecBuilder[Base](TagAndValue("type", "value")).
+ * val baseEncode = SimpleHierarchyEncodeBuilder[Base](TagAndValue("type", "value")).
  *    branch[SubclassA]("a").
  *    branch[SubclassB]("b").
  *    build
  *
- * println(baseCodec.encode(SubclassA("John"))) // { "type" : "a", "value" : { "name" : "John" } }
- * println(baseCodec.encode(SubclassB(1, 2))) // { "type" : "b", "value" : { "x" : 1, "y" : 2 } }
+ * println(baseEncode.encode(SubclassA("John"))) // { "type" : "a", "value" : { "name" : "John" } }
+ * println(baseEncode.encode(SubclassB(1, 2))) // { "type" : "b", "value" : { "x" : 1, "y" : 2 } }
  * }}}
  */
 case class TagAndValue(typeField: String, valueField: String) extends TagType {
@@ -87,16 +87,16 @@ case class TagAndValue(typeField: String, valueField: String) extends TagType {
  * case class SubclassA(name: String) extends Base
  * case class SubclassB(x: Int, y: Int) extends Base
  *
- * implicit val aCodec = SimpleJsonCodecBuilder[SubclassA].build("name", _.name)
- * implicit val bCodec = SimpleJsonCodecBuilder[SubclassB].build("x", _.x, "y", _.y)
+ * given JsonEncode[SubclassA] = SimpleJsonEncodeBuilder[SubclassA].build("name", _.name)
+ * given JsonEncode[SubclassB] = SimpleJsonEncodeBuilder[SubclassB].build("x", _.x, "y", _.y)
  *
- * val baseCodec = SimpleHierarchyCodecBuilder[Base](NoTag).
+ * val baseEncode = SimpleHierarchyEncodeBuilder[Base](NoTag).
  *    branch[SubclassA].
  *    branch[SubclassB].
  *    build
  *
- * println(baseCodec.encode(SubclassA("John"))) // { "name" : "John" }
- * println(baseCodec.encode(SubclassB(1, 2))) // { "x" : 1, "y" : 2 }
+ * println(baseEncode.encode(SubclassA("John"))) // { "name" : "John" }
+ * println(baseEncode.encode(SubclassB(1, 2))) // { "x" : 1, "y" : 2 }
  * }}}
  *
  * @see [[com.rojoma.json.v3.util.TagType]]

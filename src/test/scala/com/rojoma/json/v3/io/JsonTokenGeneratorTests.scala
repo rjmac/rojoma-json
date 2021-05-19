@@ -3,11 +3,12 @@ package io
 
 import ast._
 import codec.JsonEncode
-import testsupport.ArbitraryJValue._
+import testsupport.ArbitraryJValue.given
 import util.JsonUtil.renderJson
 import util.WrappedCharArray
 
-import org.scalatest.{FunSuite, MustMatchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import org.scalacheck.{Gen, Arbitrary}
@@ -17,7 +18,7 @@ import scala.collection.mutable.ListBuffer
 import JsonTokenGeneratorTests._
 import Tokens._
 
-class JsonTokenGeneratorTests extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
+class JsonTokenGeneratorTests extends AnyFunSuite with Matchers with ScalaCheckPropertyChecks {
   def arbTest[T <: JValue : Arbitrary : JsonEncode]: Unit = {
     forAll(splittableJson[T]) { case (x, whitespace, positions) =>
       val asString = renderJson(x, pretty = whitespace)
@@ -165,8 +166,11 @@ object JsonTokenGeneratorTests {
   }
 
   def splitAt(text: String, positions: List[Int]): List[String] =
-    (List(0) ++ positions.sorted ++ List(text.length)).sliding(2).map { case Seq(a,b) =>
-      text.substring(a, b)
+    (List(0) ++ positions.sorted ++ List(text.length)).sliding(2).map {
+      case Seq(a,b) =>
+        text.substring(a, b)
+      case _ =>
+       throw new Exception("Unexpected not-length-2 window")
     }.toList
 
   def splittableJson[T <: JValue : Arbitrary : JsonEncode] = for {

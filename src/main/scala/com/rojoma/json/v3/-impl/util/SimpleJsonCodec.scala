@@ -5,9 +5,9 @@ import codec._
 
 sealed abstract class JsonCodecOrOption[T]
 object JsonCodecOrOption {
-  implicit def jcVersion[T: JsonEncode: JsonDecode]: JsonCodecOrOption[T] =
+  given jcVersion[T: JsonEncode: JsonDecode]: JsonCodecOrOption[T] =
     JsonCodecVersion[T](JsonEncode[T], JsonDecode[T])
-  implicit def oVersion[T: JsonEncode: JsonDecode]: JsonCodecOrOption[Option[T]] =
+  given oVersion[T: JsonEncode: JsonDecode]: JsonCodecOrOption[Option[T]] =
     OptionVersion[T](JsonEncode[T], JsonDecode[T])
 }
 case class JsonCodecVersion[T](enc: JsonEncode[T], dec: JsonDecode[T]) extends JsonCodecOrOption[T] {

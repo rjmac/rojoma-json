@@ -1,7 +1,10 @@
 package com.rojoma.json.v3
 package util
 
-import org.scalatest.{FunSuite, MustMatchers}
+import scala.language.implicitConversions
+
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 
 import ast._
 import io._
@@ -11,9 +14,9 @@ object SimpleHierarchyCodecBuilderTests {
   // A simple hierarchy
   sealed abstract class Base
   case class A(x: String) extends Base
-  implicit val aCodec = AutomaticJsonCodecBuilder[A]
+  given aCodec: (JsonEncode[A] with JsonDecode[A]) = SimpleJsonCodecBuilder[A].build("x", _.x)
   case class B(x: Int) extends Base
-  implicit val bCodec = AutomaticJsonCodecBuilder[B]
+  given bCodec: (JsonEncode[B] with JsonDecode[B]) = SimpleJsonCodecBuilder[B].build("x", _.x)
 
   def baseCodec(typeTag: TagType) =
     SimpleHierarchyCodecBuilder[Base](typeTag).
@@ -30,7 +33,7 @@ object SimpleHierarchyCodecBuilderTests {
   def j(s: String) = JsonReader.fromString(s)
 }
 
-class SimpleHierarchyCodecBuilderTests extends FunSuite with MustMatchers {
+class SimpleHierarchyCodecBuilderTests extends AnyFunSuite with Matchers {
   import SimpleHierarchyCodecBuilderTests._
 
   test("Can encode a simple hierarchy with the tag-and-value type") {

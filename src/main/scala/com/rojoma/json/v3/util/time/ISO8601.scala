@@ -29,7 +29,7 @@ package ISO8601 {
       }
     }
 
-    implicit object dateCodec extends JsonEncode[Date] with JsonDecode[Date] {
+    given dateCodec: JsonEncode[Date] with JsonDecode[Date] with {
       def encode(x: Date) = instantCodec.encode(x.toInstant)
 
       def decode(x: JValue) = instantCodec.decode(x).flatMap { instant =>
@@ -42,7 +42,7 @@ package ISO8601 {
       }
     }
 
-    implicit object instantCodec extends JsonEncode[Instant] with JsonDecode[Instant] {
+    given instantCodec: JsonEncode[Instant] with JsonDecode[Instant] with {
       private val fixupPattern = offsetDateTimeFixupPattern
 
       def encode(x: Instant) =
@@ -62,7 +62,7 @@ package ISO8601 {
         }
     }
 
-    implicit object offsetDateTimeCodec extends JsonEncode[OffsetDateTime] with JsonDecode[OffsetDateTime] {
+    given offsetDateTimeCodec: JsonEncode[OffsetDateTime] with JsonDecode[OffsetDateTime] with {
       private val fixupPattern = offsetDateTimeFixupPattern
 
       def encode(x: OffsetDateTime) =
@@ -82,7 +82,7 @@ package ISO8601 {
         }
     }
 
-    implicit object offsetTimeCodec extends JsonEncode[OffsetTime] with JsonDecode[OffsetTime] {
+    given offsetTimeCodec: JsonEncode[OffsetTime] with JsonDecode[OffsetTime] with {
       def encode(x: OffsetTime) =
         JString(DateTimeFormatter.ISO_OFFSET_TIME.format(x))
 
@@ -102,7 +102,7 @@ package ISO8601 {
         }
     }
 
-    implicit object zoneOffsetCodec extends JsonEncode[ZoneOffset] with JsonDecode[ZoneOffset] {
+    given zoneOffsetCodec: JsonEncode[ZoneOffset] with JsonDecode[ZoneOffset] with {
       def encode(x: ZoneOffset) = JString(x.toString)
 
       private val fixupPattern = Pattern.compile("^([+-])([0-9]{2}(?:[0-9]{2})?)$")
@@ -121,7 +121,7 @@ package ISO8601 {
         }
     }
 
-    implicit object localDateTimeCodec extends JsonEncode[LocalDateTime] with JsonDecode[LocalDateTime] {
+    given localDateTimeCodec: JsonEncode[LocalDateTime] with JsonDecode[LocalDateTime] with {
       def encode(x: LocalDateTime) =
         JString(DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(x))
 
@@ -139,7 +139,7 @@ package ISO8601 {
         }
     }
 
-    implicit object localDateCodec extends JsonEncode[LocalDate] with JsonDecode[LocalDate] {
+    given localDateCodec: JsonEncode[LocalDate] with JsonDecode[LocalDate] with {
       def encode(x: LocalDate) =
         JString(DateTimeFormatter.ISO_LOCAL_DATE.format(x))
 
@@ -157,7 +157,7 @@ package ISO8601 {
         }
     }
 
-    implicit object localTimeCodec extends JsonEncode[LocalTime] with JsonDecode[LocalTime] {
+    given localTimeCodec: JsonEncode[LocalTime] with JsonDecode[LocalTime] with {
       def encode(x: LocalTime) =
         JString(DateTimeFormatter.ISO_LOCAL_TIME.format(x))
 
@@ -175,7 +175,7 @@ package ISO8601 {
         }
     }
 
-    implicit object yearMonthCodec extends JsonEncode[YearMonth] with JsonDecode[YearMonth] {
+    given yearMonthCodec: JsonEncode[YearMonth] with JsonDecode[YearMonth] with {
       def encode(x: YearMonth) = {
         val s = x.toString
         if(x.getYear > 9999 && s.charAt(0) != '+') JString("+" + s)
@@ -196,7 +196,7 @@ package ISO8601 {
         }
     }
 
-    implicit object monthDayCodec extends JsonEncode[MonthDay] with JsonDecode[MonthDay] {
+    given monthDayCodec: JsonEncode[MonthDay] with JsonDecode[MonthDay] with {
       def encode(x: MonthDay) = JString(x.toString)
 
       def decode(x: JValue) =
@@ -213,7 +213,7 @@ package ISO8601 {
         }
     }
 
-    implicit object durationCodec extends JsonEncode[Duration] with JsonDecode[Duration] {
+    given durationCodec: JsonEncode[Duration] with JsonDecode[Duration] with {
       // Due to a bug in Java 8 (https://bugs.openjdk.java.net/browse/JDK-8054978) this
       // actually doesn't work quite properly!
       val jdkDurationBug = Duration.parse("PT-0.5S").toString == "PT0.5S"
@@ -265,7 +265,7 @@ package ISO8601 {
       }
     }
 
-    implicit object periodCodec extends JsonEncode[Period] with JsonDecode[Period] {
+    given periodCodec: JsonEncode[Period] with JsonDecode[Period] with {
       def encode(x: Period) = JString(x.toString)
 
       def decode(x: JValue) =
@@ -284,32 +284,32 @@ package ISO8601 {
   }
 
   object encode {
-    implicit val dateEncode : JsonEncode[Date] = codec.dateCodec
-    implicit val instantEncode : JsonEncode[Instant] = codec.instantCodec
-    implicit val offsetDateTimeEncode : JsonEncode[OffsetDateTime] = codec.offsetDateTimeCodec
-    implicit val offsetTimeEncode : JsonEncode[OffsetTime] = codec.offsetTimeCodec
-    implicit val zoneOffsetEncode : JsonEncode[ZoneOffset] = codec.zoneOffsetCodec
-    implicit val localDateTimeEncode : JsonEncode[LocalDateTime] = codec.localDateTimeCodec
-    implicit val localDateEncode : JsonEncode[LocalDate] = codec.localDateCodec
-    implicit val localTimeEncode : JsonEncode[LocalTime] = codec.localTimeCodec
-    implicit val yearMonthEncode : JsonEncode[YearMonth] = codec.yearMonthCodec
-    implicit val monthDayEncode : JsonEncode[MonthDay] = codec.monthDayCodec
-    implicit val durationEncode : JsonEncode[Duration] = codec.durationCodec
-    implicit val periodEncode : JsonEncode[Period] = codec.periodCodec
+    given dateEncode : JsonEncode[Date] = codec.dateCodec
+    given instantEncode : JsonEncode[Instant] = codec.instantCodec
+    given offsetDateTimeEncode : JsonEncode[OffsetDateTime] = codec.offsetDateTimeCodec
+    given offsetTimeEncode : JsonEncode[OffsetTime] = codec.offsetTimeCodec
+    given zoneOffsetEncode : JsonEncode[ZoneOffset] = codec.zoneOffsetCodec
+    given localDateTimeEncode : JsonEncode[LocalDateTime] = codec.localDateTimeCodec
+    given localDateEncode : JsonEncode[LocalDate] = codec.localDateCodec
+    given localTimeEncode : JsonEncode[LocalTime] = codec.localTimeCodec
+    given yearMonthEncode : JsonEncode[YearMonth] = codec.yearMonthCodec
+    given monthDayEncode : JsonEncode[MonthDay] = codec.monthDayCodec
+    given durationEncode : JsonEncode[Duration] = codec.durationCodec
+    given periodEncode : JsonEncode[Period] = codec.periodCodec
   }
 
   object decode {
-    implicit val dateDecode : JsonDecode[Date] = codec.dateCodec
-    implicit val instantDecode : JsonDecode[Instant] = codec.instantCodec
-    implicit val offsetDateTimeDecode : JsonDecode[OffsetDateTime] = codec.offsetDateTimeCodec
-    implicit val offsetTimeDecode : JsonDecode[OffsetTime] = codec.offsetTimeCodec
-    implicit val zoneOffsetDecode : JsonDecode[ZoneOffset] = codec.zoneOffsetCodec
-    implicit val localDateTimeDecode : JsonDecode[LocalDateTime] = codec.localDateTimeCodec
-    implicit val localDateDecode : JsonDecode[LocalDate] = codec.localDateCodec
-    implicit val localTimeDecode : JsonDecode[LocalTime] = codec.localTimeCodec
-    implicit val yearMonthDecode : JsonDecode[YearMonth] = codec.yearMonthCodec
-    implicit val monthDayDecode : JsonDecode[MonthDay] = codec.monthDayCodec
-    implicit val durationDecode : JsonDecode[Duration] = codec.durationCodec
-    implicit val periodDecode : JsonDecode[Period] = codec.periodCodec
+    given dateDecode : JsonDecode[Date] = codec.dateCodec
+    given instantDecode : JsonDecode[Instant] = codec.instantCodec
+    given offsetDateTimeDecode : JsonDecode[OffsetDateTime] = codec.offsetDateTimeCodec
+    given offsetTimeDecode : JsonDecode[OffsetTime] = codec.offsetTimeCodec
+    given zoneOffsetDecode : JsonDecode[ZoneOffset] = codec.zoneOffsetCodec
+    given localDateTimeDecode : JsonDecode[LocalDateTime] = codec.localDateTimeCodec
+    given localDateDecode : JsonDecode[LocalDate] = codec.localDateCodec
+    given localTimeDecode : JsonDecode[LocalTime] = codec.localTimeCodec
+    given yearMonthDecode : JsonDecode[YearMonth] = codec.yearMonthCodec
+    given monthDayDecode : JsonDecode[MonthDay] = codec.monthDayCodec
+    given durationDecode : JsonDecode[Duration] = codec.durationCodec
+    given periodDecode : JsonDecode[Period] = codec.periodCodec
   }
 }

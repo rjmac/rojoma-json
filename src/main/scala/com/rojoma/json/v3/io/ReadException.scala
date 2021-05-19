@@ -1,7 +1,10 @@
 package com.rojoma.json.v3
 package io
 
+import scala.language.implicitConversions
+
 import ast._
+import codec.{JsonEncode, JsonDecode, Path, DecodeError}
 
 private[io] object pos {
   def apply(position: Position, restOfMessage: String, restOfMessageArgs: Any*) = {
@@ -52,12 +55,11 @@ class JsonBadParse(val event: JsonEvent) extends JsonReaderException(pos(event.p
 // use-case I see for them is reporting errors to user code.
 
 object JsonLexException {
-  implicit val jCodec = locally {
+  given jCodec: (JsonEncode[JsonLexException] with JsonDecode[JsonLexException]) = locally {
     import matcher._
-    import codec._
     import util._
 
-    implicit val characterCodec = new JsonEncode[Char] with JsonDecode[Char] {
+    given characterCodec: JsonEncode[Char] with JsonDecode[Char] with {
       def encode(c: Char) = JString(c.toString)
       def decode(x: JValue) = x match {
         case js@JString(s) =>
@@ -68,7 +70,7 @@ object JsonLexException {
       }
     }
 
-    implicit val unexpectedCharacterCodec = new JsonEncode[JsonUnexpectedCharacter] with JsonDecode[JsonUnexpectedCharacter] {
+    given unexpectedCharacterCodec: JsonEncode[JsonUnexpectedCharacter] with JsonDecode[JsonUnexpectedCharacter] with {
       private val character = Variable[Char]()
       private val expected = Variable[String]()
       private val position = Variable[Position]()
@@ -89,7 +91,7 @@ object JsonLexException {
       }
     }
 
-    implicit val numberOutOfRangeCodec = new JsonEncode[JsonNumberOutOfRange] with JsonDecode[JsonNumberOutOfRange] {
+    given numberOutOfRangeCodec: JsonEncode[JsonNumberOutOfRange] with JsonDecode[JsonNumberOutOfRange] with {
       private val number = Variable[String]()
       private val position = Variable[Position]()
       private val pattern = PObject(
@@ -107,7 +109,7 @@ object JsonLexException {
       }
     }
 
-    implicit val lexerEofCodec = new JsonEncode[JsonLexerEOF] with JsonDecode[JsonLexerEOF] {
+    given lexerEofCodec: JsonEncode[JsonLexerEOF] with JsonDecode[JsonLexerEOF] with {
       private val position = Variable[Position]()
       private val pattern = PObject(
         "phase" -> "lexer",
@@ -132,12 +134,11 @@ object JsonLexException {
 }
 
 object JsonParseException {
-  implicit val jCodec = locally {
+  given jCodec : (JsonEncode[JsonParseException] with JsonDecode[JsonParseException]) = locally {
     import matcher._
-    import codec._
     import util._
 
-    implicit val unexpectedTokenCodec = new JsonEncode[JsonUnexpectedToken] with JsonDecode[JsonUnexpectedToken] {
+    given unexpectedTokenCodec: JsonEncode[JsonUnexpectedToken] with JsonDecode[JsonUnexpectedToken] with {
       private val token = Variable[JsonToken](JsonToken.sansPositionCodec)
       private val expected = Variable[String]()
       private val position = Variable[Position]()
@@ -158,7 +159,7 @@ object JsonParseException {
       }
     }
 
-    implicit val unknownIdentifierCodec = new JsonEncode[JsonUnknownIdentifier] with JsonDecode[JsonUnknownIdentifier] {
+    given unknownIdentifierCodec: JsonEncode[JsonUnknownIdentifier] with JsonDecode[JsonUnknownIdentifier] with {
       private val identifier = Variable[String]()
       private val position = Variable[Position]()
       private val pattern = PObject(
@@ -176,7 +177,7 @@ object JsonParseException {
       }
     }
 
-    implicit val parserEofCodec = new JsonEncode[JsonParserEOF] with JsonDecode[JsonParserEOF] {
+    given parserEofCodec: JsonEncode[JsonParserEOF] with JsonDecode[JsonParserEOF] with {
       private val position = Variable[Position]()
       private val pattern = PObject(
         "phase" -> "parser",
@@ -201,12 +202,11 @@ object JsonParseException {
 }
 
 object JsonReadException {
-  implicit val jCodec = locally {
+  given jCodec: (JsonEncode[JsonReadException] with JsonDecode[JsonReadException]) = locally {
     import matcher._
-    import codec._
     import util._
 
-    implicit val badParseCodec = new JsonEncode[JsonBadParse] with JsonDecode[JsonBadParse] {
+    given badParseCodec: JsonEncode[JsonBadParse] with JsonDecode[JsonBadParse] with {
       private val event = Variable[JsonEvent](JsonEvent.sansPositionCodec)
       private val position = Variable[Position]()
       private val pattern = PObject(
@@ -231,9 +231,7 @@ object JsonReadException {
 }
 
 object JsonReaderException {
-    import codec._
-
-  implicit val jCodec: JsonEncode[JsonReaderException] with JsonDecode[JsonReaderException] = new JsonEncode[JsonReaderException] with JsonDecode[JsonReaderException] {
+  given jCodec: JsonEncode[JsonReaderException] with JsonDecode[JsonReaderException] with {
     private val Type = Path("type")
     private val Phase = Path("phase")
 

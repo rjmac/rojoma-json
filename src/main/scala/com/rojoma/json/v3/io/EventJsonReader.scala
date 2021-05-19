@@ -14,7 +14,7 @@ class EventJsonReader(input: Iterator[JsonEvent]) extends JsonReader {
   def this(reader: Reader, fieldCache: FieldCache) = this(new FusedBlockJsonEventIterator(reader, fieldCache))
   def this(text: String, fieldCache: FieldCache) = this(new java.io.StringReader(text), fieldCache)
 
-  def this(tokens: Iterator[JsonToken])(implicit dummy: com.rojoma.json.v3.`-impl`.StupidErasure = null) = this(tokens, IdentityFieldCache)
+  def this(tokens: Iterator[JsonToken])(using dummy: com.rojoma.json.v3.`-impl`.StupidErasure = null) = this(tokens, IdentityFieldCache)
   def this(reader: Reader) = this(reader, IdentityFieldCache)
   def this(text: String) = this(text, IdentityFieldCache)
 
@@ -62,7 +62,7 @@ class EventJsonReader(input: Iterator[JsonEvent]) extends JsonReader {
     if(atEndOfObject) return JObject.empty
 
     val result = VectorMap.newBuilder[String, JValue]
-    do {
+    while {
       lexer.next() match {
         case FieldEvent(field) =>
           val value = read()
@@ -70,7 +70,9 @@ class EventJsonReader(input: Iterator[JsonEvent]) extends JsonReader {
         case event =>
           throw new JsonBadParse(event)
       }
-    } while(!atEndOfObject)
+
+      !atEndOfObject
+    } do ()
     JObject(result.result())
   }
 
@@ -78,9 +80,11 @@ class EventJsonReader(input: Iterator[JsonEvent]) extends JsonReader {
   private def readArray(): JArray = {
     if(atEndOfArray) return JArray.empty
     val builder = new VectorBuilder[JValue]
-    do {
+    while {
       builder += read()
-    } while(!atEndOfArray)
+
+      !atEndOfArray
+    } do ()
     JArray(builder.result())
   }
 }

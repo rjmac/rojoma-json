@@ -3,12 +3,12 @@ package com.rojoma.json.v3.interpolation
 import java.net.URI
 import java.util.UUID
 
-import org.scalatest.FunSuite
-import org.scalatest.MustMatchers
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 
 import com.rojoma.json.v3.ast._
 
-class InterpolationTests extends FunSuite with MustMatchers {
+class InterpolationTests extends AnyFunSuite with Matchers {
   test("Empty arrays are parsed") {
     json"""[]""" must be theSameInstanceAs (JArray.canonicalEmpty)
   }

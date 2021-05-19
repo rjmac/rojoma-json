@@ -1,16 +1,19 @@
 package com.rojoma.json.v3
 package util
 
+import scala.reflect.ClassTag
+
 import ast._
-import testsupport.ArbitraryJValue._
+import testsupport.ArbitraryJValue.given
 import testsupport.ArbitraryValidString._
 
-import org.scalatest.{FunSuite, MustMatchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import io.JsonTokenGeneratorTests._
 
-class JArrayProducerTest extends FunSuite with MustMatchers with ScalaCheckPropertyChecks {
+class JArrayProducerTest extends AnyFunSuite with Matchers with ScalaCheckPropertyChecks {
   def r(targets: List[JValue], s: List[String]) = {
     def loop(state: JArrayProducer, targets: List[JValue], inputs: List[WrappedCharArray]): String = {
       inputs match {
@@ -50,7 +53,7 @@ class JArrayProducerTest extends FunSuite with MustMatchers with ScalaCheckPrope
     }
   }
 
-  def badRead[T: Manifest](expected: List[JValue], s: String): Unit = {
+  def badRead[T: ClassTag](expected: List[JValue], s: String): Unit = {
     withSplitString(s) { ss =>
       a [T] must be thrownBy { r(expected, ss) }
     }

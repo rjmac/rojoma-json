@@ -11,73 +11,73 @@ trait FieldEncode[T] {
 }
 
 object FieldEncode {
-  def apply[T](implicit ev: FieldEncode[T]) = ev
-  def toField[T](x: T)(implicit ev: FieldEncode[T]) = ev.encode(x)
+  def apply[T](using ev: FieldEncode[T]) = ev
+  def toField[T](x: T)(using ev: FieldEncode[T]) = ev.encode(x)
 
-  implicit object stringEncode extends FieldEncode[String] {
+  given stringEncode: FieldEncode[String] with {
     def encode(x: String) = x
   }
 
-  implicit object boolEncode extends FieldEncode[Boolean] {
+  given boolEncode: FieldEncode[Boolean] with {
     def encode(x: Boolean) = if(x) "true" else "false"
   }
 
-  implicit object byteEncode extends FieldEncode[Byte] {
+  given byteEncode: FieldEncode[Byte] with {
     def encode(x: Byte) = x.toString
   }
 
-  implicit object shortEncode extends FieldEncode[Short] {
+  given shortEncode: FieldEncode[Short] with {
     def encode(x: Short) = x.toString
   }
 
-  implicit object intEncode extends FieldEncode[Int] {
+  given intEncode: FieldEncode[Int] with {
     def encode(x: Int) = x.toString
   }
 
-  implicit object longEncode extends FieldEncode[Long] {
+  given longEncode: FieldEncode[Long] with {
     def encode(x: Long) = x.toString
   }
 
-  implicit object floatEncode extends FieldEncode[Float] {
+  given floatEncode: FieldEncode[Float] with {
     def encode(x: Float) = x.toString
   }
 
-  implicit object doubleEncode extends FieldEncode[Double] {
+  given doubleEncode: FieldEncode[Double] with {
     def encode(x: Double) = x.toString
   }
 
-  implicit object bgintEncode extends FieldEncode[BigInt] {
+  given bgintEncode: FieldEncode[BigInt] with {
     def encode(x: BigInt) = x.toString
   }
 
-  implicit object bigintegerEncode extends FieldEncode[java.math.BigInteger] {
+  given bigintegerEncode: FieldEncode[java.math.BigInteger] with {
     def encode(x: java.math.BigInteger) = x.toString
   }
 
-  implicit object bigdecimalEncode extends FieldEncode[BigDecimal] {
+  given bigdecimalEncode: FieldEncode[BigDecimal] with {
     def encode(x: BigDecimal) = x.toString
   }
 
-  implicit object jbigdecimalEncode extends FieldEncode[java.math.BigDecimal] {
+  given jbigdecimalEncode: FieldEncode[java.math.BigDecimal] with {
     def encode(x: java.math.BigDecimal) = x.toString
   }
 
-  implicit object jstringEncode extends FieldEncode[JString] {
+  given jstringEncode: FieldEncode[JString] with {
     def encode(x: JString) = x.string
   }
 
-  implicit def jlEnumEncode[T <: java.lang.Enum[T]] = new FieldEncode[T] {
+  given jlEnumEncode[T <: java.lang.Enum[T]]: FieldEncode[T] with {
     def encode(x: T) = x.name
   }
 
-  implicit object uuidEncode extends FieldEncode[ju.UUID] {
+  given uuidEncode: FieldEncode[ju.UUID] with {
     def encode(x: ju.UUID) = x.toString
   }
 
-  implicit object uriEncode extends FieldEncode[jn.URI] {
+  given uriEncode: FieldEncode[jn.URI] with {
     def encode(x: jn.URI) = x.toString
   }
 
-  def scalaEnumEncode[T <: Enumeration](enum: T): FieldEncode[enum.Value] =
-    FieldCodec.scalaEnumCodec(enum)
+  def scalaEnumEncode[T <: Enumeration](e: T): FieldEncode[e.Value] =
+    FieldCodec.scalaEnumCodec(e)
 }

@@ -4,12 +4,13 @@ package util
 import ast._
 import codec._
 
-import org.scalatest.{FunSuite, MustMatchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 
 case class Foo(a: Int, b: Option[String])
 
-class SimpleJsonCodecTests extends FunSuite with MustMatchers {
-  implicit val codec = SimpleJsonCodecBuilder[Foo].build("a", _.a, "b", _.b)
+class SimpleJsonCodecTests extends AnyFunSuite with Matchers {
+  given codec: (JsonEncode[Foo] with JsonDecode[Foo]) = SimpleJsonCodecBuilder[Foo].build("a", _.a, "b", _.b)
 
   test("Generated codecs work") {
     JsonEncode.toJValue(Foo(1, Some("one"))) must equal (JObject(Map("a" -> JNumber(1), "b" -> JString("one"))))

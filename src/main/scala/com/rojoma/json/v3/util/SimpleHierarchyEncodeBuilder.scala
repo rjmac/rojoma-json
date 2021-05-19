@@ -10,7 +10,7 @@ import codec._
 import com.rojoma.json.v3.`-impl`.util.ClassAwareMap
 
 class SimpleHierarchyEncodeBuilder[Root <: AnyRef] private[util] (tagType: TagType, subcodecs: Map[String, JsonEncode[_ <: Root]], classes: ClassAwareMap[String]) {
-  def branch[T <: Root](name: String)(implicit enc: JsonEncode[T], mfst: ClassTag[T]) = {
+  def branch[T <: Root](name: String)(using enc: JsonEncode[T], mfst: ClassTag[T]) = {
     val cls = mfst.runtimeClass
     if(subcodecs contains name) throw new IllegalArgumentException("Already defined a encoder for branch " + name)
     if(classes containsExact cls) throw new IllegalArgumentException("Already defined a encoder for class " + cls)
@@ -59,7 +59,7 @@ class SimpleHierarchyEncodeBuilder[Root <: AnyRef] private[util] (tagType: TagTy
 }
 
 class NoTagSimpleHierarchyEncodeBuilder[Root <: AnyRef] private[util] (subcodecs: Seq[(Class[_], JsonEncode[_ <: Root])]) {
-  def branch[T <: Root](implicit enc: JsonEncode[T], mfst: ClassTag[T]) = {
+  def branch[T <: Root](using enc: JsonEncode[T], mfst: ClassTag[T]) = {
     val cls = mfst.runtimeClass
     if(subcodecs.find(_._1 == cls).isDefined) throw new IllegalArgumentException("Already defined a encoder for class " + cls)
     new NoTagSimpleHierarchyEncodeBuilder[Root](subcodecs :+ (cls -> enc))

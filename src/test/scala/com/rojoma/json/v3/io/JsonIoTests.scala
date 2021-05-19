@@ -1,7 +1,8 @@
 package com.rojoma.json.v3
 package io
 
-import org.scalatest.{FunSuite, MustMatchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.Checkers
 
 import org.scalacheck.Prop._
@@ -11,9 +12,9 @@ import ast.JValue
 
 import Tokens._
 
-class JsonIoTests extends FunSuite with Checkers with MustMatchers {
+class JsonIoTests extends AnyFunSuite with Checkers with Matchers {
   test("object -> compact string -> object") {
-    check(forAll { x: JValue =>
+    check(forAll { (x: JValue) =>
       JsonReader(CompactJsonWriter.toString(x)).read() == x
       JsonReader.unbufferedString(CompactJsonWriter.toString(x)).read() == x
       JsonReader.semibufferedString(CompactJsonWriter.toString(x)).read() == x
@@ -21,7 +22,7 @@ class JsonIoTests extends FunSuite with Checkers with MustMatchers {
   }
 
   test("object -> pretty string -> object") {
-    check(forAll { x: JValue =>
+    check(forAll { (x: JValue) =>
       JsonReader(PrettyJsonWriter.toString(x)).read() == x
       JsonReader.unbufferedString(PrettyJsonWriter.toString(x)).read() == x
       JsonReader.semibufferedString(PrettyJsonWriter.toString(x)).read() == x
@@ -29,7 +30,7 @@ class JsonIoTests extends FunSuite with Checkers with MustMatchers {
   }
 
   test("reading leaves the event iterator empty") {
-    check(forAll { x: JValue =>
+    check(forAll { (x: JValue) =>
       val reader = new EventJsonReader(new JsonTokenIterator(new java.io.StringReader(x.toString)))
       reader.read()
       !reader.lexer.hasNext

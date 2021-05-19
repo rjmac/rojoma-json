@@ -33,7 +33,7 @@ private[extensions] class SimpleStringWriter extends StringWriter {
     if(endOfFastPrefix != 0) output.write(s, 0, endOfFastPrefix)
     var i = endOfFastPrefix
     val len = s.length
-    do {
+    while {
       val c = s.charAt(i)
 
       c match {
@@ -54,7 +54,9 @@ private[extensions] class SimpleStringWriter extends StringWriter {
       }
 
       i += 1
-    } while(i != len)
+
+      i != len
+    } do ()
   }
 
   def gallop(s: String, start: Int): Int = {
