@@ -23,6 +23,8 @@ scalacOptions ++= {
   Seq("-deprecation", "-feature", "-Xlint") ++ optimizationOptions
 }
 
+Compile/console/scalacOptions := (Compile/console/scalacOptions).value.filterNot(Set("-Xlint"))
+
 Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 
 libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
