@@ -16,15 +16,15 @@ class NoSuchTokenException(val position: Position) extends NoSuchElementExceptio
   def column: Int = position.column
 }
 
-abstract class JsonReaderException(val message: String) extends Exception(message) {
+sealed abstract class JsonReaderException(val message: String) extends Exception(message) {
   def position: Position
   def row: Int = position.row
   def column: Int = position.column
 }
 
-trait JsonLexException extends JsonReaderException
-trait JsonParseException extends JsonReaderException
-trait JsonReadException extends JsonReaderException
+sealed trait JsonLexException extends JsonReaderException
+sealed trait JsonParseException extends JsonReaderException
+sealed trait JsonReadException extends JsonReaderException
 
 class JsonUnexpectedCharacter(val character: Char, val expected: String, val position: Position) extends JsonReaderException(pos(position, "Expected %s; got character %s", expected, JString(character.toString))) with JsonLexException
 class JsonNumberOutOfRange(val number: String, val position: Position) extends JsonReaderException(pos(position, "Cannot store in BigDecimal: %s", number)) with JsonLexException
