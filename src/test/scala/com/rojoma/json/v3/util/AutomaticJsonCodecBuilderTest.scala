@@ -68,6 +68,24 @@ class AutomaticJsonCodecBuilderTest extends FunSuite with MustMatchers with Eith
     JsonUtil.parseJson[O]("{x:null}") must equal (Right(O(Some(JNull))))
   }
 
+  test("AllowMissing works") {
+    case class O(@AllowMissing("Nil") x: Seq[Int])
+    implicit val codec = AutomaticJsonCodecBuilder[O]
+    JsonUtil.parseJson[O]("{}") must equal (Right(O(Nil)))
+  }
+
+  test("AllowMissing on Option overrides the missing behavior") {
+    case class O(@AllowMissing("Some(5)") x: Option[Int])
+    implicit val codec = AutomaticJsonCodecBuilder[O]
+    JsonUtil.parseJson[O]("{}") must equal (Right(O(Some(5))))
+  }
+
+  test("A None with an AllowMissing serializes as null") {
+    case class O(@AllowMissing("Some(5)") x: Option[Int])
+    implicit val codec = AutomaticJsonEncodeBuilder[O]
+    JsonUtil.renderJson(O(None)) must equal ("""{"x":null}""")
+  }
+
   test("Recursive encodes properly") {
     case class Recursive(x: String, @LazyCodec xs: List[Recursive])
     implicit lazy val codec: JsonEncode[Recursive] with JsonDecode[Recursive] = AutomaticJsonCodecBuilder[Recursive]

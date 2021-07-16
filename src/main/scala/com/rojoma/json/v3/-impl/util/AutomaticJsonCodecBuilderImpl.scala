@@ -4,7 +4,7 @@ package `-impl`.util
 import scala.collection.mutable
 
 import codec._
-import util.{JsonKey, AlternativeJsonKey, JsonKeyStrategy, Strategy, LazyCodec, NullForNone, ForbidUnknownFields}
+import util.{JsonKey, AlternativeJsonKey, JsonKeyStrategy, Strategy, LazyCodec, NullForNone, ForbidUnknownFields, AllowMissing}
 
 import MacroCompat._
 
@@ -100,11 +100,16 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
     private def findAccessor(param: TermSymbol) =
       param.name.asInstanceOf[TermName]
 
+    private def findType(param: TermSymbol) =
+      param.typeSignature.asSeenFrom(T, T.typeSymbol)
+
     private def findCodecType(param: TermSymbol) = {
-      val tpe = param.typeSignature.asSeenFrom(T, T.typeSymbol)
+      val tpe = findType(param)
       if(isType(tpe.erasure, typeOf[Option[_]].erasure)) {
-        val TypeRef(_, _, c) = tpe
-        c.head
+        tpe match {
+          case TypeRef(_, _, c) => c.head
+          case _ => c.abort(param.pos, "Internal exception: expected a TypeRef")
+        }
       } else {
         tpe
       }
@@ -118,7 +123,25 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
       nfnDefault || param.annotations.exists(ann => isType(ann.tree.tpe, typeOf[NullForNone]))
     }
 
-    private case class FieldInfo(encName: TermName, decName: TermName, isLazy: Boolean, jsonNames: Seq[String], accessorName: TermName, missingMethodName: TermName, errorAugmenterMethodName: TermName, codecType: Type, isOption: Boolean, isNullForNone: Boolean)
+    private def defaultIfMissing(param: TermSymbol): Option[Tree] = {
+      checkAnn(param, typeOf[AllowMissing])
+
+      val keyAnnotations = param.annotations.filter { ann => isType(ann.tree.tpe, typeOf[AllowMissing]) }
+      if(keyAnnotations.size > 1) {
+        c.abort(posOf(param, keyAnnotations(1)), "Found multiple AllowMissing annotations")
+      }
+
+      keyAnnotations.headOption.map { ann =>
+        findValue(ann) match {
+          case Some(s: String) =>
+            c.parse(s)
+          case _ =>
+            c.abort(posOf(param, ann), "Unable to find value for AllowMissing annotation")
+        }
+      }
+    }
+
+    private case class FieldInfo(encName: TermName, decName: TermName, isLazy: Boolean, jsonNames: Seq[String], accessorName: TermName, missingMethodName: TermName, errorAugmenterMethodName: TermName, typ: Type, codecType: Type, isOption: Boolean, isNullForNone: Boolean, defaultIfMissing: Option[(Tree, TermName)], position: Position)
 
     private val fieldss = locally {
       val seenNames = new mutable.HashSet[String]
@@ -152,9 +175,12 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
                     findAccessor(param),
                     freshTermName(),
                     freshTermName(),
+                    findType(param),
                     findCodecType(param),
                     isOption(param),
-                    hasNullForNoneAnnotation(param)
+                    hasNullForNoneAnnotation(param),
+                    defaultIfMissing(param).map((_, freshTermName())),
+                    mem.pos
                   )
                 }
               buffer += fieldList
@@ -191,7 +217,10 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
       val encoderMap = freshTermName()
       def encoderMapUpdates = for(fi <- fields) yield {
         if(fi.isOption) {
-          if(fi.isNullForNone) {
+          if(fi.isNullForNone || fi.defaultIfMissing.nonEmpty) {
+            if(fi.isNullForNone && fi.defaultIfMissing.nonEmpty) {
+              c.warning(fi.position, "NullForNone is implied by AllowMissing on Options")
+            }
             q"""$encoderMap += ${fi.jsonNames.head} -> {
                   val $tmp = $param.${fi.accessorName}
                   if($tmp.isInstanceOf[_root_.scala.Some[_]]) ${fi.encName}.encode($tmp.get)
@@ -222,7 +251,13 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
       }
     }
 
-    private def missingMethods: List[DefDef] = fields.filter(!_.isOption).map { fi =>
+    private def defaults = fields.flatMap { case fi =>
+      fi.defaultIfMissing.map { case (dflt, dfltName) =>
+        q"private[this] def ${dfltName}: ${fi.typ} = $dflt"
+      }
+    }
+
+    private def missingMethods: List[DefDef] = fields.filter { fi => !fi.isOption && fi.defaultIfMissing.isEmpty }.map { fi =>
       q"""private[this] def ${fi.missingMethodName}: _root_.scala.Left[_root_.com.rojoma.json.v3.codec.DecodeError, _root_.scala.Nothing] =
             _root_.scala.Left(_root_.com.rojoma.json.v3.codec.DecodeError.MissingField(${fi.jsonNames.head},
                               _root_.com.rojoma.json.v3.codec.Path.empty))"""
@@ -246,7 +281,7 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
 
       val decoderMapExtractions: List[ValDef] = for((fi,tmp) <- fields.zip(tmps.flatten)) yield {
         val expr = if(fi.isOption) {
-          fi.jsonNames.foldRight[Tree](q"""_root_.scala.None""") { (jsonName, otherwise) =>
+          fi.jsonNames.foldRight[Tree](fi.defaultIfMissing.fold[Tree](q"""_root_.scala.None""") { case (_, name) => q"""$name""" }) { (jsonName, otherwise) =>
             q"""val $tmp2 = $obj.get($jsonName)
                 if($tmp2.isInstanceOf[_root_.scala.Some[_]]) {
                   val $tmp3 = ${fi.decName}.decode($tmp2.get)
@@ -256,7 +291,7 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
                 } else $otherwise"""
           }
         } else {
-          fi.jsonNames.foldRight[Tree](q"""return ${fi.missingMethodName}""") { (jsonName, otherwise) =>
+          fi.jsonNames.foldRight[Tree](fi.defaultIfMissing.fold[Tree](q"""return ${fi.missingMethodName}""") { case (_, name) => q"""$name""" }) { (jsonName, otherwise) =>
             q"""val $tmp2 = ${obj}.get($jsonName)
                 if($tmp2.isInstanceOf[_root_.scala.Some[_]]) {
                   val $tmp3 = ${fi.decName}.decode($tmp2.get)
@@ -330,6 +365,7 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
         q"""(new _root_.com.rojoma.json.v3.codec.JsonDecode[$Tname] {
               ..$eitherValues
               ..$decodes
+              ..$defaults
               ..$missingMethods
               ..$errorAugmenterMethods
               ..$fieldSet
@@ -347,6 +383,7 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
                        ..$eitherValues
                        ..$encodes
                        ..$decodes
+                       ..$defaults
                        ..$missingMethods
                        ..$errorAugmenterMethods
                        ..$fieldSet
