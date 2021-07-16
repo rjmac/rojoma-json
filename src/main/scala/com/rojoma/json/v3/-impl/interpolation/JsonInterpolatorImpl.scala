@@ -312,6 +312,7 @@ object JsonInterpolatorImpl {
               case e: JsonReaderException =>
                 c.abort(relativize(node.pos, part, e.position), stripPos(e.message))
             }
+          case _ => abort("Internal error: non-string-literal part")
         }
         if(parts.length != pieces.length + 1) abort("Internal error: there is not one more piece than part")
 
