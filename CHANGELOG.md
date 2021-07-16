@@ -4,7 +4,8 @@
 * On scala 2.12, `JBoolean.apply` now alawys returns `canonicalTrue` or `canonicalFalse`
 * Small integer `JNumber`s are now interned, if constructed with an integral type.
 * The encoders produced by the automatic builders will produce values statically typed as `JObject`
-* Add `OrNull` to make interpolating value-or-null less syntactically heavy
+* Add `OrJNull` to make interpolating value-or-null less syntactically heavy
+* Add `@AllowMissing` annotation to permit easier evolution of JSON serialization
 
 3.12.0
 ======
