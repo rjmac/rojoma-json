@@ -1,7 +1,7 @@
-3.13.0 (unreleased)
+3.13.0
 ===================
 * `JObject` and `JArray` have `empty` in addition to (and preferred to) `canonicalEmpty`
-* On scala 2.12, `JBoolean.apply` now alawys returns `canonicalTrue` or `canonicalFalse`
+* On scala 2.12, `JBoolean.apply` now always returns `canonicalTrue` or `canonicalFalse`
 * Small integer `JNumber`s are now interned, if constructed with an integral type.
 * The encoders produced by the automatic builders will produce values statically typed as `JObject`
 * Add `OrJNull` to make interpolating value-or-null less syntactically heavy

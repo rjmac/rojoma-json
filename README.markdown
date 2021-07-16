@@ -350,7 +350,7 @@ class's constructor's parameters.  The annotations are:
   an empty `Option`.  Ordinarily empty `Option`s are simply omitted
   from generation altogether.
 - `@AllowMissing("scala expression")` which provides a default value
-  for a field if it not present when deserialized.  An `Option` field
+  for a field if it is not present when deserialized.  An `Option` field
   with `@AllowMissing` acts as though it also has `@NullForNone`
 * `@LazyCodec` which causes the codec for the field to be resolved
   lazily.  It is ordinarily not necessary, but can be used to stop
