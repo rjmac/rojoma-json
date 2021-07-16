@@ -6,7 +6,7 @@ Starting with version 2.0.0, rojoma-json is published on Maven
 central, so setting up SBT is as simple as
 
 ```scala
-libraryDependencies += "com.rojoma" %% "rojoma-json-v3" % "3.12.0"
+libraryDependencies += "com.rojoma" %% "rojoma-json-v3" % "3.13.0"
 ```
 
 While for Maven, the pom snippet is:
@@ -16,7 +16,7 @@ While for Maven, the pom snippet is:
   <dependency>
     <groupId>com.rojoma</groupId>
     <artifactId>rojoma-json-v3_${scala.version}</artifactId>
-    <version>3.12.0</version>
+    <version>3.13.0</version>
   </dependency>
 </dependencies>
 ```
@@ -349,6 +349,9 @@ class's constructor's parameters.  The annotations are:
 * `@NullForNone` which causes the field to generate a `null` if it is
   an empty `Option`.  Ordinarily empty `Option`s are simply omitted
   from generation altogether.
+- `@AllowMissing("scala expression")` which provides a default value
+  for a field if it not present when deserialized.  An `Option` field
+  with `@AllowMissing` acts as though it also has `@NullForNone`
 * `@LazyCodec` which causes the codec for the field to be resolved
   lazily.  It is ordinarily not necessary, but can be used to stop
   stack overflows or `NullPointerException`s building codecs for
