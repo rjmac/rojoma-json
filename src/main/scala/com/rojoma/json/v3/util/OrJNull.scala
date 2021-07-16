@@ -34,9 +34,9 @@ object OrJNull {
     }
 
   object implicits {
-    implicit class OrJNullExt[T](private val underlying: Option[T]) extends AnyVal {
+    implicit class OrJNullExt[T](val `private once 2.10 is no more`: Option[T]) extends AnyVal {
       def orJNull: OrJNull[T] =
-        underlying match {
+        `private once 2.10 is no more` match {
           case scala.Some(x) => OrJNull.Some(x)
           case scala.None => OrJNull.None
         }
