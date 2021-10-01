@@ -2,6 +2,7 @@ package com.rojoma.json.v3
 package `-impl`.util
 
 import scala.collection.mutable
+import scala.reflect.macros.ParseException
 
 import codec._
 import util.{JsonKey, AlternativeJsonKey, JsonKeyStrategy, Strategy, LazyCodec, NullForNone, ForbidUnknownFields, AllowMissing}
@@ -134,7 +135,12 @@ class AutomaticJsonCodecBuilderImpl[Ctx <: Context](c_ : Ctx)  extends MacroComp
       keyAnnotations.headOption.map { ann =>
         findValue(ann) match {
           case Some(s: String) =>
-            c.parse(s)
+            try {
+              c.parse(s)
+            } catch {
+              case e: ParseException =>
+                c.abort(posOf(param, ann), "AllowMissing parse error: " + e.getMessage)
+            }
           case _ =>
             c.abort(posOf(param, ann), "Unable to find value for AllowMissing annotation")
         }

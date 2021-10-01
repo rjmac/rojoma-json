@@ -5,6 +5,7 @@ import scala.jdk.CollectionConverters._
 
 import ast._
 import interpolation._
+import util.{JsonCaseInsensitiveEnum, JsonEnumStrategy, Strategy}
 
 import org.scalatest.FunSuite
 import org.scalatest.MustMatchers
@@ -120,16 +121,109 @@ class JsonCodecTests extends FunSuite with Checkers with MustMatchers {
     doCheck[ju.Map[String, String]]()
   }
 
-  test("scala enum roundtrips") {
+  test("scala enum roundtrips - case sensitive, identity") {
     object X extends Enumeration {
-      val a, b, c = Value
+      val anEnum, b, c = Value
       val d = Value("haha")
     }
     val codec = JsonCodec.scalaEnumCodec(X)
-    codec.encode(X.a) must equal (JString("a"))
+    codec.encode(X.anEnum) must equal (JString("anEnum"))
+    codec.decode(JString("anEnum")) must equal (Right(X.anEnum))
+    codec.decode(JString("anenum")) must equal (Left(DecodeError.InvalidValue(got = JString("anenum"))))
     codec.decode(JString("b")) must equal (Right(X.b))
     codec.encode(X.d) must equal (JString("haha"))
     codec.decode(JString("haha")) must equal (Right(X.d))
+    codec.decode(JString("B")) must equal (Left(DecodeError.InvalidValue(got = JString("B"))))
+  }
+
+  test("scala enum roundtrips - case insensitive - identity") {
+    @JsonCaseInsensitiveEnum
+    object X extends Enumeration {
+      val anEnum, b, c = Value
+      val d = Value("haha")
+    }
+    val codec = JsonCodec.scalaEnumCodec(X)
+    codec.encode(X.anEnum) must equal (JString("anEnum"))
+    codec.decode(JString("anEnum")) must equal (Right(X.anEnum))
+    codec.decode(JString("anenum")) must equal (Right(X.anEnum))
+    codec.decode(JString("b")) must equal (Right(X.b))
+    codec.encode(X.d) must equal (JString("haha"))
+    codec.decode(JString("haha")) must equal (Right(X.d))
+    codec.decode(JString("HAHA")) must equal (Right(X.d))
+    codec.decode(JString("B")) must equal (Right(X.b))
+  }
+
+  test("scala enum roundtrips - case sensitive, underscore") {
+    @JsonEnumStrategy(Strategy.Underscore)
+    object X extends Enumeration {
+      val anEnum, b, c = Value
+      val d = Value("haha")
+    }
+    val codec = JsonCodec.scalaEnumCodec(X)
+    codec.encode(X.anEnum) must equal (JString("an_enum"))
+    codec.decode(JString("an_enum")) must equal (Right(X.anEnum))
+    codec.decode(JString("an_Enum")) must equal (Left(DecodeError.InvalidValue(got = JString("an_Enum"))))
+    codec.decode(JString("b")) must equal (Right(X.b))
+    codec.encode(X.d) must equal (JString("haha"))
+    codec.decode(JString("haha")) must equal (Right(X.d))
+    codec.decode(JString("B")) must equal (Left(DecodeError.InvalidValue(got = JString("B"))))
+  }
+
+  test("scala enum roundtrips - case insensitive - underscore") {
+    @JsonCaseInsensitiveEnum
+    @JsonEnumStrategy(Strategy.Underscore)
+    object X extends Enumeration {
+      val anEnum, b, c = Value
+      val d = Value("haha")
+    }
+    val codec = JsonCodec.scalaEnumCodec(X)
+    codec.encode(X.anEnum) must equal (JString("an_enum"))
+    codec.decode(JString("an_enum")) must equal (Right(X.anEnum))
+    codec.decode(JString("an_Enum")) must equal (Right(X.anEnum))
+    codec.decode(JString("b")) must equal (Right(X.b))
+    codec.encode(X.d) must equal (JString("haha"))
+    codec.decode(JString("haha")) must equal (Right(X.d))
+    codec.decode(JString("B")) must equal (Right(X.b))
+  }
+
+  test("java enum roundtrips - case sensitive, identity") {
+    import jsoncodectests.{CaseSensitiveIdentity => X}
+    val enc = implicitly[JsonEncode[X]]; val dec= implicitly[JsonDecode[X]]
+    enc.encode(X.HelloWorld) must equal (JString("HelloWorld"))
+    dec.decode(JString("HelloWorld")) must equal (Right(X.HelloWorld))
+    dec.decode(JString("helloworld")) must equal (Left(DecodeError.InvalidValue(got = JString("helloworld"))))
+    dec.decode(JString("B")) must equal (Right(X.B))
+    dec.decode(JString("b")) must equal (Left(DecodeError.InvalidValue(got = JString("b"))))
+  }
+
+  test("java enum roundtrips - case insensitive - identity") {
+    import jsoncodectests.{CaseInsensitiveIdentity => X}
+    val enc = implicitly[JsonEncode[X]]; val dec= implicitly[JsonDecode[X]]
+    enc.encode(X.HelloWorld) must equal (JString("HelloWorld"))
+    dec.decode(JString("HelloWorld")) must equal (Right(X.HelloWorld))
+    dec.decode(JString("helloworld")) must equal (Right(X.HelloWorld))
+    dec.decode(JString("B")) must equal (Right(X.B))
+    dec.decode(JString("b")) must equal (Right(X.B))
+  }
+
+  test("java enum roundtrips - case sensitive, underscore") {
+    import jsoncodectests.{CaseSensitiveUnderscore => X}
+    val enc = implicitly[JsonEncode[X]]; val dec= implicitly[JsonDecode[X]]
+    enc.encode(X.HelloWorld) must equal (JString("hello_world"))
+    dec.decode(JString("Hello_World")) must equal (Left(DecodeError.InvalidValue(got = JString("Hello_World"))))
+    dec.decode(JString("hello_world")) must equal (Right(X.HelloWorld))
+    dec.decode(JString("B")) must equal (Left(DecodeError.InvalidValue(got = JString("B"))))
+    dec.decode(JString("b")) must equal (Right(X.B))
+  }
+
+  test("java enum roundtrips - case insensitive - underscore") {
+    import jsoncodectests.{CaseInsensitiveUnderscore => X}
+    val enc = implicitly[JsonEncode[X]]; val dec= implicitly[JsonDecode[X]]
+    enc.encode(X.HelloWorld) must equal (JString("hello_world"))
+    dec.decode(JString("Hello_World")) must equal (Right(X.HelloWorld))
+    dec.decode(JString("hello_world")) must equal (Right(X.HelloWorld))
+    dec.decode(JString("B")) must equal (Right(X.B))
+    dec.decode(JString("b")) must equal (Right(X.B))
   }
 
   test("scala enum codec disallows invalid values") {

@@ -165,8 +165,9 @@ object JsonTokenGeneratorTests {
   }
 
   def splitAt(text: String, positions: List[Int]): List[String] =
-    (List(0) ++ positions.sorted ++ List(text.length)).sliding(2).map { case Seq(a,b) =>
-      text.substring(a, b)
+    (List(0) ++ positions.sorted ++ List(text.length)).sliding(2).map {
+      case Seq(a,b) => text.substring(a, b)
+      case _ =>  throw new Exception("expected list of length 2")
     }.toList
 
   def splittableJson[T <: JValue : Arbitrary : JsonEncode] = for {

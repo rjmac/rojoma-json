@@ -7,7 +7,7 @@ import java.{util => ju}
 import java.{net => jn}
 
 import ast._
-import util.{WrapperJsonDecode, JsonCaseInsensitiveEnum}
+import util.{WrapperJsonDecode, JsonCaseInsensitiveEnum, JsonEnumStrategy, Strategy}
 
 trait JsonDecode[T] {
   def decode(x: JValue): JsonDecode.DecodeResult[T]
@@ -282,7 +282,7 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
   // either is right-biased; if decoding as Right fails it tries Left;
   // if Left fails the whole thing fails.
   implicit def eitherDecode[L: JsonDecode, R: JsonDecode] = new JsonDecode[Either[L, R]] {
-    def decode(x: JValue) = 
+    def decode(x: JValue) =
       JsonDecode[R].decode(x) match {
         case Right(right) => Right(Right(right))
         case Left(err1) =>
@@ -295,27 +295,57 @@ object JsonDecode  extends com.rojoma.json.v3.`-impl`.codec.TupleDecode {
   }
 
   implicit def jlEnumDecode[T <: java.lang.Enum[T]](implicit tag: ClassTag[T]) = {
-    if(tag.runtimeClass.isAnnotationPresent(classOf[JsonCaseInsensitiveEnum])) {
-      new JsonDecode[T] {
-        val nameMap =
-          tag.
-            runtimeClass.
-            asInstanceOf[Class[T]].
-            getMethod("values").
-            invoke(null).
-            asInstanceOf[Array[T]].
-            iterator.
-            map { e => e.name.toLowerCase -> e }.
-            toMap
+    val isUnderscoreized = Option(tag.runtimeClass.getAnnotation(classOf[JsonEnumStrategy])).
+      fold(false) { ann =>
+        ann.value() match {
+          case Strategy.Underscore =>
+            true
+          case Strategy.Identity =>
+            false
+        }
+      }
+    val isCaseInsensitive = tag.runtimeClass.isAnnotationPresent(classOf[JsonCaseInsensitiveEnum])
+    if(isUnderscoreized || isCaseInsensitive) {
+      val nameMap =
+        tag.
+          runtimeClass.
+          asInstanceOf[Class[T]].
+          getMethod("values").
+          invoke(null).
+          asInstanceOf[Array[T]].
+          iterator.
+          map { e =>
+            val name =
+              if(isUnderscoreized) `-impl`.util.CamelSplit(e.name).mkString("_").toLowerCase.intern()
+              else if(isCaseInsensitive) e.name.toLowerCase.intern()
+              else e.name
+            name -> e
+          }.
+          toMap
 
-        def decode(x: JValue) = x match {
-          case str@JString(s) =>
-            nameMap.get(s.toLowerCase) match {
-              case Some(e) => Right(e)
-              case None => Left(DecodeError.InvalidValue(str))
-            }
-          case other =>
-            Left(DecodeError.InvalidType(JString, other.jsonType))
+      if(isCaseInsensitive) {
+        new JsonDecode[T] {
+          def decode(x: JValue) = x match {
+            case str@JString(s) =>
+              nameMap.get(s.toLowerCase) match {
+                case Some(e) => Right(e)
+                case None => Left(DecodeError.InvalidValue(str))
+              }
+            case other =>
+              Left(DecodeError.InvalidType(JString, other.jsonType))
+          }
+        }
+      } else {
+        new JsonDecode[T] {
+          def decode(x: JValue) = x match {
+            case str@JString(s) =>
+              nameMap.get(s) match {
+                case Some(e) => Right(e)
+                case None => Left(DecodeError.InvalidValue(str))
+              }
+            case other =>
+              Left(DecodeError.InvalidType(JString, other.jsonType))
+          }
         }
       }
     } else {
