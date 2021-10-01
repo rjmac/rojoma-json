@@ -1,5 +1,9 @@
+Unreleased
+==========
+* Add `@JsonEnumStrategy` to allow underscorizing enums
+
 3.13.0
-===================
+======
 * `JObject` and `JArray` have `empty` in addition to (and preferred to) `canonicalEmpty`
 * On scala 2.12, `JBoolean.apply` now always returns `canonicalTrue` or `canonicalFalse`
 * Small integer `JNumber`s are now interned, if constructed with an integral type.

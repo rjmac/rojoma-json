@@ -9,7 +9,7 @@ import java.{util => ju}
 import java.{net => jn}
 
 import ast._
-import util.WrapperJsonEncode
+import util.{WrapperJsonEncode, Strategy, JsonEnumStrategy}
 
 trait JsonEncode[T] {
   def encode(x: T): JValue
@@ -191,9 +191,44 @@ object JsonEncode extends com.rojoma.json.v3.`-impl`.codec.TupleEncode {
     }
   }
 
-  implicit def jlEnumEncode[T <: java.lang.Enum[T]] = new JsonEncode[T] {
-    def encode(x: T) = JString(x.name)
+  @deprecated(message = "Use jlEnumEncode2 instead", since = "3.14.0")
+  def jlEnumEncode[T <: java.lang.Enum[T]] = new JsonEncode[T] {
+    @volatile private var trueEncode: JsonEncode[T] = null
+
+    def encode(x: T) = {
+      var e = trueEncode
+      if(e == null) {
+        e = new EnumCodec[T](x.getClass)
+        trueEncode = e
+      }
+      e.encode(x)
+    }
   }
+
+  private class EnumCodec[T <: java.lang.Enum[T]](cls: Class[_]) extends JsonEncode[T] {
+    private val converter: T => String = locally {
+      val ann = cls.getAnnotation(classOf[JsonEnumStrategy])
+      if(ann == null) {
+        _.name
+      } else ann.value match {
+        case Strategy.Identity =>
+          _.name
+        case Strategy.Underscore =>
+          val converted =
+            cls.getMethod("values").invoke(null).asInstanceOf[Array[T]].map { item =>
+              `-impl`.util.CamelSplit(item.name).map(_.toLowerCase).mkString("_").intern()
+            }
+          t => converted(t.ordinal)
+      }
+    }
+
+    def encode(x: T) = {
+      JString(converter(x))
+    }
+  }
+
+  implicit def jlEnumEncode2[T <: java.lang.Enum[T]](implicit ev: ClassTag[T]): JsonEncode[T] =
+    new EnumCodec[T](ev.runtimeClass)
 
   implicit object UnitEncode extends JsonEncode[Unit] {
     private val empty = JArray.empty
