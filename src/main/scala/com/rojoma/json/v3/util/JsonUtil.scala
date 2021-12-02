@@ -1,7 +1,7 @@
 package com.rojoma.json.v3
 package util
 
-import java.io.{Reader, InputStreamReader, FileInputStream, FileOutputStream, OutputStreamWriter, Writer, FilterWriter, BufferedWriter, IOException, File}
+import java.io.{Reader, InputStreamReader, FileInputStream, FileOutputStream, OutputStreamWriter, Writer, FilterWriter, BufferedWriter, IOException, File, OutputStream, FilterOutputStream, InputStream, BufferedInputStream, BufferedOutputStream, FilterInputStream}
 import java.nio.charset.Charset
 import scala.io.Codec
 
@@ -9,6 +9,24 @@ import io._
 import codec._
 
 object JsonUtil {
+  private class CloseBlockingWriter(writer: Writer) extends FilterWriter(writer) {
+    override def close() {}
+    override def flush() {}
+  }
+
+  private class CloseBlockingOutputStream(stream: OutputStream) extends FilterOutputStream(stream) {
+    override def close() {}
+    override def flush() {}
+
+    // FilterOutputStream overrides bulk-write to use single-byte write
+    override def write(buf: Array[Byte]) = out.write(buf)
+    override def write(buf: Array[Byte], off: Int, len: Int) = out.write(buf, off, len)
+  }
+
+  private class CloseBlockingInputStream(stream: InputStream) extends FilterInputStream(stream) {
+    override def close() {}
+  }
+
   @throws(classOf[IOException])
   @throws(classOf[JsonParseException])
   def readJson[T : JsonDecode](reader: Reader, buffer: Boolean = true): Either[DecodeError, T] = {
@@ -16,6 +34,14 @@ object JsonUtil {
       if(buffer) JsonReader.fromEvents(new FusedBlockJsonEventIterator(reader))
       else JsonReader.fromTokens(new JsonTokenIterator(reader))
     JsonDecode.fromJValue[T](jvalue)
+  }
+
+  @throws(classOf[IOException])
+  @throws(classOf[JsonParseException])
+  def readJsonBytes[T : JsonDecode](stream: InputStream, charset: Charset, buffer: Boolean = true): Either[DecodeError, T] = {
+    val barrier = new CloseBlockingInputStream(stream)
+    val buffered = if(buffer) new BufferedInputStream(barrier) else barrier
+    readJson[T](new InputStreamReader(buffered, charset), buffer = buffer)
   }
 
   @throws(classOf[IOException])
@@ -71,16 +97,22 @@ object JsonUtil {
     }
 
     if(buffer) {
-      val barrier = new FilterWriter(writer) {
-        override def close() {}
-        override def flush() {}
-      }
+      val barrier = new CloseBlockingWriter(writer)
       val buffer = new BufferedWriter(barrier)
       write(buffer)
       buffer.flush()
     } else {
       write(writer)
     }
+  }
+
+  @throws(classOf[IOException])
+  def writeJsonBytes[T : JsonEncode](stream: OutputStream, charset: Charset, jsonable: T, pretty: Boolean = false, buffer: Boolean = true): Unit = {
+    val barrier = new CloseBlockingOutputStream(stream)
+    val buffered = if(buffer) new BufferedOutputStream(barrier) else barrier
+    val writer = new OutputStreamWriter(buffered, charset)
+    writeJson(writer, jsonable, pretty = pretty, buffer = false)
+    writer.flush()
   }
 
   @throws(classOf[IOException])
