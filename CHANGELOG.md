@@ -1,3 +1,8 @@
+3.15.0
+======
+* Add `readJsonBytes` and `writeJsonBytes` to JsonUtil
+* Fix an accidental rojoma-json v2 dependency in JsonZipper
+
 3.14.0
 ======
 * Add `@JsonEnumStrategy` to allow underscorizing enums
