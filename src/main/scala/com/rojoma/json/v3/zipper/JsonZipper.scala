@@ -247,7 +247,10 @@ object JsonZipper {
 
   def unapply(zipper: JsonZipper): Option[JValue] = Some(zipper.value)
 
-  implicit def toCastable[T <: JsonZipper](x: T): com.rojoma.`json-impl`.DownCaster[T] = new com.rojoma.`json-impl`.DownCaster(x)
+  @deprecated(message = "Do not use this function", since = "3.14.1")
+  def toCastable[T <: JsonZipper](x: T): com.rojoma.`json-impl`.DownCaster[T] = new com.rojoma.`json-impl`.DownCaster(x)
+
+  implicit def toCorrectCastable[T <: JsonZipper](x: T): com.rojoma.json.v3.`-impl`.GenericDownCaster[T] = new com.rojoma.json.v3.`-impl`.GenericDownCaster(x)
 }
 
 // TOP LEVEL
